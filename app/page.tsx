@@ -3,24 +3,22 @@
 import React from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { Separator } from "@/components/ui/separator";
-import {
   SidebarInset,
   SidebarProvider,
-  SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyHeader,
+  EmptyTitle,
+  EmptyDescription,
+  EmptyContent,
+  EmptyMedia,
+} from "@/components/ui/empty";
 import { WorkspaceProvider, useWorkspace } from "@/features/workspace/store";
 import { FileExplorerProvider, useFileExplorer } from "@/features/file-explorer/store";
 import { FileIcon } from "@/features/file-explorer/components/file-icon";
-import { normalizePath } from "@/lib/tauri-ipc";
+import { IconThemeProvider } from "@/features/icon-theme";
 import { ideEvents, FileEventPayload } from "@/lib/events";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -49,82 +47,9 @@ function PageContent() {
     });
   }, []);
 
-  // Compute breadcrumb path
-  const relativeBreadcrumb = React.useMemo(() => {
-    if (!activeWorkspace || !selectedNode) return [];
-    const wsRoot = normalizePath(activeWorkspace.rootPath).toLowerCase();
-    const nodePath = normalizePath(selectedNode.path);
-    const nodeLower = nodePath.toLowerCase();
-
-    if (nodeLower.startsWith(wsRoot)) {
-      const rel = nodePath.slice(activeWorkspace.rootPath.length).replace(/^\/+/, "");
-      return rel ? rel.split("/") : [selectedNode.name];
-    }
-    return [selectedNode.name];
-  }, [activeWorkspace, selectedNode]);
-
   return (
     <SidebarInset>
-      <header className="flex h-16 shrink-0 items-center gap-2 px-4">
-        <SidebarTrigger className="-ml-1" />
-        <Separator
-          orientation="vertical"
-          className="mr-2 data-vertical:h-4 data-vertical:self-auto"
-        />
-        <Breadcrumb>
-          <BreadcrumbList>
-            {activeWorkspace ? (
-              <>
-                <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbLink href="#" className="font-semibold text-foreground">
-                    {activeWorkspace.name}
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
-                {relativeBreadcrumb.length > 0 ? (
-                  relativeBreadcrumb.map((segment, idx) => {
-                    const isLast = idx === relativeBreadcrumb.length - 1;
-                    return (
-                      <React.Fragment key={idx}>
-                        <BreadcrumbSeparator className="hidden md:block" />
-                        <BreadcrumbItem>
-                          {isLast ? (
-                            <BreadcrumbPage className="font-medium text-foreground">
-                              {segment}
-                            </BreadcrumbPage>
-                          ) : (
-                            <span className="text-muted-foreground hidden md:inline">
-                              {segment}
-                            </span>
-                          )}
-                        </BreadcrumbItem>
-                      </React.Fragment>
-                    );
-                  })
-                ) : (
-                  <>
-                    <BreadcrumbSeparator className="hidden md:block" />
-                    <BreadcrumbItem>
-                      <BreadcrumbPage>Workspace Overview</BreadcrumbPage>
-                    </BreadcrumbItem>
-                  </>
-                )}
-              </>
-            ) : (
-              <>
-                <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbLink href="#">Kairo IDE</BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator className="hidden md:block" />
-                <BreadcrumbItem>
-                  <BreadcrumbPage>No Project Open</BreadcrumbPage>
-                </BreadcrumbItem>
-              </>
-            )}
-          </BreadcrumbList>
-        </Breadcrumb>
-      </header>
-
-      <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+      <div className="flex flex-1 flex-col gap-4 p-4 pt-14">
         {/* Top 3 Metric Cards - preserving existing grid layout */}
         <div className="grid auto-rows-min gap-4 md:grid-cols-3">
           {/* Card 1: Workspace status */}
@@ -140,7 +65,7 @@ function PageContent() {
                 <span>{activeWorkspace ? activeWorkspace.name : "No Workspace"}</span>
                 {activeWorkspace?.projectTypes && activeWorkspace.projectTypes.length > 0 && (
                   <span className="rounded bg-sidebar-accent px-1.5 py-0.2 text-[9px] font-mono text-sidebar-accent-foreground font-normal">
-                    {activeWorkspace.projectTypes.slice(0, 2).join(" • ")}
+                    {activeWorkspace.projectTypes.slice(0, 2).join(" \u2022 ")}
                   </span>
                 )}
               </div>
@@ -194,9 +119,9 @@ function PageContent() {
           </div>
         </div>
 
-        {/* Main Content Area */}
-        <div className="min-h-[100vh] flex-1 rounded-xl bg-muted/50 md:min-h-min p-6 flex flex-col justify-center items-center">
-          {sideNode || (selectedNode && selectedNode.type === "file") ? (
+        {/* Main Content / Tab Area */}
+        {sideNode || (selectedNode && selectedNode.type === "file") ? (
+          <div className="min-h-[100vh] flex-1 rounded-xl bg-muted/50 md:min-h-min p-6 flex flex-col justify-center items-center">
             <div className={`w-full max-w-4xl grid gap-4 ${sideNode ? "md:grid-cols-2" : "max-w-2xl"}`}>
               {/* Primary Selected File */}
               {selectedNode && selectedNode.type === "file" && (
@@ -300,12 +225,14 @@ function PageContent() {
                 </div>
               )}
             </div>
-          ) : activeWorkspace ? (
-            <div className="flex flex-col items-center justify-center text-center max-w-md">
-              <div className="flex size-12 items-center justify-center rounded-2xl bg-sidebar-primary/10 text-sidebar-primary mb-3">
+          </div>
+        ) : activeWorkspace ? (
+          <Empty className="min-h-[100vh] md:min-h-min flex-1 w-full border border-dashed border-border/70 bg-muted/30 rounded-xl p-8">
+            <EmptyHeader className="max-w-md">
+              <EmptyMedia variant="icon" className="size-12 rounded-2xl bg-sidebar-primary/10 text-sidebar-primary mb-3">
                 <HugeiconsIcon icon={Folder01Icon} className="size-6" />
-              </div>
-              <h2 className="text-lg font-semibold">{activeWorkspace.name}</h2>
+              </EmptyMedia>
+              <EmptyTitle className="text-lg font-semibold">{activeWorkspace.name}</EmptyTitle>
               <p
                 className="text-xs text-muted-foreground font-mono mt-1 px-4 truncate max-w-full"
                 title={activeWorkspace.rootPath}
@@ -324,26 +251,30 @@ function PageContent() {
                   ))}
                 </div>
               )}
-              <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
+              <EmptyDescription className="text-xs text-muted-foreground mt-3 leading-relaxed">
                 Select a file from the explorer on the left to inspect it, or right-click in the tree to create, rename, and manage files.
-              </p>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center text-center max-w-md">
-              <div className="flex size-14 items-center justify-center rounded-2xl bg-sidebar-primary/10 text-sidebar-primary mb-3">
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        ) : (
+          <Empty className="min-h-[100vh] md:min-h-min flex-1 w-full border border-dashed border-border/70 bg-muted/30 rounded-xl p-8">
+            <EmptyHeader className="max-w-md">
+              <EmptyMedia variant="icon" className="size-14 rounded-2xl bg-sidebar-primary/10 text-sidebar-primary mb-3">
                 <HugeiconsIcon icon={File01Icon} className="size-7" />
-              </div>
-              <h2 className="text-lg font-bold">Welcome to Kairo IDE</h2>
-              <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+              </EmptyMedia>
+              <EmptyTitle className="text-lg font-bold">Welcome to Kairo IDE</EmptyTitle>
+              <EmptyDescription className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
                 Open a local project or select a recent workspace from the sidebar to begin.
-              </p>
-              <Button onClick={() => openFolder()} className="mt-4 cursor-pointer" size="sm">
+              </EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent className="mt-4">
+              <Button onClick={() => openFolder()} className="cursor-pointer" size="sm">
                 <HugeiconsIcon icon={Folder01Icon} className="size-4 mr-1.5" />
                 Open Folder
               </Button>
-            </div>
-          )}
-        </div>
+            </EmptyContent>
+          </Empty>
+        )}
       </div>
     </SidebarInset>
   );
@@ -351,19 +282,22 @@ function PageContent() {
 
 export default function Page() {
   return (
-    <WorkspaceProvider>
-      <FileExplorerProvider>
-        <SidebarProvider
-          style={
-            {
-              "--sidebar-width": "19rem",
-            } as React.CSSProperties
-          }
-        >
-          <AppSidebar />
-          <PageContent />
-        </SidebarProvider>
-      </FileExplorerProvider>
-    </WorkspaceProvider>
+    <IconThemeProvider>
+      <WorkspaceProvider>
+        <FileExplorerProvider>
+          <SidebarProvider
+            style={
+              {
+                "--sidebar-width": "19rem",
+              } as React.CSSProperties
+            }
+          >
+            <AppSidebar />
+            <PageContent />
+          </SidebarProvider>
+        </FileExplorerProvider>
+      </WorkspaceProvider>
+    </IconThemeProvider>
   );
 }
+

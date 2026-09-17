@@ -325,10 +325,16 @@ pub fn fs_reveal(path: String) -> Result<(), String> {
 
     #[cfg(target_os = "windows")]
     {
+        use std::os::windows::process::CommandExt;
         let formatted = p.to_string_lossy().replace('/', "\\");
-        std::process::Command::new("explorer")
-            .arg(format!("/select,{}", formatted))
-            .spawn()
+
+        let mut cmd = std::process::Command::new("explorer");
+        if p.is_dir() && p.parent().is_none() {
+            cmd.raw_arg(format!("\"{}\"", formatted));
+        } else {
+            cmd.raw_arg(format!("/select,\"{}\"", formatted));
+        }
+        cmd.spawn()
             .map_err(|e| format!("Failed to reveal item in file manager: {}", e))?;
     }
 

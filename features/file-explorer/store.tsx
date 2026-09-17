@@ -215,7 +215,7 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
   const [bulkDeleteCandidate, setBulkDeleteCandidate] = useState<FileSystemNode[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showHidden, setShowHidden] = useState(false);
+  const [showHidden, setShowHiddenState] = useState(false);
   const [filterQuery, setFilterQuery] = useState("");
   const [sortConfig, setSortConfig] = useState<ExplorerSortConfig>({
     mode: "folders-first",
@@ -228,6 +228,9 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
   const selectedPathsRef = useRef(selectedPaths);
   const nodesRef = useRef(nodes);
   const sortConfigRef = useRef(sortConfig);
+  const showHiddenRef = useRef(showHidden);
+
+  const displayNodesRef = useRef<FileSystemNode[]>([]);
 
   useEffect(() => {
     expandedPathsRef.current = expandedPaths;
@@ -236,17 +239,26 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
     selectedPathsRef.current = selectedPaths;
     nodesRef.current = nodes;
     sortConfigRef.current = sortConfig;
+    showHiddenRef.current = showHidden;
   });
 
-  /**
-   * Recursively loads children for all expanded paths.
-   */
-  const loadDirectoryRecursive = useCallback(
-    (dirPath: string, currentExpanded: Set<string>): Promise<FileSystemNode[]> => {
-      return loadDirectoryRecursiveHelper(dirPath, currentExpanded, showHidden);
-    },
-    [showHidden]
-  );
+  const setShowHidden = useCallback((valOrFn: boolean | ((prev: boolean) => boolean)) => {
+    const nextVal = typeof valOrFn === "function" ? valOrFn(showHiddenRef.current) : valOrFn;
+    showHiddenRef.current = nextVal;
+    setShowHiddenState(nextVal);
+
+    const ws = activeWorkspaceRef.current;
+    if (ws) {
+      loadDirectoryRecursiveHelper(ws.rootPath, expandedPathsRef.current, nextVal)
+        .then((freshNodes) => {
+          setNodes(freshNodes);
+        })
+        .catch((err) => {
+          console.error("[FileExplorer] Failed to reload directory on showHidden change:", err);
+        });
+    }
+  }, []);
+
 
   /**
    * Refreshes the explorer tree, preserving expanded folder states.
@@ -264,11 +276,19 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
 
       try {
         if (!targetPath || normalizePath(targetPath) === normalizePath(ws.rootPath)) {
-          const freshNodes = await loadDirectoryRecursive(ws.rootPath, expandedPathsRef.current);
+          const freshNodes = await loadDirectoryRecursiveHelper(
+            ws.rootPath,
+            expandedPathsRef.current,
+            showHiddenRef.current
+          );
           setNodes(freshNodes);
         } else {
           const normTarget = normalizePath(targetPath);
-          const subChildren = await loadDirectoryRecursive(normTarget, expandedPathsRef.current);
+          const subChildren = await loadDirectoryRecursiveHelper(
+            normTarget,
+            expandedPathsRef.current,
+            showHiddenRef.current
+          );
           setNodes((prev) =>
             updateNodeInTree(prev, normTarget, (node) => ({
               ...node,
@@ -284,15 +304,17 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
         setIsLoading(false);
       }
     },
-    [loadDirectoryRecursive]
+    []
   );
+
+  const activeWorkspacePath = activeWorkspace?.rootPath;
 
   // Restore workspace state or reset when active workspace changes
   useEffect(() => {
     let isCancelled = false;
 
     async function initWorkspace() {
-      if (!activeWorkspace) {
+      if (!activeWorkspacePath) {
         setNodes([]);
         setSelectedNode(null);
         setSelectedPaths(new Set());
@@ -310,19 +332,25 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
       setInlineAction(null);
       setBulkDeleteCandidate(null);
 
-      const savedState = WorkspaceService.getWorkspaceState(activeWorkspace.rootPath);
+      const savedState = WorkspaceService.getWorkspaceState(activeWorkspacePath);
       const restoredExpanded = savedState?.expandedPaths
         ? new Set(savedState.expandedPaths)
         : new Set<string>();
       const restoredSortMode = (savedState?.sortMode as ExplorerSortMode) || "folders-first";
       const restoredShowHidden = savedState?.showHidden ?? false;
 
+      expandedPathsRef.current = restoredExpanded;
+      showHiddenRef.current = restoredShowHidden;
       setExpandedPaths(restoredExpanded);
       setSortConfig({ mode: restoredSortMode, caseSensitive: false });
-      setShowHidden(restoredShowHidden);
+      setShowHiddenState(restoredShowHidden);
 
       try {
-        const items = await loadDirectoryRecursive(activeWorkspace.rootPath, restoredExpanded);
+        const items = await loadDirectoryRecursiveHelper(
+          activeWorkspacePath,
+          restoredExpanded,
+          restoredShowHidden
+        );
         if (!isCancelled) {
           setNodes(items);
         }
@@ -343,17 +371,17 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
     return () => {
       isCancelled = true;
     };
-  }, [activeWorkspace, loadDirectoryRecursive]);
+  }, [activeWorkspacePath]);
 
   // Persist workspace state changes
   useEffect(() => {
-    if (!activeWorkspace) return;
-    WorkspaceService.saveWorkspaceState(activeWorkspace.rootPath, {
+    if (!activeWorkspacePath) return;
+    WorkspaceService.saveWorkspaceState(activeWorkspacePath, {
       expandedPaths: Array.from(expandedPaths),
       sortMode: sortConfig.mode,
       showHidden,
     });
-  }, [activeWorkspace, expandedPaths, sortConfig.mode, showHidden]);
+  }, [activeWorkspacePath, expandedPaths, sortConfig.mode, showHidden]);
 
   // Computed display nodes (filtered & sorted)
   const { displayNodes, matchingCount } = useMemo(() => {
@@ -365,6 +393,10 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
     const sorted = recursivelySortNodes(filtered.filteredNodes, sortConfig);
     return { displayNodes: sorted, matchingCount: filtered.matchingCount };
   }, [nodes, filterQuery, sortConfig]);
+
+  useEffect(() => {
+    displayNodesRef.current = displayNodes;
+  }, [displayNodes]);
 
   // Computed array of currently selected nodes
   const selectedNodes = useMemo(() => {
@@ -401,7 +433,7 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
         );
 
         try {
-          const children = await FileExplorerService.readDirectory(nodePath, showHidden);
+          const children = await FileExplorerService.readDirectory(nodePath, showHiddenRef.current);
           setNodes((prev) =>
             updateNodeInTree(prev, nodePath, (n) => ({
               ...n,
@@ -422,7 +454,7 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
         }
       }
     },
-    [showHidden]
+    []
   );
 
   const collapseAll = useCallback(() => {
@@ -456,7 +488,7 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
       const nodePath = normalizePath(node.path);
 
       if (isShift && lastAnchorNode) {
-        const visible = getVisibleNodes(displayNodes, expandedPathsRef.current);
+        const visible = getVisibleNodes(displayNodesRef.current, expandedPathsRef.current);
         const anchorIdx = visible.findIndex(
           (n) => normalizePath(n.path) === normalizePath(lastAnchorNode.path)
         );
@@ -518,7 +550,7 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
         modifiedAt: node.modifiedAt,
       });
     },
-    [displayNodes, lastAnchorNode]
+    [lastAnchorNode]
   );
 
   const clearSelection = useCallback(() => {
@@ -647,15 +679,37 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
             isDirectory: false,
           });
         } else if (inlineAction.type === "create-folder") {
-          await FileExplorerService.createDirectory(
+          const newDirPath = await FileExplorerService.createDirectory(
             inlineAction.parentPath,
             cleanValue
           );
           await refresh(inlineAction.parentPath);
+          ideEvents.emit("file:created", {
+            path: newDirPath,
+            name: cleanValue,
+            isDirectory: true,
+          });
         } else if (inlineAction.type === "rename" && inlineAction.targetNodeId) {
           const targetNorm = normalizePath(inlineAction.targetNodeId);
           const newPath = await FileExplorerService.rename(targetNorm, cleanValue);
+          const newPathNorm = normalizePath(newPath);
           await refresh(inlineAction.parentPath);
+
+          // Migrate expanded and selected paths to the new renamed path
+          setExpandedPaths((prev) => {
+            if (!prev.has(targetNorm)) return prev;
+            const next = new Set(prev);
+            next.delete(targetNorm);
+            next.add(newPathNorm);
+            return next;
+          });
+          setSelectedPaths((prev) => {
+            if (!prev.has(targetNorm)) return prev;
+            const next = new Set(prev);
+            next.delete(targetNorm);
+            next.add(newPathNorm);
+            return next;
+          });
 
           ideEvents.emit("file:renamed", {
             oldPath: targetNorm,
@@ -1063,57 +1117,106 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
     ]
   );
 
+  const contextValue = useMemo(
+    () => ({
+      nodes,
+      displayNodes,
+      isLoading,
+      error,
+      showHidden,
+      setShowHidden,
+      sortConfig,
+      setSortMode,
+      filterQuery,
+      setFilterQuery,
+      matchingCount,
+      selectedNode,
+      selectedNodes,
+      selectedPaths,
+      selectNode,
+      clearSelection,
+      expandedPaths,
+      toggleExpand,
+      collapseAll,
+      openFile,
+      openToSide,
+      refresh,
+      inlineAction,
+      startCreateFile,
+      startCreateFolder,
+      startRename,
+      cancelInlineAction,
+      commitInlineAction,
+      deleteCandidate: bulkDeleteCandidate?.[0] ?? null,
+      bulkDeleteCandidate,
+      promptDelete,
+      cancelDelete,
+      confirmDelete,
+      clipboard,
+      copyNode,
+      cutNode,
+      copySelected,
+      cutSelected,
+      pasteNode,
+      duplicateNode,
+      copyAbsolutePath,
+      copyRelativePath,
+      revealInFileManager,
+      handleDrop,
+      clearError,
+      handleKeyDown,
+    }),
+    [
+      nodes,
+      displayNodes,
+      isLoading,
+      error,
+      showHidden,
+      setShowHidden,
+      sortConfig,
+      setSortMode,
+      filterQuery,
+      setFilterQuery,
+      matchingCount,
+      selectedNode,
+      selectedNodes,
+      selectedPaths,
+      selectNode,
+      clearSelection,
+      expandedPaths,
+      toggleExpand,
+      collapseAll,
+      openFile,
+      openToSide,
+      refresh,
+      inlineAction,
+      startCreateFile,
+      startCreateFolder,
+      startRename,
+      cancelInlineAction,
+      commitInlineAction,
+      bulkDeleteCandidate,
+      promptDelete,
+      cancelDelete,
+      confirmDelete,
+      clipboard,
+      copyNode,
+      cutNode,
+      copySelected,
+      cutSelected,
+      pasteNode,
+      duplicateNode,
+      copyAbsolutePath,
+      copyRelativePath,
+      revealInFileManager,
+      handleDrop,
+      clearError,
+      handleKeyDown,
+    ]
+  );
+
   return (
-    <FileExplorerContext.Provider
-      value={{
-        nodes,
-        displayNodes,
-        isLoading,
-        error,
-        showHidden,
-        setShowHidden,
-        sortConfig,
-        setSortMode,
-        filterQuery,
-        setFilterQuery,
-        matchingCount,
-        selectedNode,
-        selectedNodes,
-        selectedPaths,
-        selectNode,
-        clearSelection,
-        expandedPaths,
-        toggleExpand,
-        collapseAll,
-        openFile,
-        openToSide,
-        refresh,
-        inlineAction,
-        startCreateFile,
-        startCreateFolder,
-        startRename,
-        cancelInlineAction,
-        commitInlineAction,
-        deleteCandidate: bulkDeleteCandidate?.[0] ?? null,
-        bulkDeleteCandidate,
-        promptDelete,
-        cancelDelete,
-        confirmDelete,
-        clipboard,
-        copyNode,
-        cutNode,
-        copySelected,
-        cutSelected,
-        pasteNode,
-        duplicateNode,
-        copyAbsolutePath,
-        copyRelativePath,
-        revealInFileManager,
-        handleDrop,
-        clearError,
-        handleKeyDown,
-      }}
-    >
+    <FileExplorerContext.Provider value={contextValue}>
       {children}
     </FileExplorerContext.Provider>
   );

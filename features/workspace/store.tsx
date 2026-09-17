@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { Workspace, RecentWorkspace } from "./types";
 import { WorkspaceService } from "./service";
 import { ideEvents } from "@/lib/events";
@@ -159,22 +159,37 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     setError(null);
   }, []);
 
+  const contextValue = useMemo(
+    () => ({
+      activeWorkspace,
+      recentWorkspaces,
+      isLoading,
+      error,
+      openFolder,
+      openWorkspacePath,
+      closeWorkspace,
+      removeRecent,
+      clearRecent,
+      clearError,
+      refreshRecent,
+    }),
+    [
+      activeWorkspace,
+      recentWorkspaces,
+      isLoading,
+      error,
+      openFolder,
+      openWorkspacePath,
+      closeWorkspace,
+      removeRecent,
+      clearRecent,
+      clearError,
+      refreshRecent,
+    ]
+  );
+
   return (
-    <WorkspaceContext.Provider
-      value={{
-        activeWorkspace,
-        recentWorkspaces,
-        isLoading,
-        error,
-        openFolder,
-        openWorkspacePath,
-        closeWorkspace,
-        removeRecent,
-        clearRecent,
-        clearError,
-        refreshRecent,
-      }}
-    >
+    <WorkspaceContext.Provider value={contextValue}>
       {children}
     </WorkspaceContext.Provider>
   );

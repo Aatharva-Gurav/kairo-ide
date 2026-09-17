@@ -5,6 +5,14 @@ import { useWorkspace } from "../store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import {
+  Empty,
+  EmptyHeader,
+  EmptyTitle,
+  EmptyDescription,
+  EmptyContent,
+  EmptyMedia,
+} from "@/components/ui/empty";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Folder01Icon,
@@ -68,26 +76,28 @@ export function EmptyWorkspaceView() {
         </div>
       )}
 
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-2">
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary/10 text-sidebar-primary">
-            <HugeiconsIcon icon={Folder01Icon} className="size-4" />
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold leading-tight">No Folder Open</h3>
-            <p className="text-xs text-muted-foreground">Open a folder to start working</p>
-          </div>
-        </div>
-
-        <Button
-          onClick={() => openFolder()}
-          className="w-full mt-2 cursor-pointer"
-          size="sm"
-        >
-          <HugeiconsIcon icon={Folder01Icon} className="size-4 mr-1.5" />
-          Open Folder
-        </Button>
-      </div>
+      {/* Primary Empty Workspace Call-to-Action */}
+      <Empty className="border border-dashed border-sidebar-border/80 bg-sidebar-accent/15 p-4 rounded-xl gap-3">
+        <EmptyHeader>
+          <EmptyMedia variant="icon" className="size-9 rounded-lg bg-sidebar-primary/10 text-sidebar-primary mb-0.5">
+            <HugeiconsIcon icon={Folder01Icon} className="size-4.5" />
+          </EmptyMedia>
+          <EmptyTitle className="text-sm font-semibold">No Folder Open</EmptyTitle>
+          <EmptyDescription className="text-xs text-muted-foreground">
+            Open a folder to start working
+          </EmptyDescription>
+        </EmptyHeader>
+        <EmptyContent className="w-full">
+          <Button
+            onClick={() => openFolder()}
+            className="w-full cursor-pointer"
+            size="sm"
+          >
+            <HugeiconsIcon icon={Folder01Icon} className="size-4 mr-1.5" />
+            Open Folder
+          </Button>
+        </EmptyContent>
+      </Empty>
 
       <Separator className="my-1 bg-sidebar-border" />
 
@@ -129,13 +139,26 @@ export function EmptyWorkspaceView() {
         )}
 
         {recentWorkspaces.length === 0 ? (
-          <div className="py-4 text-center text-xs text-muted-foreground/70">
-            No recently opened projects
-          </div>
+          <Empty className="border-0 bg-transparent py-6 px-2 gap-1.5">
+            <EmptyMedia variant="icon" className="size-7 rounded-md bg-muted/50 text-muted-foreground mb-0">
+              <HugeiconsIcon icon={Clock01Icon} className="size-3.5" />
+            </EmptyMedia>
+            <EmptyTitle className="text-xs font-normal text-muted-foreground">
+              No recently opened projects
+            </EmptyTitle>
+            <EmptyDescription className="text-[11px] text-muted-foreground/60">
+              Opened workspaces will appear here
+            </EmptyDescription>
+          </Empty>
         ) : filteredRecents.length === 0 ? (
-          <div className="py-3 text-center text-xs text-muted-foreground/70">
-            No matching projects found
-          </div>
+          <Empty className="border-0 bg-transparent py-5 px-2 gap-1">
+            <EmptyTitle className="text-xs font-normal text-muted-foreground">
+              No matching projects found
+            </EmptyTitle>
+            <EmptyDescription className="text-[11px] text-muted-foreground/60">
+              Try a different search query
+            </EmptyDescription>
+          </Empty>
         ) : (
           <div className="flex flex-col gap-1 overflow-y-auto max-h-72">
             {filteredRecents.map((project) => {

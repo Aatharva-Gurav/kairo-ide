@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useRef, useEffect } from "react";
 import { useFileExplorer } from "../store";
@@ -9,17 +9,13 @@ import {
   FileAddIcon,
   FolderAddIcon,
   RefreshIcon,
-  Search01Icon,
   CollapseIcon,
   ArrowUpDownIcon,
   EyeIcon,
   EyeOffIcon,
+  Cancel01Icon,
 } from "@hugeicons/core-free-icons";
-
-interface ExplorerToolbarProps {
-  isFilterOpen: boolean;
-  onToggleFilter: () => void;
-}
+import { cn } from "@/lib/utils";
 
 const SORT_OPTIONS: Array<{ mode: ExplorerSortMode; label: string }> = [
   { mode: "folders-first", label: "Folders First" },
@@ -28,10 +24,7 @@ const SORT_OPTIONS: Array<{ mode: ExplorerSortMode; label: string }> = [
   { mode: "type-based", label: "By Extension" },
 ];
 
-export function ExplorerToolbar({
-  isFilterOpen,
-  onToggleFilter,
-}: ExplorerToolbarProps) {
+export function ExplorerToolbar() {
   const {
     startCreateFile,
     startCreateFolder,
@@ -43,7 +36,7 @@ export function ExplorerToolbar({
     setSortMode,
   } = useFileExplorer();
 
-  const { activeWorkspace } = useWorkspace();
+  const { activeWorkspace, closeWorkspace } = useWorkspace();
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
   const sortMenuRef = useRef<HTMLDivElement>(null);
 
@@ -65,85 +58,59 @@ export function ExplorerToolbar({
   if (!activeWorkspace) return null;
 
   return (
-    <div className="flex items-center justify-between px-2 py-1 border-b border-sidebar-border/60 bg-sidebar/50 text-muted-foreground select-none">
-      <div className="flex items-center gap-0.5">
-        <button
-          onClick={() => startCreateFile(activeWorkspace.rootPath)}
-          className="p-1 rounded text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer transition-colors"
-          title="New File..."
-        >
-          <HugeiconsIcon icon={FileAddIcon} className="size-3.5" />
-        </button>
-        <button
-          onClick={() => startCreateFolder(activeWorkspace.rootPath)}
-          className="p-1 rounded text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer transition-colors"
-          title="New Folder..."
-        >
-          <HugeiconsIcon icon={FolderAddIcon} className="size-3.5" />
-        </button>
-        <button
-          onClick={() => refresh()}
-          className="p-1 rounded text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer transition-colors"
-          title="Refresh Explorer"
-        >
-          <HugeiconsIcon icon={RefreshIcon} className="size-3.5" />
-        </button>
-        <button
-          onClick={collapseAll}
-          className="p-1 rounded text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer transition-colors"
-          title="Collapse All Folders"
-        >
-          <HugeiconsIcon icon={CollapseIcon} className="size-3.5" />
-        </button>
-      </div>
+    <div className="absolute bottom-3.5 left-1/2 -translate-x-1/2 z-30 flex items-center gap-0.5 px-2 py-1 rounded-full border border-sidebar-border/80 bg-sidebar/75 dark:bg-sidebar/85 backdrop-blur-md shadow-lg shadow-black/10 text-muted-foreground select-none max-w-[calc(100%-1.5rem)]">
+      {/* File & Folder Actions */}
+      <button
+        onClick={() => startCreateFile(activeWorkspace.rootPath)}
+        className="p-1.5 rounded-full hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer transition-colors"
+        title="New File..."
+      >
+        <HugeiconsIcon icon={FileAddIcon} className="size-3.5" />
+      </button>
+      <button
+        onClick={() => startCreateFolder(activeWorkspace.rootPath)}
+        className="p-1.5 rounded-full hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer transition-colors"
+        title="New Folder..."
+      >
+        <HugeiconsIcon icon={FolderAddIcon} className="size-3.5" />
+      </button>
+      <button
+        onClick={() => refresh()}
+        className="p-1.5 rounded-full hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer transition-colors"
+        title="Refresh Explorer"
+      >
+        <HugeiconsIcon icon={RefreshIcon} className="size-3.5" />
+      </button>
+      <button
+        onClick={collapseAll}
+        className="p-1.5 rounded-full hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer transition-colors"
+        title="Collapse All Folders"
+      >
+        <HugeiconsIcon icon={CollapseIcon} className="size-3.5" />
+      </button>
 
-      <div className="flex items-center gap-0.5 relative">
-        <button
-          onClick={onToggleFilter}
-          className={`p-1 rounded cursor-pointer transition-colors ${
-            isFilterOpen
-              ? "bg-sidebar-accent text-sidebar-primary font-medium"
-              : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-          }`}
-          title="Filter Files (Ctrl+F)"
-        >
-          <HugeiconsIcon icon={Search01Icon} className="size-3.5" />
-        </button>
+      {/* Divider */}
+      <div className="h-3.5 w-px bg-sidebar-border/80 my-auto mx-0.5 shrink-0" />
 
-        {/* Sort Menu Button */}
+      {/* Sort Menu Button with Upward Popover */}
+      <div className="relative flex items-center">
         <button
           onClick={() => setIsSortMenuOpen((prev) => !prev)}
-          className={`p-1 rounded cursor-pointer transition-colors ${
+          className={cn(
+            "p-1.5 rounded-full cursor-pointer transition-colors",
             isSortMenuOpen
               ? "bg-sidebar-accent text-sidebar-primary"
-              : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-          }`}
+              : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          )}
           title={`Sort: ${SORT_OPTIONS.find((s) => s.mode === sortConfig.mode)?.label}`}
         >
           <HugeiconsIcon icon={ArrowUpDownIcon} className="size-3.5" />
         </button>
 
-        {/* Hidden Files Toggle */}
-        <button
-          onClick={() => setShowHidden(!showHidden)}
-          className={`p-1 rounded cursor-pointer transition-colors ${
-            showHidden
-              ? "bg-sidebar-accent text-sidebar-primary"
-              : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-          }`}
-          title={showHidden ? "Hide Hidden Files" : "Show Hidden Files"}
-        >
-          <HugeiconsIcon
-            icon={showHidden ? EyeIcon : EyeOffIcon}
-            className="size-3.5"
-          />
-        </button>
-
-        {/* Sort Dropdown Popover */}
         {isSortMenuOpen && (
           <div
             ref={sortMenuRef}
-            className="absolute right-0 top-full mt-1 z-50 w-36 rounded-md border border-border bg-popover p-1 shadow-md text-popover-foreground text-xs"
+            className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-50 w-36 rounded-xl border border-sidebar-border/80 bg-popover/95 backdrop-blur-md p-1 shadow-xl text-popover-foreground text-xs"
           >
             <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
               Sort By
@@ -155,11 +122,12 @@ export function ExplorerToolbar({
                   setSortMode(opt.mode);
                   setIsSortMenuOpen(false);
                 }}
-                className={`flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs cursor-pointer ${
+                className={cn(
+                  "flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-xs cursor-pointer",
                   sortConfig.mode === opt.mode
                     ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold"
                     : "hover:bg-sidebar-accent/50 text-sidebar-foreground"
-                }`}
+                )}
               >
                 <span>{opt.label}</span>
                 {sortConfig.mode === opt.mode && (
@@ -170,7 +138,35 @@ export function ExplorerToolbar({
           </div>
         )}
       </div>
+
+      {/* Hidden Files Toggle */}
+      <button
+        onClick={() => setShowHidden(!showHidden)}
+        className={cn(
+          "p-1.5 rounded-full cursor-pointer transition-colors",
+          showHidden
+            ? "bg-sidebar-accent text-sidebar-primary"
+            : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+        )}
+        title={showHidden ? "Hide Hidden Files" : "Show Hidden Files"}
+      >
+        <HugeiconsIcon
+          icon={showHidden ? EyeIcon : EyeOffIcon}
+          className="size-3.5"
+        />
+      </button>
+
+      {/* Divider */}
+      <div className="h-3.5 w-px bg-sidebar-border/80 my-auto mx-0.5 shrink-0" />
+
+      {/* Close Workspace Button */}
+      <button
+        onClick={closeWorkspace}
+        className="p-1.5 rounded-full text-muted-foreground hover:bg-destructive/15 hover:text-destructive cursor-pointer transition-colors"
+        title="Close Workspace"
+      >
+        <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" />
+      </button>
     </div>
   );
 }
-

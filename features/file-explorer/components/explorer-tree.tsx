@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
 import { useFileExplorer } from "../store";
@@ -96,7 +96,7 @@ export function ExplorerTree({ onOpenContextMenu }: ExplorerTreeProps) {
       onDragOver={handleRootDragOver}
       onDragLeave={handleRootDragLeave}
       onDrop={handleRootDrop}
-      className={`flex flex-col flex-1 min-h-0 w-full outline-none select-none overflow-y-auto no-scrollbar py-1 ${
+      className={`flex flex-col flex-1 min-h-0 w-full outline-none select-none overflow-y-auto no-scrollbar pt-1.5 pb-16 px-1 ${
         isRootDragOver ? "bg-sidebar-primary/5" : ""
       }`}
     >

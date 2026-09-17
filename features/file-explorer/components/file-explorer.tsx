@@ -1,20 +1,17 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
-import { useFileExplorer } from "../store";
 import { useWorkspace } from "../../workspace/store";
-import { ExplorerToolbar } from "./explorer-toolbar";
-import { ExplorerFilter } from "./explorer-filter";
+import { ExplorerSearchBar } from "./explorer-search-bar";
 import { ExplorerBulkBar } from "./explorer-bulk-bar";
 import { ExplorerTree } from "./explorer-tree";
+import { ExplorerToolbar } from "./explorer-toolbar";
 import { ContextMenu } from "./context-menu";
 import { ConfirmDeleteModal } from "./confirm-delete-modal";
 import { ContextMenuState, FileSystemNode } from "../types";
 
 export function FileExplorer() {
   const { activeWorkspace } = useWorkspace();
-  const { filterQuery } = useFileExplorer();
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   const [contextMenu, setContextMenu] = useState<ContextMenuState>({
     isOpen: false,
@@ -45,26 +42,19 @@ export function FileExplorer() {
     return null;
   }
 
-  const showFilter = isFilterOpen || Boolean(filterQuery);
-
   return (
-    <div className="flex flex-col flex-1 min-h-0 w-full overflow-hidden">
-      {/* Explorer Toolbar: Filter, Sort, Hidden, Collapse, Actions */}
-      <ExplorerToolbar
-        isFilterOpen={showFilter}
-        onToggleFilter={() => setIsFilterOpen((prev) => !prev)}
-      />
-
-      {/* Explorer Filter Bar */}
-      {showFilter && (
-        <ExplorerFilter onClose={() => setIsFilterOpen(false)} />
-      )}
+    <div className="relative flex flex-col flex-1 min-h-0 w-full h-full overflow-hidden">
+      {/* Fixed Search Bar at top of sidebar */}
+      <ExplorerSearchBar />
 
       {/* Bulk Selection Quick Action Bar */}
       <ExplorerBulkBar />
 
       {/* Tree Hierarchy Component */}
       <ExplorerTree onOpenContextMenu={handleOpenContextMenu} />
+
+      {/* Floating Toolbar Button Group at bottom center */}
+      <ExplorerToolbar />
 
       {/* Context Menu */}
       <ContextMenu state={contextMenu} onClose={handleCloseContextMenu} />
