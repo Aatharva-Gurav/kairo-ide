@@ -19,6 +19,7 @@ import {
 import { FileExplorerService } from "./service";
 import { useWorkspace } from "../workspace/store";
 import { WorkspaceService } from "../workspace/service";
+import { SettingsService } from "@/features/settings/services/settings.service";
 import { ideEvents } from "@/lib/events";
 import { dirname, normalizePath, relativePath } from "@/lib/tauri-ipc";
 
@@ -215,7 +216,9 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
   const [bulkDeleteCandidate, setBulkDeleteCandidate] = useState<FileSystemNode[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showHidden, setShowHiddenState] = useState(false);
+  const [showHidden, setShowHiddenState] = useState<boolean>(() => {
+    return SettingsService.getEffectiveSettings().explorer.showHidden;
+  });
   const [filterQuery, setFilterQuery] = useState("");
   const [sortConfig, setSortConfig] = useState<ExplorerSortConfig>({
     mode: "folders-first",
@@ -258,6 +261,17 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
         });
     }
   }, []);
+
+  // Subscribe to live settings changes (e.g. showHidden toggle from settings modal)
+  useEffect(() => {
+    return SettingsService.subscribe((effective, changedKey) => {
+      if (!changedKey || changedKey === "explorer.showHidden") {
+        if (effective.explorer.showHidden !== showHiddenRef.current) {
+          setShowHidden(effective.explorer.showHidden);
+        }
+      }
+    });
+  }, [setShowHidden]);
 
 
   /**

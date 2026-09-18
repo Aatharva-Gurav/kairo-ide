@@ -53,6 +53,15 @@ export type IDEEventMap = {
   "explorer:collapse-all": void;
   "explorer:multi-selected": { paths: string[] };
   "watcher:fs-changed": { type: "create" | "modify" | "delete"; path: string };
+
+  "editor:document-opened": { path: string };
+  "editor:document-closed": { path: string };
+  "editor:document-saved": { path: string };
+  "editor:document-changed": { path: string; isDirty: boolean };
+  "editor:active-changed": { path: string | null };
+  "editor:reveal-in-explorer": { path: string };
+  "search:navigate-to-match": { path: string; line: number; column: number; matchLength?: number };
+  "sidebar:switch-tab": "explorer" | "search";
 };
 
 type EventHandler<T> = (data: T) => void;

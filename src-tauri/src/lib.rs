@@ -30,6 +30,11 @@ pub fn run() {
       fs_duplicate,
       fs_reveal,
       fs_exists,
+      fs_read_file,
+      fs_write_file,
+      fs_search_workspace,
+      fs_replace_in_files,
+      fs_list_workspace_files,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

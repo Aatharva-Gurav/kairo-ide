@@ -43,8 +43,8 @@ export function ExplorerSearchBar() {
   };
 
   return (
-    <div className="flex items-center h-11 pl-2.5 pr-11 border-b border-sidebar-border/70 bg-sidebar/50 backdrop-blur-xs select-none shrink-0">
-      <div className="relative flex flex-1 items-center">
+    <div className="flex items-center h-10 px-2.5 border-b border-sidebar-border/70 bg-sidebar/50 backdrop-blur-xs select-none shrink-0">
+      <div className="relative flex flex-1 items-center min-w-0">
         <HugeiconsIcon
           icon={Search01Icon}
           className="absolute left-2.5 size-3.5 text-muted-foreground pointer-events-none"
@@ -56,7 +56,7 @@ export function ExplorerSearchBar() {
           onChange={(e) => setFilterQuery(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Search files..."
-          className="h-7 w-full rounded-md bg-background/70 dark:bg-background/50 border border-sidebar-border/80 pl-8 pr-12 text-xs text-foreground placeholder:text-muted-foreground/60 outline-none ring-1 ring-transparent focus:ring-sidebar-ring transition-all"
+          className="h-7 w-full rounded-md bg-background/70 dark:bg-background/50 border border-sidebar-border/80 pl-8 pr-14 text-xs text-foreground placeholder:text-muted-foreground/60 outline-none ring-1 ring-transparent focus:ring-sidebar-ring transition-all"
         />
         {filterQuery ? (
           <div className="absolute right-1.5 flex items-center gap-1">

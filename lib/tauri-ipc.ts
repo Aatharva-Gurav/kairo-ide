@@ -189,9 +189,6 @@ export async function invokeCommand<T>(command: string, args?: Record<string, un
     return await invoke<T>(command, args);
   } catch (error) {
     throw new Error(formatFsError(error));
-    const formatted = formatFsError(error);
-    const code = parseFsErrorCode(error);
-    throw new FileSystemError(code, formatted);
   }
 }
 
@@ -209,4 +206,102 @@ export async function revealInFileManager(pathStr: string): Promise<void> {
 export async function pathExists(pathStr: string): Promise<boolean> {
   const norm = normalizePath(pathStr);
   return await invokeCommand<boolean>("fs_exists", { path: norm });
+}
+
+export interface FileContentResult {
+  content: string;
+  isBinary: boolean;
+  size: number;
+  readonly: boolean;
+}
+
+export interface SearchQueryOptions {
+  isCaseSensitive: boolean;
+  isWholeWord: boolean;
+  isRegex: boolean;
+  includePatterns: string[];
+  excludePatterns: string[];
+  maxResults?: number;
+}
+
+export interface WorkspaceSearchMatch {
+  filePath: string;
+  lineNumber: number;
+  column: number;
+  matchLength: number;
+  lineContent: string;
+}
+
+export interface FileReplacementPayload {
+  filePath: string;
+  lineNumber: number;
+  column: number;
+  matchLength: number;
+  replacement: string;
+}
+
+export interface ReplaceSummary {
+  filesModified: number;
+  occurrencesReplaced: number;
+}
+
+/**
+ * Reads file content safely from the filesystem via Tauri backend.
+ */
+export async function readFileContent(pathStr: string): Promise<FileContentResult> {
+  const norm = normalizePath(pathStr);
+  return await invokeCommand<FileContentResult>("fs_read_file", { path: norm });
+}
+
+/**
+ * Writes file content safely to the filesystem via Tauri backend.
+ */
+export async function writeFileContent(pathStr: string, content: string): Promise<void> {
+  const norm = normalizePath(pathStr);
+  await invokeCommand<void>("fs_write_file", { path: norm, content });
+}
+
+/**
+ * Searches the workspace files for text matches using native backend engine.
+ */
+export async function searchWorkspaceFiles(
+  rootPath: string,
+  query: string,
+  options: SearchQueryOptions
+): Promise<WorkspaceSearchMatch[]> {
+  const normRoot = normalizePath(rootPath);
+  return await invokeCommand<WorkspaceSearchMatch[]>("fs_search_workspace", {
+    rootPath: normRoot,
+    query,
+    options,
+  });
+}
+
+/**
+ * Executes batch replacements across workspace files via Tauri backend.
+ */
+export async function replaceInWorkspaceFiles(
+  replacements: FileReplacementPayload[]
+): Promise<ReplaceSummary> {
+  return await invokeCommand<ReplaceSummary>("fs_replace_in_files", {
+    replacements: replacements.map((r) => ({
+      ...r,
+      filePath: normalizePath(r.filePath),
+    })),
+  });
+}
+
+/**
+ * Lists all project files for fast Quick Open navigation.
+ */
+export async function listWorkspaceFiles(
+  rootPath: string,
+  maxFiles?: number
+): Promise<string[]> {
+  const normRoot = normalizePath(rootPath);
+  const files = await invokeCommand<string[]>("fs_list_workspace_files", {
+    rootPath: normRoot,
+    maxFiles,
+  });
+  return files.map(normalizePath);
 }

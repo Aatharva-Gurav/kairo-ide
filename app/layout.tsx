@@ -20,6 +20,8 @@ export const metadata: Metadata = {
   description: "Modern desktop IDE built with Next.js and Tauri",
 };
 
+import { ErrorBoundaryGuard } from "@/components/error-boundary-guard";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -30,7 +32,9 @@ export default function RootLayout({
       lang="en"
       className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", inter.variable)}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <ErrorBoundaryGuard>{children}</ErrorBoundaryGuard>
+      </body>
     </html>
   );
 }
