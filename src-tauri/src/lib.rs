@@ -1,7 +1,10 @@
 pub mod commands;
+pub mod menu;
 
 use commands::fs::*;
 use commands::workspace::*;
+use menu::*;
+use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -14,10 +17,17 @@ pub fn run() {
             .build(),
         )?;
       }
+
+      let menus = menu::init_menus(app.handle())?;
+      app.manage(std::sync::Mutex::new(Some(menus)));
+
       Ok(())
     })
+    .on_menu_event(menu::handle_menu_event)
     .invoke_handler(tauri::generate_handler![
       workspace_pick_folder,
+      workspace_pick_file,
+      workspace_save_file_as,
       workspace_validate_path,
       workspace_detect_project,
       fs_read_directory,
@@ -35,6 +45,12 @@ pub fn run() {
       fs_search_workspace,
       fs_replace_in_files,
       fs_list_workspace_files,
+      menu_popup,
+      menu_sync_recent_workspaces,
+      window_minimize,
+      window_toggle_maximize,
+      window_close,
+      window_is_maximized,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

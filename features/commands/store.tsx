@@ -20,6 +20,8 @@ import { CommandPaletteModal } from "@/features/command-palette/components/comma
 import { QuickOpenModal } from "@/features/editor/components/quick-open-modal";
 import { SettingsModal } from "@/features/settings/components/settings-modal";
 import { ideEvents } from "@/lib/events";
+import { isTauriEnvironment, invokeCommand, writeFileContent } from "@/lib/tauri-ipc";
+import { WorkspaceService } from "@/features/workspace/service";
 
 export interface CommandContextValue {
   isCommandPaletteOpen: boolean;
@@ -43,17 +45,17 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
   const [isQuickOpenOpen, setQuickOpenOpen] = useState(false);
 
   // Subsystem hooks
-  const { activeWorkspace, openFolder, closeWorkspace } = useWorkspace();
+  const { activeWorkspace, openFolder, closeWorkspace, openWorkspacePath } = useWorkspace();
   const fileExplorer = useFileExplorer();
   const editor = useEditor();
   const { openSettings, updateSetting, settings } = useSettings();
   const { toggleSidebar } = useSidebar();
 
   // Keep references to prevent stale closures in registered commands
-  const workspaceRef = useRef({ activeWorkspace, openFolder, closeWorkspace });
+  const workspaceRef = useRef({ activeWorkspace, openFolder, closeWorkspace, openWorkspacePath });
   useEffect(() => {
-    workspaceRef.current = { activeWorkspace, openFolder, closeWorkspace };
-  }, [activeWorkspace, openFolder, closeWorkspace]);
+    workspaceRef.current = { activeWorkspace, openFolder, closeWorkspace, openWorkspacePath };
+  }, [activeWorkspace, openFolder, closeWorkspace, openWorkspacePath]);
 
   const explorerRef = useRef(fileExplorer);
   useEffect(() => {
@@ -492,6 +494,232 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
+
+  // Synchronize recent workspaces with native Tauri menu
+  useEffect(() => {
+    if (!isTauriEnvironment()) return;
+    const recents = WorkspaceService.getRecentWorkspaces();
+    invokeCommand("menu_sync_recent_workspaces", {
+      paths: recents.map((r) => r.rootPath),
+    }).catch(() => {});
+  }, [activeWorkspace]);
+
+  // Native Tauri Menu Event Listener
+  useEffect(() => {
+    if (!isTauriEnvironment()) return;
+
+    let unlisten: (() => void) | undefined;
+
+    import("@tauri-apps/api/event").then(({ listen }) => {
+      listen<{ id: string; payload?: string }>("menu:action", async (event) => {
+        const { id, payload } = event.payload;
+
+        switch (id) {
+          case "file.new": {
+            if (workspaceRef.current.activeWorkspace) {
+              explorerRef.current.startCreateFile();
+            } else {
+              editorRef.current.openDocument("untitled-1.txt").catch(() => {});
+            }
+            break;
+          }
+          case "file.open": {
+            try {
+              const picked = await invokeCommand<string | null>("workspace_pick_file");
+              if (picked) {
+                await editorRef.current.openDocument(picked);
+              }
+            } catch (err) {
+              console.error("[NativeMenu] Failed to open file:", err);
+            }
+            break;
+          }
+          case "file.openFolder": {
+            await workspaceRef.current.openFolder();
+            break;
+          }
+          case "file.openRecent": {
+            if (payload) {
+              await workspaceRef.current.openWorkspacePath(payload);
+            }
+            break;
+          }
+          case "file.clearRecent": {
+            WorkspaceService.clearRecentWorkspaces();
+            invokeCommand("menu_sync_recent_workspaces", { paths: [] }).catch(() => {});
+            break;
+          }
+          case "file.save": {
+            await editorRef.current.saveDocument();
+            break;
+          }
+          case "file.saveAs": {
+            const doc = editorRef.current.activeDocument;
+            if (!doc) break;
+            try {
+              const targetPath = await invokeCommand<string | null>("workspace_save_file_as", {
+                defaultPath: doc.path,
+              });
+              if (targetPath) {
+                await writeFileContent(targetPath, doc.content);
+                await editorRef.current.openDocument(targetPath);
+              }
+            } catch (err) {
+              console.error("[NativeMenu] Failed to Save As:", err);
+            }
+            break;
+          }
+          case "file.saveAll": {
+            await editorRef.current.saveAllDocuments();
+            break;
+          }
+          case "file.closeEditor": {
+            if (editorRef.current.activeDocumentId) {
+              await editorRef.current.closeDocument(editorRef.current.activeDocumentId);
+            }
+            break;
+          }
+          case "edit.undo": {
+            const monaco = editorRef.current.monacoEditorRef.current;
+            if (monaco) {
+              monaco.trigger("nativeMenu", "undo", null);
+            } else {
+              document.execCommand("undo");
+            }
+            break;
+          }
+          case "edit.redo": {
+            const monaco = editorRef.current.monacoEditorRef.current;
+            if (monaco) {
+              monaco.trigger("nativeMenu", "redo", null);
+            } else {
+              document.execCommand("redo");
+            }
+            break;
+          }
+          case "edit.cut": {
+            const monaco = editorRef.current.monacoEditorRef.current;
+            if (monaco) {
+              monaco.trigger("nativeMenu", "editor.action.clipboardCutAction", null);
+            } else {
+              document.execCommand("cut");
+            }
+            break;
+          }
+          case "edit.copy": {
+            const monaco = editorRef.current.monacoEditorRef.current;
+            if (monaco) {
+              monaco.trigger("nativeMenu", "editor.action.clipboardCopyAction", null);
+            } else {
+              document.execCommand("copy");
+            }
+            break;
+          }
+          case "edit.paste": {
+            const monaco = editorRef.current.monacoEditorRef.current;
+            if (monaco) {
+              monaco.trigger("nativeMenu", "editor.action.clipboardPasteAction", null);
+            } else {
+              document.execCommand("paste");
+            }
+            break;
+          }
+          case "edit.selectAll":
+          case "selection.selectAll": {
+            const monaco = editorRef.current.monacoEditorRef.current;
+            if (monaco) {
+              monaco.trigger("nativeMenu", "editor.action.selectAll", null);
+            } else {
+              document.execCommand("selectAll");
+            }
+            break;
+          }
+          case "selection.expand": {
+            editorRef.current.monacoEditorRef.current?.trigger(
+              "nativeMenu",
+              "editor.action.smartSelect.expand",
+              null
+            );
+            break;
+          }
+          case "selection.shrink": {
+            editorRef.current.monacoEditorRef.current?.trigger(
+              "nativeMenu",
+              "editor.action.smartSelect.shrink",
+              null
+            );
+            break;
+          }
+          case "selection.copyLineUp": {
+            editorRef.current.monacoEditorRef.current?.trigger(
+              "nativeMenu",
+              "editor.action.copyLinesUpAction",
+              null
+            );
+            break;
+          }
+          case "selection.copyLineDown": {
+            editorRef.current.monacoEditorRef.current?.trigger(
+              "nativeMenu",
+              "editor.action.copyLinesDownAction",
+              null
+            );
+            break;
+          }
+          case "selection.moveLineUp": {
+            editorRef.current.monacoEditorRef.current?.trigger(
+              "nativeMenu",
+              "editor.action.moveLinesUpAction",
+              null
+            );
+            break;
+          }
+          case "selection.moveLineDown": {
+            editorRef.current.monacoEditorRef.current?.trigger(
+              "nativeMenu",
+              "editor.action.moveLinesDownAction",
+              null
+            );
+            break;
+          }
+          case "view.commandPalette": {
+            openCommandPalette();
+            break;
+          }
+          case "view.editorLayout.splitRight": {
+            editorRef.current.toggleSplitView();
+            break;
+          }
+          case "view.explorer": {
+            ideEvents.emit("sidebar:switch-tab", "explorer");
+            break;
+          }
+          case "view.search": {
+            ideEvents.emit("sidebar:switch-tab", "search");
+            break;
+          }
+          case "help.welcome": {
+            if (workspaceRef.current.activeWorkspace) {
+              workspaceRef.current.closeWorkspace();
+            }
+            break;
+          }
+          case "help.keyboardShortcuts": {
+            settingsRef.current.openSettings("shortcuts");
+            break;
+          }
+          default:
+            break;
+        }
+      }).then((fn) => {
+        unlisten = fn;
+      });
+    });
+
+    return () => {
+      if (unlisten) unlisten();
+    };
+  }, [openCommandPalette]);
 
   const executeCommand = useCallback(async (id: string): Promise<boolean> => {
     return await CommandRegistry.execute(id);

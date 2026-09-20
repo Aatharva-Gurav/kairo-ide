@@ -24,12 +24,14 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Folder01Icon } from "@hugeicons/core-free-icons";
 import { KairoBrandIcon } from "@/components/kairo-brand-icon";
 
+import { AppTitleBar } from "@/components/app-titlebar";
+
 function PageContent() {
   const { activeWorkspace, openFolder } = useWorkspace();
   const { documents } = useEditor();
 
   return (
-    <SidebarInset className="h-screen overflow-hidden flex flex-col p-0 m-0 border-0">
+    <SidebarInset className="h-[calc(100vh-30px)] overflow-hidden flex flex-col p-0 m-0 border-0">
       {activeWorkspace || documents.length > 0 ? (
         <EditorWorkspace />
       ) : (
@@ -76,8 +78,13 @@ export default function Page() {
                   }
                 >
                   <CommandProvider>
-                    <AppSidebar />
-                    <PageContent />
+                    <div className="flex flex-col h-screen w-screen overflow-hidden">
+                      <AppTitleBar />
+                      <div className="flex flex-1 overflow-hidden relative">
+                        <AppSidebar />
+                        <PageContent />
+                      </div>
+                    </div>
                   </CommandProvider>
                 </SidebarProvider>
               </SearchProvider>

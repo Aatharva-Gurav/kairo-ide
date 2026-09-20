@@ -53,8 +53,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         className={cn(
           "fixed z-40 flex items-center justify-center transition-all duration-150 ease-out cursor-pointer select-none size-7 rounded-md active:scale-95 border shadow-2xs backdrop-blur-md focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sidebar-ring",
           open
-            ? "top-3.5 left-[calc(var(--sidebar-width)-44px)] border-sidebar-border/80 bg-sidebar/95 text-sidebar-foreground hover:bg-sidebar-accent hover:border-sidebar-primary/50"
-            : "top-1 left-2 border-border/80 bg-background/95 text-muted-foreground hover:text-foreground shadow-2xs hover:bg-accent hover:border-sidebar-primary/50"
+            ? "top-[42px] left-[calc(var(--sidebar-width)-44px)] border-sidebar-border/80 bg-sidebar/95 text-sidebar-foreground hover:bg-sidebar-accent hover:border-sidebar-primary/50"
+            : "top-[36px] left-2 border-border/80 bg-background/95 text-muted-foreground hover:text-foreground shadow-2xs hover:bg-accent hover:border-sidebar-primary/50"
         )}
       >
         <div className="flex items-center justify-center size-5 rounded bg-sidebar-accent/40 dark:bg-sidebar-accent/30 transition-transform duration-200">
@@ -68,7 +68,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </div>
       </button>
 
-      <Sidebar variant="floating" {...props}>
+      <Sidebar variant="floating" className="top-[30px] h-[calc(100svh-30px)]" {...props}>
         {!activeWorkspace ? (
           <SidebarHeader>
             <div className="flex items-center justify-between p-2 select-none pr-12">

@@ -7,6 +7,28 @@ pub fn workspace_pick_folder() -> Result<Option<String>, String> {
 }
 
 #[tauri::command]
+pub fn workspace_pick_file() -> Result<Option<String>, String> {
+    let file = rfd::FileDialog::new().pick_file();
+    Ok(file.map(|p| p.to_string_lossy().to_string()))
+}
+
+#[tauri::command]
+pub fn workspace_save_file_as(default_path: Option<String>) -> Result<Option<String>, String> {
+    let mut dialog = rfd::FileDialog::new();
+    if let Some(dp) = default_path {
+        let p = Path::new(&dp);
+        if let Some(parent) = p.parent() {
+            dialog = dialog.set_directory(parent);
+        }
+        if let Some(file_name) = p.file_name() {
+            dialog = dialog.set_file_name(file_name.to_string_lossy());
+        }
+    }
+    let file = dialog.save_file();
+    Ok(file.map(|p| p.to_string_lossy().to_string()))
+}
+
+#[tauri::command]
 pub fn workspace_validate_path(path: String) -> Result<bool, String> {
     let p = Path::new(&path);
     Ok(p.exists() && p.is_dir())
