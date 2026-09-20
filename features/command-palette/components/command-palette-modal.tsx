@@ -105,14 +105,14 @@ export function CommandPaletteModal({
   return (
     <div
       onClick={handleClose}
-      className="fixed inset-0 z-50 flex items-start justify-center bg-background/70 backdrop-blur-xs pt-[12vh] px-4 animate-in fade-in-0"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 backdrop-blur-xs pt-[12vh] px-4 animate-in fade-in-0 duration-150 ease-out"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-xl rounded-xl border border-border bg-card shadow-2xl overflow-hidden flex flex-col max-h-[60vh] text-card-foreground animate-in zoom-in-95"
+        className="w-full max-w-xl rounded-xl border border-border/80 bg-popover/98 shadow-2xl overflow-hidden flex flex-col max-h-[60vh] text-popover-foreground animate-in zoom-in-95 slide-in-from-top-3 duration-150 delay-subtle ease-[cubic-bezier(0.16,1,0.3,1)]"
       >
         {/* Search Input Bar */}
-        <div className="flex items-center gap-2 px-3 border-b border-border bg-background">
+        <div className="flex items-center gap-2.5 px-3.5 border-b border-border/70 bg-popover/80 backdrop-blur-sm">
           <HugeiconsIcon icon={TerminalIcon} className="size-4 text-primary shrink-0" />
           <span className="text-xs font-mono font-bold text-primary select-none">&gt;</span>
           <input
@@ -125,10 +125,10 @@ export function CommandPaletteModal({
             }}
             onKeyDown={handleKeyDown}
             placeholder="Type a command to execute..."
-            className="h-10 flex-1 bg-transparent text-xs text-foreground placeholder:text-muted-foreground outline-none font-sans"
+            className="h-10 flex-1 bg-transparent text-xs text-foreground placeholder:text-muted-foreground/60 outline-none font-sans"
           />
-          <kbd className="text-[10px] font-mono text-muted-foreground rounded bg-muted px-1.5 py-0.5 border border-border select-none">
-            Esc to close
+          <kbd className="kbd-shortcut">
+            Esc
           </kbd>
         </div>
 
@@ -146,28 +146,28 @@ export function CommandPaletteModal({
                   key={cmd.id}
                   onClick={() => executeSelected(cmd)}
                   onMouseEnter={() => setSelectedIndex(idx)}
-                  className={`flex items-center justify-between px-3 py-2 rounded-md cursor-pointer select-none transition-colors ${
+                  className={`relative flex items-center justify-between px-3 py-2 rounded-md cursor-pointer select-none transition-colors duration-100 ease-out active:scale-[0.99] ${
                     !isEnabled
                       ? "opacity-50 cursor-not-allowed"
                       : isSelected
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold"
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold shadow-2xs before:absolute before:left-0.5 before:top-1.5 before:bottom-1.5 before:w-0.5 before:bg-primary before:rounded-full"
                       : "text-foreground hover:bg-muted/50"
                   }`}
                 >
                   <div className="flex items-center gap-2 min-w-0 pr-3">
-                    <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-muted/60 text-muted-foreground border border-border shrink-0">
+                    <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-muted/60 text-muted-foreground border border-border/60 shrink-0">
                       {cmd.category}
                     </span>
                     <span className="truncate font-medium">{cmd.title}</span>
                     {cmd.description && (
-                      <span className="text-[11px] text-muted-foreground truncate hidden sm:inline">
+                      <span className="text-[11px] text-muted-foreground/80 truncate hidden sm:inline">
                         — {cmd.description}
                       </span>
                     )}
                   </div>
 
                   {displayShortcut && (
-                    <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border text-[10px] font-mono font-medium text-muted-foreground shrink-0 shadow-2xs">
+                    <kbd className="kbd-shortcut shrink-0">
                       {displayShortcut}
                     </kbd>
                   )}

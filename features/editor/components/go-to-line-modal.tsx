@@ -43,14 +43,14 @@ export function GoToLineModal() {
   return (
     <div
       onClick={() => setGoToLineVisible(false)}
-      className="fixed inset-0 z-50 flex items-start justify-center bg-background/70 backdrop-blur-xs pt-[15vh] px-4 animate-in fade-in-0"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 backdrop-blur-xs pt-[15vh] px-4 animate-in fade-in-0 duration-150 ease-out"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-sm rounded-xl border border-border bg-card p-4 shadow-xl text-card-foreground animate-in zoom-in-95"
+        className="w-full max-w-sm rounded-xl border border-border/80 bg-card p-4 shadow-2xl text-card-foreground animate-in zoom-in-95 slide-in-from-top-2 duration-150 delay-subtle ease-[cubic-bezier(0.16,1,0.3,1)]"
       >
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <label className="text-xs font-semibold text-foreground">
+          <label className="text-xs font-semibold text-foreground tracking-tight">
             Go to Line (e.g. 42 or 42:10)
           </label>
           <input
@@ -60,7 +60,7 @@ export function GoToLineModal() {
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Line:Column"
-            className="h-8 rounded border border-border bg-input/40 px-2.5 text-xs text-foreground outline-none ring-1 ring-sidebar-ring font-mono"
+            className="h-7.5 rounded-md border border-border/80 bg-background px-2.5 text-xs text-foreground outline-none focus:ring-1 focus:ring-ring font-mono shadow-2xs"
           />
           <div className="flex items-center justify-end gap-2">
             <Button
@@ -68,10 +68,11 @@ export function GoToLineModal() {
               variant="outline"
               size="xs"
               onClick={() => setGoToLineVisible(false)}
+              className="cursor-pointer active:scale-95 transition-all duration-120"
             >
               Cancel
             </Button>
-            <Button type="submit" size="xs">
+            <Button type="submit" size="xs" className="cursor-pointer active:scale-95 transition-all duration-120">
               Go
             </Button>
           </div>

@@ -367,6 +367,51 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
             ed.trigger("keyboard", "editor.action.peekDefinition", null);
           }
         },
+      }),
+
+      CommandRegistry.register({
+        id: "workbench.action.splitEditor",
+        title: "View: Split Editor Right",
+        description: "Split editor pane side-by-side",
+        category: "view",
+        keywords: ["split", "pane", "side", "view"],
+        enabled: () => Boolean(editorRef.current.activeDocument),
+        execute: () => {
+          editorRef.current.toggleSplitView();
+        },
+      }),
+
+      CommandRegistry.register({
+        id: "editor.zoomIn",
+        title: "View: Zoom In Editor",
+        description: "Increase Monaco editor font size",
+        category: "view",
+        keywords: ["zoom", "in", "font", "larger"],
+        execute: () => {
+          editorRef.current.zoomIn();
+        },
+      }),
+
+      CommandRegistry.register({
+        id: "editor.zoomOut",
+        title: "View: Zoom Out Editor",
+        description: "Decrease Monaco editor font size",
+        category: "view",
+        keywords: ["zoom", "out", "font", "smaller"],
+        execute: () => {
+          editorRef.current.zoomOut();
+        },
+      }),
+
+      CommandRegistry.register({
+        id: "editor.zoomReset",
+        title: "View: Reset Editor Zoom",
+        description: "Reset Monaco editor font size to 100%",
+        category: "view",
+        keywords: ["zoom", "reset", "normal"],
+        execute: () => {
+          editorRef.current.zoomReset();
+        },
       })
     );
 

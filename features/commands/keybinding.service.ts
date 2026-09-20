@@ -16,6 +16,10 @@ export const DEFAULT_KEYBINDINGS: Keybinding[] = [
   { commandId: "search.findInWorkspace", key: "ctrl+shift+f", macKey: "cmd+shift+f" },
   { commandId: "editor.goToDefinition", key: "f12", macKey: "f12" },
   { commandId: "editor.peekDefinition", key: "alt+f12", macKey: "alt+f12" },
+  { commandId: "workbench.action.splitEditor", key: "ctrl+\\", macKey: "cmd+\\" },
+  { commandId: "editor.zoomIn", key: "ctrl+=", macKey: "cmd+=" },
+  { commandId: "editor.zoomOut", key: "ctrl+-", macKey: "cmd+-" },
+  { commandId: "editor.zoomReset", key: "ctrl+0", macKey: "cmd+0" },
 ];
 
 function getStorage(): Storage | null {

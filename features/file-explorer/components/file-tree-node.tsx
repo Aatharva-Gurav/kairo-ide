@@ -5,8 +5,9 @@ import { FileSystemNode } from "../types";
 import { useFileExplorer } from "../store";
 import { FileIcon } from "./file-icon";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon, ArrowDown01Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { normalizePath, isDescendant } from "@/lib/tauri-ipc";
+import { cn } from "@/lib/utils";
 
 interface FileTreeNodeProps {
   node: FileSystemNode;
@@ -150,7 +151,11 @@ export function FileTreeNode({
         onDrop={handleNodeDrop}
         onClick={(e) => {
           e.stopPropagation();
-          selectNode(node, e.ctrlKey || e.metaKey, e.shiftKey);
+          if (e.ctrlKey || e.metaKey || e.shiftKey) {
+            selectNode(node, true, e.shiftKey);
+          } else {
+            openFile(node);
+          }
         }}
         onDoubleClick={(e) => {
           e.stopPropagation();
@@ -165,13 +170,14 @@ export function FileTreeNode({
           onOpenContextMenu(e, node);
         }}
         style={{ paddingLeft: `${depth * 14 + 6}px` }}
-        className={`group relative flex h-6.5 w-full items-center gap-1.5 pr-2 text-xs transition-colors cursor-pointer rounded-sm ${
+        className={cn(
+          "group relative flex h-6.5 w-full items-center gap-1.5 pr-2 text-xs transition-all duration-120 delay-[20ms] ease-out cursor-pointer rounded-xs active:scale-[0.99] active:delay-0",
           isSelected
-            ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-            : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-        } ${isCut ? "opacity-40" : ""} ${
-          isDragOver ? "bg-sidebar-primary/15 ring-1 ring-sidebar-primary" : ""
-        }`}
+            ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-2xs before:absolute before:left-0 before:top-0.5 before:bottom-0.5 before:w-0.5 before:bg-sidebar-primary before:rounded-r-full"
+            : "text-sidebar-foreground/90 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
+          isCut && "opacity-45",
+          isDragOver && "bg-sidebar-primary/20 ring-1 ring-sidebar-primary/80 ring-inset"
+        )}
       >
         {/* Expand / Collapse toggle or indent spacing */}
         {isDirectory ? (
@@ -180,20 +186,23 @@ export function FileTreeNode({
               e.stopPropagation();
               toggleExpand(node);
             }}
-            className="flex size-4 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer"
+            className="flex size-3.5 shrink-0 items-center justify-center text-muted-foreground/70 hover:text-foreground cursor-pointer rounded transition-all duration-140"
             tabIndex={-1}
           >
             {node.isLoading ? (
-              <span className="size-2 rounded-full bg-sidebar-primary animate-ping" />
+              <span className="size-1.5 rounded-full bg-sidebar-primary animate-pulse" />
             ) : (
               <HugeiconsIcon
-                icon={isExpanded ? ArrowDown01Icon : ArrowRight01Icon}
-                className="size-3 transition-transform"
+                icon={ArrowRight01Icon}
+                className={cn(
+                  "size-2.5 transition-transform duration-160 ease-[cubic-bezier(0.16,1,0.3,1)]",
+                  isExpanded && "rotate-90"
+                )}
               />
             )}
           </button>
         ) : (
-          <span className="size-4 shrink-0" />
+          <span className="size-3.5 shrink-0" />
         )}
 
         {/* File or Folder Icon */}
@@ -201,7 +210,7 @@ export function FileTreeNode({
           name={node.name}
           isDirectory={isDirectory}
           isExpanded={isExpanded}
-          className="size-3.5 shrink-0"
+          className="size-3.5 shrink-0 transition-transform duration-140 group-hover:scale-105"
         />
 
         {/* Name or Rename Input */}
@@ -213,10 +222,10 @@ export function FileTreeNode({
             onKeyDown={handleInputKeyDown}
             onBlur={handleInputBlur}
             onClick={(e) => e.stopPropagation()}
-            className="h-5 flex-1 rounded bg-input/40 px-1 py-0 text-xs text-foreground outline-none ring-1 ring-sidebar-ring border border-input"
+            className="h-5.5 flex-1 rounded bg-background border border-sidebar-ring px-1.5 py-0 text-xs text-foreground font-sans outline-none shadow-2xs focus:ring-1 focus:ring-sidebar-ring"
           />
         ) : (
-          <span className="truncate leading-none text-left" title={node.name}>
+          <span className="truncate leading-none text-left tracking-tight" title={node.name}>
             {node.name}
           </span>
         )}
@@ -224,7 +233,7 @@ export function FileTreeNode({
 
       {/* Children list when expanded */}
       {isDirectory && isExpanded && (
-        <div className="flex flex-col">
+        <div className="flex flex-col animate-in fade-in-0 slide-in-from-top-1 duration-150 delay-subtle ease-out origin-top">
           {/* Inline creation inside this folder */}
           {isCreatingChild && (
             <InlineCreationInput
@@ -245,7 +254,7 @@ export function FileTreeNode({
           ) : !node.isLoading && !isCreatingChild ? (
             <div
               style={{ paddingLeft: `${(depth + 1) * 14 + 20}px` }}
-              className="py-1 text-[11px] text-muted-foreground/60 italic"
+              className="py-1 text-[11px] text-muted-foreground/60 italic animate-in fade-in-50 duration-100"
             >
               (empty)
             </div>
@@ -294,7 +303,7 @@ export function InlineCreationInput({
       style={{ paddingLeft: `${depth * 14 + 6}px` }}
       className="flex h-6.5 w-full items-center gap-1.5 pr-2 text-xs"
     >
-      <span className="size-4 shrink-0" />
+      <span className="size-3.5 shrink-0" />
       <FileIcon
         name={isDirectory ? "folder" : "file"}
         isDirectory={isDirectory}
@@ -306,7 +315,7 @@ export function InlineCreationInput({
         placeholder={isDirectory ? "folder name..." : "file name..."}
         onKeyDown={handleKeyDown}
         onBlur={handleBlur}
-        className="h-5 flex-1 rounded bg-input/40 px-1 py-0 text-xs text-foreground outline-none ring-1 ring-sidebar-ring border border-input"
+        className="h-5.5 flex-1 rounded bg-background border border-sidebar-ring px-1.5 py-0 text-xs text-foreground font-sans outline-none shadow-2xs focus:ring-1 focus:ring-sidebar-ring placeholder:text-muted-foreground/50"
       />
     </div>
   );

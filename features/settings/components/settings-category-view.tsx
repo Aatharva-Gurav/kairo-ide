@@ -62,9 +62,9 @@ export function SettingsCategoryView() {
   if (isSearching) {
     return (
       <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between pb-2 border-b border-border">
+        <div className="flex items-center justify-between pb-3 border-b border-border/80">
           <div>
-            <h2 className="text-sm font-semibold text-foreground">
+            <h2 className="text-sm font-semibold tracking-tight text-foreground">
               Search Results ({displayedDefinitions.length})
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">
@@ -80,7 +80,7 @@ export function SettingsCategoryView() {
             ))}
           </div>
         ) : (
-          <div className="py-12 text-center text-xs text-muted-foreground italic">
+          <div className="py-16 text-center text-xs text-muted-foreground italic">
             No settings match your search query.
           </div>
         )}
@@ -96,9 +96,9 @@ export function SettingsCategoryView() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between pb-2 border-b border-border">
+      <div className="flex items-center justify-between pb-3 border-b border-border/80">
         <div>
-          <h2 className="text-sm font-bold text-foreground">{meta.title}</h2>
+          <h2 className="text-sm font-semibold tracking-tight text-foreground">{meta.title}</h2>
           <p className="text-xs text-muted-foreground mt-0.5">{meta.description}</p>
         </div>
 

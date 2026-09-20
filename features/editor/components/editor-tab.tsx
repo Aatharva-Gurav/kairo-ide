@@ -56,17 +56,25 @@ export function EditorTab({ document, isActive, onSelect, onClose }: EditorTabPr
         onContextMenu={handleContextMenu}
         title={document.path}
         className={cn(
-          "group relative flex h-9 shrink-0 items-center gap-2 border-r border-border px-3 text-xs cursor-pointer select-none transition-colors",
+          "group relative flex h-9 shrink-0 items-center gap-2 border-r border-border/70 px-3 text-xs cursor-pointer select-none transition-all duration-140 ease-out animate-tab-enter",
           isActive
-            ? "bg-background text-foreground border-t-2 border-t-sidebar-primary font-medium"
-            : "bg-muted/40 text-muted-foreground hover:bg-muted/70 hover:text-foreground border-t-2 border-t-transparent"
+            ? "bg-background text-foreground font-medium"
+            : "bg-sidebar/40 text-muted-foreground hover:bg-sidebar/70 hover:text-foreground"
         )}
       >
-        <FileIcon name={document.title} isDirectory={false} className="size-3.5 shrink-0" />
-        <span className="truncate max-w-[140px]">{document.title}</span>
+        {/* Animated active indicator bar */}
+        <span
+          className={cn(
+            "absolute top-0 left-0 right-0 h-0.5 bg-sidebar-primary transition-all duration-160 ease-[cubic-bezier(0.16,1,0.3,1)] origin-center",
+            isActive ? "opacity-100 scale-x-100" : "opacity-0 scale-x-0"
+          )}
+        />
+
+        <FileIcon name={document.title} isDirectory={false} className="size-3.5 shrink-0 transition-transform duration-140 group-hover:scale-105" />
+        <span className="truncate max-w-[140px] tracking-tight">{document.title}</span>
 
         {/* Dirty indicator or close button */}
-        <div className="flex items-center justify-center size-4 shrink-0">
+        <div className="flex items-center justify-center size-4 shrink-0 relative">
           {document.isDirty ? (
             <span
               onClick={(e) => {
@@ -74,7 +82,7 @@ export function EditorTab({ document, isActive, onSelect, onClose }: EditorTabPr
                 onClose();
               }}
               title="Unsaved changes - click to close"
-              className="size-2 rounded-full bg-sidebar-primary group-hover:hidden"
+              className="size-2 rounded-full bg-sidebar-primary group-hover:hidden transition-all duration-150 animate-kairo-pulse shadow-xs cursor-pointer"
             />
           ) : null}
 
@@ -86,8 +94,8 @@ export function EditorTab({ document, isActive, onSelect, onClose }: EditorTabPr
               onClose();
             }}
             className={cn(
-              "rounded p-0.5 hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition-opacity",
-              document.isDirty ? "hidden group-hover:flex" : "opacity-0 group-hover:opacity-100",
+              "rounded p-0.5 hover:bg-muted/80 text-muted-foreground hover:text-foreground cursor-pointer transition-colors duration-140 active:scale-90",
+              document.isDirty ? "hidden group-hover:flex" : "opacity-0 group-hover:opacity-100 group-hover:delay-[30ms]",
               isActive && !document.isDirty && "opacity-70 hover:opacity-100"
             )}
           >
@@ -101,14 +109,14 @@ export function EditorTab({ document, isActive, onSelect, onClose }: EditorTabPr
         <div
           ref={menuRef}
           style={{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }}
-          className="fixed z-50 min-w-[160px] rounded-md border border-border bg-popover p-1 shadow-md text-xs text-popover-foreground animate-in fade-in-50 zoom-in-95"
+          className="fixed z-50 min-w-[170px] rounded-lg border border-border/90 bg-popover/95 backdrop-blur-md p-1 shadow-2xl text-xs text-popover-foreground animate-in fade-in-0 zoom-in-95 duration-120 delay-subtle ease-out origin-top-left"
         >
           <button
             onClick={() => {
               onClose();
               setContextMenu(null);
             }}
-            className="flex w-full items-center px-2 py-1.5 rounded hover:bg-accent hover:text-accent-foreground cursor-pointer text-left"
+            className="flex w-full items-center px-2.5 py-1.5 rounded hover:bg-accent hover:text-accent-foreground cursor-pointer text-left transition-colors"
           >
             Close
           </button>
@@ -117,7 +125,7 @@ export function EditorTab({ document, isActive, onSelect, onClose }: EditorTabPr
               closeOtherDocuments(document.path);
               setContextMenu(null);
             }}
-            className="flex w-full items-center px-2 py-1.5 rounded hover:bg-accent hover:text-accent-foreground cursor-pointer text-left"
+            className="flex w-full items-center px-2.5 py-1.5 rounded hover:bg-accent hover:text-accent-foreground cursor-pointer text-left transition-colors"
           >
             Close Others
           </button>
@@ -126,17 +134,17 @@ export function EditorTab({ document, isActive, onSelect, onClose }: EditorTabPr
               closeAllDocuments();
               setContextMenu(null);
             }}
-            className="flex w-full items-center px-2 py-1.5 rounded hover:bg-accent hover:text-accent-foreground cursor-pointer text-left"
+            className="flex w-full items-center px-2.5 py-1.5 rounded hover:bg-accent hover:text-accent-foreground cursor-pointer text-left transition-colors"
           >
             Close All
           </button>
-          <div className="h-px bg-border my-1" />
+          <div className="h-px bg-border/80 my-1" />
           <button
             onClick={() => {
               navigator.clipboard.writeText(document.path);
               setContextMenu(null);
             }}
-            className="flex w-full items-center px-2 py-1.5 rounded hover:bg-accent hover:text-accent-foreground cursor-pointer text-left"
+            className="flex w-full items-center px-2.5 py-1.5 rounded hover:bg-accent hover:text-accent-foreground cursor-pointer text-left transition-colors"
           >
             Copy Absolute Path
           </button>
@@ -145,7 +153,7 @@ export function EditorTab({ document, isActive, onSelect, onClose }: EditorTabPr
               revealInExplorer(document.path);
               setContextMenu(null);
             }}
-            className="flex w-full items-center px-2 py-1.5 rounded hover:bg-accent hover:text-accent-foreground cursor-pointer text-left"
+            className="flex w-full items-center px-2.5 py-1.5 rounded hover:bg-accent hover:text-accent-foreground cursor-pointer text-left transition-colors"
           >
             Reveal in Explorer
           </button>
@@ -154,4 +162,3 @@ export function EditorTab({ document, isActive, onSelect, onClose }: EditorTabPr
     </>
   );
 }
-

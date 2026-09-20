@@ -17,6 +17,7 @@ function SvgBase({
       style={style}
       aria-hidden={!title}
       role={title ? "img" : "presentation"}
+      shapeRendering="geometricPrecision"
     >
       {title && <title>{title}</title>}
       {children}

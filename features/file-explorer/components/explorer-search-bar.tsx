@@ -43,11 +43,11 @@ export function ExplorerSearchBar() {
   };
 
   return (
-    <div className="flex items-center h-10 px-2.5 border-b border-sidebar-border/70 bg-sidebar/50 backdrop-blur-xs select-none shrink-0">
+    <div className="flex items-center h-9 px-2.5 border-b border-sidebar-border/70 bg-sidebar/80 select-none shrink-0">
       <div className="relative flex flex-1 items-center min-w-0">
         <HugeiconsIcon
           icon={Search01Icon}
-          className="absolute left-2.5 size-3.5 text-muted-foreground pointer-events-none"
+          className="absolute left-2 size-3 text-muted-foreground/70 pointer-events-none"
         />
         <input
           ref={inputRef}
@@ -55,12 +55,12 @@ export function ExplorerSearchBar() {
           value={filterQuery}
           onChange={(e) => setFilterQuery(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Search files..."
-          className="h-7 w-full rounded-md bg-background/70 dark:bg-background/50 border border-sidebar-border/80 pl-8 pr-14 text-xs text-foreground placeholder:text-muted-foreground/60 outline-none ring-1 ring-transparent focus:ring-sidebar-ring transition-all"
+          placeholder="Filter files..."
+          className="h-6.5 w-full rounded-md border border-sidebar-border/80 bg-background/60 pl-7 pr-14 text-xs text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-sidebar-primary/60 focus:ring-1 focus:ring-sidebar-primary/40 transition-all shadow-2xs"
         />
         {filterQuery ? (
           <div className="absolute right-1.5 flex items-center gap-1">
-            <span className="text-[10px] text-muted-foreground font-mono bg-sidebar-accent/70 px-1 py-0.5 rounded leading-none">
+            <span className="text-[10px] text-muted-foreground font-mono bg-sidebar-accent/80 border border-sidebar-border/60 px-1.5 py-0.5 rounded leading-none">
               {matchingCount}
             </span>
             <button
@@ -68,16 +68,16 @@ export function ExplorerSearchBar() {
                 setFilterQuery("");
                 inputRef.current?.focus();
               }}
-              className="p-0.5 text-muted-foreground hover:text-foreground cursor-pointer rounded"
-              title="Clear search (Esc)"
+              className="p-0.5 text-muted-foreground hover:text-foreground cursor-pointer rounded hover:bg-sidebar-accent transition-colors"
+              title="Clear filter (Esc)"
             >
               <HugeiconsIcon icon={Cancel01Icon} className="size-3" />
             </button>
           </div>
         ) : (
-          <span className="absolute right-2 text-[10px] text-muted-foreground/50 font-mono pointer-events-none select-none">
+          <kbd className="absolute right-1.5 text-[9px] text-muted-foreground/70 font-mono bg-sidebar-accent/50 border border-sidebar-border/60 px-1 py-0.5 rounded pointer-events-none select-none">
             Ctrl+F
-          </span>
+          </kbd>
         )}
       </div>
     </div>

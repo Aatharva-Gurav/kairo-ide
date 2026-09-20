@@ -3,7 +3,17 @@
  * Covers Appearance, Editor, Files, Explorer, Search, and Keyboard settings.
  */
 
-export type ThemePreference = "dark" | "light" | "system";
+export type ThemePreference =
+  | "dark"
+  | "light"
+  | "system"
+  | "vs-dark"
+  | "vs-light"
+  | "one-dark-pro"
+  | "dracula"
+  | "tokyo-night"
+  | "github-dark"
+  | "monokai";
 export type UIDensity = "normal" | "compact";
 export type WordWrapPreference = "on" | "off" | "wordWrapColumn" | "bounded";
 export type LineNumbersPreference = "on" | "off" | "relative";

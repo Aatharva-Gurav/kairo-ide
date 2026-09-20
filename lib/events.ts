@@ -60,6 +60,9 @@ export type IDEEventMap = {
   "editor:document-changed": { path: string; isDirty: boolean };
   "editor:active-changed": { path: string | null };
   "editor:reveal-in-explorer": { path: string };
+  "editor:zoom-in": void;
+  "editor:zoom-out": void;
+  "editor:zoom-reset": void;
   "search:navigate-to-match": { path: string; line: number; column: number; matchLength?: number };
   "sidebar:switch-tab": "explorer" | "search";
 };

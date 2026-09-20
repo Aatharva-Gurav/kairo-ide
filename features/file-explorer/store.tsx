@@ -575,10 +575,10 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
 
   const openFile = useCallback(
     (node: FileSystemNode) => {
+      selectNode(node);
       if (node.type === "directory") {
         toggleExpand(node);
       } else {
-        selectNode(node);
         ideEvents.emit("file:open-requested", {
           path: node.path,
           name: node.name,

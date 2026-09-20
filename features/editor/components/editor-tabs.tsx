@@ -17,6 +17,8 @@ export function EditorTabs() {
     closeDocument,
     saveAllDocuments,
     closeAllDocuments,
+    isSplit,
+    toggleSplitView,
   } = useEditor();
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -31,13 +33,13 @@ export function EditorTabs() {
   const hasDirtyDocuments = documents.some((d) => d.isDirty);
 
   return (
-    <div className="flex h-9 w-full items-center justify-between border-b border-border bg-muted/30 select-none overflow-hidden">
+    <div className="flex h-9 w-full items-center justify-between border-b border-border/70 bg-sidebar/50 dark:bg-sidebar/40 select-none overflow-hidden">
       {/* Scrollable Tab List */}
       <div
         ref={scrollContainerRef}
         onWheel={handleWheel}
         className={cn(
-          "flex flex-1 h-full items-center overflow-x-auto no-scrollbar transition-[padding] duration-200",
+          "flex flex-1 h-full items-center overflow-x-auto no-scrollbar transition-[padding] duration-150 ease-out",
           !open && "pl-11"
         )}
       >
@@ -53,13 +55,27 @@ export function EditorTabs() {
       </div>
 
       {/* Tab Toolbar Actions */}
-      <div className="flex items-center gap-1 px-2 shrink-0 border-l border-border bg-muted/20">
+      <div className="flex items-center gap-0.5 px-2 shrink-0 border-l border-border/70 bg-sidebar/30 h-full">
+        <button
+          type="button"
+          onClick={toggleSplitView}
+          title={isSplit ? "Close Split Editor (Ctrl+\\)" : "Split Editor Right (Ctrl+\\)"}
+          className={cn(
+            "flex items-center justify-center size-6 rounded hover:bg-muted/60 cursor-pointer transition-colors duration-120 active:scale-95",
+            isSplit ? "text-sidebar-primary bg-sidebar-accent/70" : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <svg viewBox="0 0 16 16" fill="currentColor" className="size-3.5">
+            <path d="M14 2H2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1zM2 13V3h5v10H2zm12 0H8V3h6v10z" />
+          </svg>
+        </button>
+
         {hasDirtyDocuments && (
           <button
             type="button"
             onClick={() => saveAllDocuments()}
             title="Save All (Ctrl+Shift+S)"
-            className="flex items-center justify-center size-6 rounded hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+            className="flex items-center justify-center size-6 rounded hover:bg-muted/60 text-muted-foreground hover:text-foreground cursor-pointer transition-colors duration-120 active:scale-95"
           >
             <HugeiconsIcon icon={FloppyDiskIcon} className="size-3.5 text-sidebar-primary" />
           </button>
@@ -69,7 +85,7 @@ export function EditorTabs() {
           type="button"
           onClick={() => closeAllDocuments()}
           title="Close All Tabs"
-          className="flex items-center justify-center size-6 rounded hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+          className="flex items-center justify-center size-6 rounded hover:bg-muted/60 text-muted-foreground hover:text-foreground cursor-pointer transition-colors duration-120 active:scale-95"
         >
           <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" />
         </button>
@@ -77,4 +93,3 @@ export function EditorTabs() {
     </div>
   );
 }
-

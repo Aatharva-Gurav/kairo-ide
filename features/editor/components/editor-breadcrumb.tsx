@@ -22,11 +22,11 @@ export function EditorBreadcrumb({ document }: EditorBreadcrumbProps) {
   const parts = rel ? rel.split("/").filter(Boolean) : [document.title];
 
   return (
-    <div className="flex h-7 w-full items-center gap-1 border-b border-border bg-background/50 px-3 text-[11px] text-muted-foreground select-none overflow-x-auto no-scrollbar">
+    <div className="flex h-6.5 w-full items-center gap-1.5 border-b border-border/70 bg-background/90 px-3 text-[11px] text-muted-foreground select-none overflow-x-auto no-scrollbar">
       {activeWorkspace && (
-        <div className="flex items-center gap-1 shrink-0 font-medium text-foreground/80">
-          <HugeiconsIcon icon={Folder01Icon} className="size-3 text-sidebar-primary" />
-          <span>{activeWorkspace.name}</span>
+        <div className="flex items-center gap-1 shrink-0 font-medium text-foreground/80 text-xs">
+          <HugeiconsIcon icon={Folder01Icon} className="size-3.5 text-sidebar-primary" />
+          <span className="tracking-tight">{activeWorkspace.name}</span>
         </div>
       )}
 
@@ -34,14 +34,16 @@ export function EditorBreadcrumb({ document }: EditorBreadcrumbProps) {
         const isLast = index === parts.length - 1;
         return (
           <React.Fragment key={index}>
-            <HugeiconsIcon icon={ArrowRight01Icon} className="size-2.5 text-muted-foreground/60 shrink-0" />
+            <HugeiconsIcon icon={ArrowRight01Icon} className="size-2.5 text-muted-foreground/40 shrink-0" />
             <div
-              className={`flex items-center gap-1 shrink-0 ${
-                isLast ? "text-foreground font-medium" : "text-muted-foreground/90"
+              className={`group flex items-center gap-1 shrink-0 px-1.5 py-0.5 rounded transition-colors duration-120 ${
+                isLast
+                  ? "text-foreground font-medium bg-muted/25"
+                  : "text-muted-foreground/80 hover:text-foreground hover:bg-muted/40 cursor-pointer"
               }`}
             >
               {isLast && <FileIcon name={part} isDirectory={false} className="size-3 shrink-0" />}
-              <span className="truncate max-w-[150px]">{part}</span>
+              <span className="truncate max-w-[160px] tracking-tight">{part}</span>
             </div>
           </React.Fragment>
         );
@@ -49,4 +51,3 @@ export function EditorBreadcrumb({ document }: EditorBreadcrumbProps) {
     </div>
   );
 }
-

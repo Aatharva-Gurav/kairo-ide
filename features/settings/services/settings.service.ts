@@ -369,18 +369,22 @@ export class SettingsService {
     if (!changedKey || changedKey === "appearance.theme") {
       const root = document.documentElement;
       const theme = settings.appearance.theme;
+      root.setAttribute("data-theme", theme);
 
-      if (theme === "dark") {
-        root.classList.add("dark");
-      } else if (theme === "light") {
-        root.classList.remove("dark");
-      } else if (theme === "system") {
+      const isLightTheme = theme === "light" || theme === "vs-light";
+      const isSystem = theme === "system";
+
+      if (isSystem) {
         const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
         if (prefersDark) {
           root.classList.add("dark");
         } else {
           root.classList.remove("dark");
         }
+      } else if (isLightTheme) {
+        root.classList.remove("dark");
+      } else {
+        root.classList.add("dark");
       }
     }
   }

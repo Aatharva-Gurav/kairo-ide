@@ -71,33 +71,33 @@ export function SettingsModal() {
   return (
     <div
       onClick={closeSettings}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-xs p-4 animate-in fade-in-0"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in-0 duration-150 ease-out"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-4xl h-[80vh] rounded-xl border border-border bg-card shadow-2xl flex flex-col overflow-hidden text-card-foreground animate-in zoom-in-95"
+        className="w-full max-w-4xl h-[82vh] rounded-xl border border-border/80 bg-card shadow-2xl flex flex-col overflow-hidden text-card-foreground animate-in zoom-in-95 duration-150 delay-subtle ease-[cubic-bezier(0.16,1,0.3,1)]"
       >
         {/* Top Header */}
-        <div className="flex items-center justify-between px-6 py-3.5 border-b border-border bg-background">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-border/80 bg-background/60 backdrop-blur-sm">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <HugeiconsIcon icon={Settings01Icon} className="size-4 text-primary" />
-              <h1 className="text-sm font-bold text-foreground">Settings</h1>
+              <h1 className="text-sm font-semibold tracking-tight text-foreground">Settings</h1>
             </div>
 
             {/* Scope Selector: User vs Workspace */}
-            <div className="flex items-center p-0.5 rounded-lg border border-border bg-muted/40 ml-4">
+            <div className="flex items-center p-0.5 rounded-md border border-border/60 bg-muted/40 ml-3">
               <button
                 type="button"
                 onClick={() => setActiveScope("user")}
                 className={cn(
-                  "px-3 py-1 text-xs font-medium rounded-md transition-all cursor-pointer",
+                  "px-2.5 py-1 text-xs font-medium rounded transition-all duration-120 cursor-pointer active:scale-95",
                   activeScope === "user"
                     ? "bg-background text-foreground shadow-2xs font-semibold"
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                User (Global)
+                User
               </button>
               <button
                 type="button"
@@ -113,7 +113,7 @@ export function SettingsModal() {
                     : "No workspace currently open"
                 }
                 className={cn(
-                  "px-3 py-1 text-xs font-medium rounded-md transition-all flex items-center gap-1.5",
+                  "px-2.5 py-1 text-xs font-medium rounded transition-all duration-120 flex items-center gap-1.5 active:scale-95",
                   !activeWorkspace
                     ? "opacity-50 cursor-not-allowed text-muted-foreground"
                     : activeScope === "workspace"
@@ -123,7 +123,7 @@ export function SettingsModal() {
               >
                 <span>Workspace</span>
                 {activeWorkspace && (
-                  <span className="text-[10px] text-muted-foreground font-mono truncate max-w-[100px]">
+                  <span className="text-[10px] text-muted-foreground/80 font-mono truncate max-w-[100px]">
                     ({activeWorkspace.name})
                   </span>
                 )}
@@ -132,15 +132,15 @@ export function SettingsModal() {
           </div>
 
           {/* Right Actions: Reset All & Close */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <Button
               variant="outline"
               size="xs"
               onClick={() => resetAll(activeScope)}
               title={`Reset all ${activeScope} settings to defaults`}
-              className="cursor-pointer"
+              className="cursor-pointer group active:scale-95 transition-all duration-120"
             >
-              <HugeiconsIcon icon={ReloadIcon} className="size-3 mr-1" />
+              <HugeiconsIcon icon={ReloadIcon} className="size-3 mr-1 transition-transform duration-300 group-hover:rotate-180" />
               Reset All
             </Button>
             <Button
@@ -148,28 +148,28 @@ export function SettingsModal() {
               size="icon-xs"
               onClick={closeSettings}
               title="Close Settings (Esc)"
-              className="cursor-pointer text-muted-foreground hover:text-foreground"
+              className="cursor-pointer text-muted-foreground hover:text-foreground active:scale-95 transition-all duration-120"
             >
-              <HugeiconsIcon icon={Cancel01Icon} className="size-4" />
+              <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" />
             </Button>
           </div>
         </div>
 
         {/* Search Bar */}
-        <div className="px-6 py-2.5 border-b border-border bg-muted/20 flex items-center gap-2">
-          <HugeiconsIcon icon={Search01Icon} className="size-4 text-muted-foreground shrink-0" />
+        <div className="px-5 py-2 border-b border-border/60 bg-muted/15 flex items-center gap-2.5">
+          <HugeiconsIcon icon={Search01Icon} className="size-4 text-muted-foreground/70 shrink-0" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search settings (e.g. font, theme, autosave, tab size)..."
-            className="flex-1 bg-transparent text-xs text-foreground placeholder:text-muted-foreground outline-none font-sans"
+            className="flex-1 bg-transparent text-xs text-foreground placeholder:text-muted-foreground/60 outline-none font-sans"
             autoFocus
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery("")}
-              className="text-[11px] text-muted-foreground hover:text-foreground cursor-pointer"
+              className="text-[11px] text-muted-foreground hover:text-foreground px-1.5 py-0.5 rounded hover:bg-muted/60 transition-colors cursor-pointer active:scale-95"
             >
               Clear
             </button>
@@ -179,8 +179,8 @@ export function SettingsModal() {
         {/* Main Content Body */}
         <div className="flex flex-1 min-h-0 overflow-hidden">
           {/* Categories Sidebar */}
-          <div className="w-52 border-r border-border bg-sidebar p-2 flex flex-col gap-0.5 select-none shrink-0">
-            <span className="text-[10px] font-semibold text-muted-foreground px-2.5 py-1 uppercase tracking-wider">
+          <div className="w-52 border-r border-border/60 bg-sidebar/50 p-2 flex flex-col gap-0.5 select-none shrink-0">
+            <span className="text-[10px] font-semibold text-muted-foreground/70 px-2.5 py-1 uppercase tracking-wider">
               Categories
             </span>
             {CATEGORIES.map((cat) => {
@@ -194,13 +194,13 @@ export function SettingsModal() {
                     setActiveCategory(cat.id);
                   }}
                   className={cn(
-                    "flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors text-left cursor-pointer",
+                    "group relative flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors duration-120 text-left cursor-pointer active:scale-98",
                     isSelected
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold"
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold shadow-2xs before:absolute before:left-0.5 before:top-1.5 before:bottom-1.5 before:w-0.5 before:bg-primary before:rounded-full"
                       : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/50"
                   )}
                 >
-                  <HugeiconsIcon icon={cat.icon} className="size-3.5 shrink-0" />
+                  <HugeiconsIcon icon={cat.icon} className="size-3.5 shrink-0 text-muted-foreground group-hover:text-foreground transition-colors" />
                   <span className="truncate">{cat.label}</span>
                 </button>
               );
@@ -208,7 +208,7 @@ export function SettingsModal() {
           </div>
 
           {/* Settings Pane */}
-          <div className="flex-1 min-w-0 p-6 overflow-y-auto bg-background/50">
+          <div key={activeCategory} className="flex-1 min-w-0 p-6 overflow-y-auto bg-card/20 animate-in fade-in-50 duration-150">
             {activeCategory === "shortcuts" && !searchQuery.trim() ? (
               <KeyboardShortcutsSettings />
             ) : (
@@ -220,4 +220,3 @@ export function SettingsModal() {
     </div>
   );
 }
-

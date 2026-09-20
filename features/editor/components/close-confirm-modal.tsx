@@ -24,14 +24,14 @@ export function CloseConfirmModal() {
   if (!dirtyCloseCandidate) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-xs p-4 animate-in fade-in-0">
-      <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-lg text-card-foreground">
-        <div className="flex items-start gap-4">
-          <div className="rounded-full bg-amber-500/10 p-2 text-amber-500 shrink-0">
-            <HugeiconsIcon icon={AlertCircleIcon} className="size-5" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in-0 duration-150 ease-out">
+      <div className="w-full max-w-md rounded-xl border border-border/80 bg-card p-5 shadow-2xl text-card-foreground animate-in zoom-in-95 duration-150 delay-subtle ease-[cubic-bezier(0.16,1,0.3,1)]">
+        <div className="flex items-start gap-3.5">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500 border border-amber-500/20 shadow-2xs">
+            <HugeiconsIcon icon={AlertCircleIcon} className="size-4.5" />
           </div>
-          <div className="flex-1">
-            <h3 className="text-sm font-semibold">
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm font-semibold tracking-tight text-foreground">
               Save changes to &quot;{dirtyCloseCandidate.title}&quot;?
             </h3>
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
@@ -40,11 +40,12 @@ export function CloseConfirmModal() {
           </div>
         </div>
 
-        <div className="mt-6 flex items-center justify-end gap-2">
+        <div className="mt-5 flex items-center justify-end gap-2 pt-2 border-t border-border/60">
           <Button
             variant="outline"
             size="sm"
             onClick={() => confirmDirtyClose("cancel")}
+            className="cursor-pointer active:scale-95 transition-all duration-120"
           >
             Cancel
           </Button>
@@ -52,12 +53,14 @@ export function CloseConfirmModal() {
             variant="destructive"
             size="sm"
             onClick={() => confirmDirtyClose("discard")}
+            className="cursor-pointer active:scale-95 transition-all duration-120"
           >
             Don&apos;t Save
           </Button>
           <Button
             size="sm"
             onClick={() => confirmDirtyClose("save")}
+            className="cursor-pointer font-medium active:scale-95 transition-all duration-120"
           >
             Save
           </Button>
@@ -66,4 +69,3 @@ export function CloseConfirmModal() {
     </div>
   );
 }
-

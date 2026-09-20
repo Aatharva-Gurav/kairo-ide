@@ -3,6 +3,7 @@
 import React from "react";
 import { useIconTheme } from "../context";
 import { resolveIcon } from "../resolver";
+import { cn } from "@/lib/utils";
 
 export interface FileIconProps {
   name: string;
@@ -29,7 +30,7 @@ export function FileIcon({
   return (
     <>
       {iconDef.render({
-        className,
+        className: cn("size-4 shrink-0 inline-block align-middle transition-opacity duration-100", className),
         title: title ?? (isDirectory ? (isExpanded ? `${name} (Open folder)` : `${name} (Folder)`) : name),
         style,
       })}

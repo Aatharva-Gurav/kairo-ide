@@ -30,7 +30,8 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", inter.variable)}
+      className={cn("dark h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", inter.variable)}
+      style={{ colorScheme: "dark" }}
     >
       <body className="min-h-full flex flex-col">
         <ErrorBoundaryGuard>{children}</ErrorBoundaryGuard>

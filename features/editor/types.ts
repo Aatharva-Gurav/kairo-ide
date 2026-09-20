@@ -29,10 +29,18 @@ export interface EditorDocument {
   error?: string | null;
 }
 
-export type { EditorSettings } from "@/features/settings/types";
+export type { EditorSettings, FilesSettings } from "@/features/settings/types";
 import { DEFAULT_SETTINGS } from "@/features/settings/registry";
 export { DEFAULT_SETTINGS };
 export const DEFAULT_EDITOR_SETTINGS = DEFAULT_SETTINGS.editor;
+
+export type SplitDirection = "horizontal" | "vertical";
+
+export interface EditorSplitState {
+  isSplit: boolean;
+  splitDocumentId: string | null;
+  splitRatio: number;
+}
 
 export interface FormatOptions {
   tabSize?: number;

@@ -12,6 +12,7 @@ import React, {
 import {
   EditorDocument,
   EditorSettings,
+  FilesSettings,
   DirtyCloseConfirmAction,
 } from "./types";
 import { EditorService } from "./services/editor.service";
@@ -26,9 +27,27 @@ export interface EditorContextValue {
   activeDocumentId: string | null;
   activeDocument: EditorDocument | null;
   settings: EditorSettings;
+  filesSettings: FilesSettings;
   dirtyCloseCandidate: EditorDocument | null;
   isQuickOpenVisible: boolean;
   isGoToLineVisible: boolean;
+
+  // Split view
+  isSplit: boolean;
+  splitDocumentId: string | null;
+  splitDocument: EditorDocument | null;
+  splitRatio: number;
+  setSplitRatio: (ratio: number) => void;
+  openSplitView: (filePath?: string) => void;
+  closeSplitView: () => void;
+  toggleSplitView: () => void;
+  setSplitDocumentId: (filePath: string) => void;
+
+  // Editor-only zoom
+  editorZoomLevel: number;
+  zoomIn: () => void;
+  zoomOut: () => void;
+  zoomReset: () => void;
 
   openDocument: (filePath: string) => Promise<EditorDocument>;
   closeDocument: (filePath: string, force?: boolean) => Promise<boolean>;
@@ -58,11 +77,36 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<EditorSettings>(() => {
     return SettingsService.getEffectiveSettings().editor;
   });
+  const [filesSettings, setFilesSettings] = useState<FilesSettings>(() => {
+    return SettingsService.getEffectiveSettings().files;
+  });
+
+  // Split view state
+  const [isSplit, setIsSplit] = useState(false);
+  const [splitDocumentId, setSplitDocumentIdState] = useState<string | null>(null);
+  const [splitRatio, setSplitRatio] = useState(0.5);
+
+  // Editor-only zoom level (0 = 100%, +1 = 110%, etc.)
+  const [editorZoomLevel, setEditorZoomLevel] = useState(0);
+
+  // Auto-save debounce timer map
+  const autoSaveTimersRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+
+  const filesSettingsRef = useRef(filesSettings);
+  useEffect(() => {
+    filesSettingsRef.current = filesSettings;
+  }, [filesSettings]);
+
+  const splitDocumentIdRef = useRef(splitDocumentId);
+  useEffect(() => {
+    splitDocumentIdRef.current = splitDocumentId;
+  }, [splitDocumentId]);
 
   // Subscribe to live settings updates
   useEffect(() => {
     return SettingsService.subscribe((newEffective) => {
       setSettings(newEffective.editor);
+      setFilesSettings(newEffective.files);
     });
   }, []);
 
@@ -87,6 +131,64 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     return documents.find((doc) => doc.id === activeDocumentId) || null;
   }, [documents, activeDocumentId]);
 
+  const splitDocument = useMemo(() => {
+    if (!splitDocumentId) return null;
+    return documents.find((doc) => doc.id === splitDocumentId) || null;
+  }, [documents, splitDocumentId]);
+
+  // Split view actions
+  const openSplitView = useCallback((filePath?: string) => {
+    const target =
+      filePath
+        ? normalizePath(filePath)
+        : activeDocumentIdRef.current || (documentsRef.current[0]?.id ?? null);
+    if (target) {
+      setSplitDocumentIdState(target);
+      setIsSplit(true);
+    }
+  }, []);
+
+  const closeSplitView = useCallback(() => {
+    setIsSplit(false);
+    setSplitDocumentIdState(null);
+  }, []);
+
+  const toggleSplitView = useCallback(() => {
+    setIsSplit((prev) => {
+      if (prev) {
+        setSplitDocumentIdState(null);
+        return false;
+      }
+      const target =
+        activeDocumentIdRef.current || (documentsRef.current[0]?.id ?? null);
+      if (target) {
+        setSplitDocumentIdState(target);
+        return true;
+      }
+      return false;
+    });
+  }, []);
+
+  const setSplitDocumentId = useCallback((filePath: string) => {
+    setSplitDocumentIdState(normalizePath(filePath));
+  }, []);
+
+  // Zoom controls
+  const zoomIn = useCallback(() => {
+    setEditorZoomLevel((prev) => Math.min(prev + 1, 10));
+    ideEvents.emit("editor:zoom-in", undefined);
+  }, []);
+
+  const zoomOut = useCallback(() => {
+    setEditorZoomLevel((prev) => Math.max(prev - 1, -5));
+    ideEvents.emit("editor:zoom-out", undefined);
+  }, []);
+
+  const zoomReset = useCallback(() => {
+    setEditorZoomLevel(0);
+    ideEvents.emit("editor:zoom-reset", undefined);
+  }, []);
+
   // Update settings through central SettingsService
   const updateSettings = useCallback((partial: Partial<EditorSettings>) => {
     Object.entries(partial).forEach(([key, val]) => {
@@ -94,8 +196,83 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  // Forward-ref for saveDocument so callbacks and event handlers can invoke it without circular dependencies
+  const saveDocumentRef = useRef<((filePath?: string) => Promise<boolean>) | null>(null);
+
+  const saveDocument = useCallback(
+    async (filePath?: string): Promise<boolean> => {
+      const targetId = filePath ? normalizePath(filePath) : activeDocumentIdRef.current;
+      if (!targetId) return false;
+
+      // Clear any pending debounce auto-save timer for this file
+      const pendingTimer = autoSaveTimersRef.current.get(targetId);
+      if (pendingTimer) {
+        clearTimeout(pendingTimer);
+        autoSaveTimersRef.current.delete(targetId);
+      }
+
+      const doc = documentsRef.current.find((d) => d.id === targetId);
+      if (!doc || doc.isBinary || doc.readonly) return false;
+
+      try {
+        if (settings.formatOnSave && monacoEditorRef.current) {
+          await FormatterService.formatMonacoDocument(monacoEditorRef.current);
+        }
+
+        let contentToSave = doc.content;
+        if (filesSettingsRef.current.trimTrailingWhitespace) {
+          contentToSave = contentToSave
+            .split("\n")
+            .map((line) => line.replace(/\s+$/, ""))
+            .join("\n");
+        }
+        if (filesSettingsRef.current.insertFinalNewline && !contentToSave.endsWith("\n")) {
+          contentToSave += "\n";
+        }
+
+        await EditorService.saveDocument(doc.path, contentToSave);
+
+        setDocuments((prev) =>
+          prev.map((d) =>
+            d.id === targetId
+              ? { ...d, content: contentToSave, savedContent: contentToSave, isDirty: false, error: null }
+              : d
+          )
+        );
+
+        ideEvents.emit("editor:document-saved", { path: targetId });
+        ideEvents.emit("editor:document-changed", { path: targetId, isDirty: false });
+        return true;
+      } catch (error: unknown) {
+        const msg = error instanceof Error ? error.message : "Save failed.";
+        setDocuments((prev) =>
+          prev.map((d) => (d.id === targetId ? { ...d, error: msg } : d))
+        );
+        return false;
+      }
+    },
+    [settings.formatOnSave]
+  );
+
+  useEffect(() => {
+    saveDocumentRef.current = saveDocument;
+  }, [saveDocument]);
+
   const setActiveDocumentId = useCallback((filePath: string) => {
     const norm = normalizePath(filePath);
+    const prevId = activeDocumentIdRef.current;
+
+    // Auto-save on focus change
+    if (prevId && prevId !== norm) {
+      const mode = filesSettingsRef.current.autoSave;
+      if (mode === "onFocusChange" || mode === "onWindowChange") {
+        const prevDoc = documentsRef.current.find((d) => d.id === prevId);
+        if (prevDoc && prevDoc.isDirty && saveDocumentRef.current) {
+          saveDocumentRef.current(prevId);
+        }
+      }
+    }
+
     if (activeDocumentIdRef.current && monacoEditorRef.current) {
       ModelService.saveViewState(monacoEditorRef.current, activeDocumentIdRef.current);
     }
@@ -140,6 +317,13 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
 
+      // Clear pending auto-save timer
+      const pendingTimer = autoSaveTimersRef.current.get(norm);
+      if (pendingTimer) {
+        clearTimeout(pendingTimer);
+        autoSaveTimersRef.current.delete(norm);
+      }
+
       ModelService.disposeModel(norm);
 
       const remaining = documentsRef.current.filter((d) => d.id !== norm);
@@ -157,6 +341,17 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
+      // If closed split document, reassign or close split
+      if (splitDocumentIdRef.current === norm) {
+        const remainingForSplit = remaining.filter((d) => d.id !== norm);
+        if (remainingForSplit.length > 0) {
+          setSplitDocumentIdState(remainingForSplit[0].id);
+        } else {
+          setIsSplit(false);
+          setSplitDocumentIdState(null);
+        }
+      }
+
       ideEvents.emit("editor:document-closed", { path: norm });
       return true;
     },
@@ -170,12 +365,16 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
       return false;
     }
 
+    autoSaveTimersRef.current.forEach((t) => clearTimeout(t));
+    autoSaveTimersRef.current.clear();
+
     ModelService.disposeAll();
     setDocuments([]);
     setActiveDocumentIdState(null);
+    closeSplitView();
     ideEvents.emit("editor:active-changed", { path: null });
     return true;
-  }, []);
+  }, [closeSplitView]);
 
   const closeOtherDocuments = useCallback(
     async (filePath: string): Promise<boolean> => {
@@ -188,7 +387,15 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
 
-      others.forEach((d) => ModelService.disposeModel(d.id));
+      others.forEach((d) => {
+        const pendingTimer = autoSaveTimersRef.current.get(d.id);
+        if (pendingTimer) {
+          clearTimeout(pendingTimer);
+          autoSaveTimersRef.current.delete(d.id);
+        }
+        ModelService.disposeModel(d.id);
+      });
+
       setDocuments(documentsRef.current.filter((d) => d.id === norm));
       setActiveDocumentId(norm);
       return true;
@@ -211,44 +418,24 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
         return doc;
       })
     );
-  }, []);
 
-  const saveDocument = useCallback(
-    async (filePath?: string): Promise<boolean> => {
-      const targetId = filePath ? normalizePath(filePath) : activeDocumentIdRef.current;
-      if (!targetId) return false;
-
-      const doc = documentsRef.current.find((d) => d.id === targetId);
-      if (!doc || doc.isBinary || doc.readonly) return false;
-
-      try {
-        if (settings.formatOnSave && monacoEditorRef.current) {
-          await FormatterService.formatMonacoDocument(monacoEditorRef.current);
-        }
-
-        await EditorService.saveDocument(doc.path, doc.content);
-
-        setDocuments((prev) =>
-          prev.map((d) =>
-            d.id === targetId
-              ? { ...d, savedContent: d.content, isDirty: false, error: null }
-              : d
-          )
-        );
-
-        ideEvents.emit("editor:document-saved", { path: targetId });
-        ideEvents.emit("editor:document-changed", { path: targetId, isDirty: false });
-        return true;
-      } catch (error: unknown) {
-        const msg = error instanceof Error ? error.message : "Save failed.";
-        setDocuments((prev) =>
-          prev.map((d) => (d.id === targetId ? { ...d, error: msg } : d))
-        );
-        return false;
+    // Auto-save: afterDelay
+    if (filesSettingsRef.current.autoSave === "afterDelay") {
+      const existingTimer = autoSaveTimersRef.current.get(norm);
+      if (existingTimer) {
+        clearTimeout(existingTimer);
       }
-    },
-    [settings.formatOnSave]
-  );
+      const delay = Math.max(200, filesSettingsRef.current.autoSaveDelay || 1000);
+      const timer = setTimeout(() => {
+        autoSaveTimersRef.current.delete(norm);
+        const currentDoc = documentsRef.current.find((d) => d.id === norm);
+        if (currentDoc && currentDoc.isDirty && saveDocumentRef.current) {
+          saveDocumentRef.current(norm);
+        }
+      }, delay);
+      autoSaveTimersRef.current.set(norm, timer);
+    }
+  }, []);
 
   const saveAllDocuments = useCallback(async (): Promise<boolean> => {
     const { saved, failed } = await EditorService.saveAllDocuments(documentsRef.current);
@@ -360,6 +547,13 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
         }
       }),
 
+      ideEvents.on("file:open-to-side", async (payload) => {
+        if (!payload.isDirectory) {
+          await openDocument(payload.path);
+          openSplitView(payload.path);
+        }
+      }),
+
       ideEvents.on("workspace:closed", () => {
         closeAllDocuments();
       }),
@@ -368,7 +562,38 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     return () => {
       unsubs.forEach((u) => u());
     };
-  }, [openDocument, closeDocument, closeAllDocuments]);
+  }, [openDocument, closeDocument, closeAllDocuments, openSplitView]);
+
+  // Auto-save on window blur
+  useEffect(() => {
+    const handleBlur = () => {
+      const mode = filesSettingsRef.current.autoSave;
+      if (mode === "onFocusChange" || mode === "onWindowChange" || mode === "afterDelay") {
+        const dirtyDocs = documentsRef.current.filter((d) => d.isDirty);
+        for (const doc of dirtyDocs) {
+          if (saveDocumentRef.current) {
+            saveDocumentRef.current(doc.id);
+          }
+        }
+      }
+    };
+
+    window.addEventListener("blur", handleBlur);
+    return () => window.removeEventListener("blur", handleBlur);
+  }, []);
+
+  // Split view shortcut: Ctrl+\ (Cmd+\ on macOS)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "\\") {
+        e.preventDefault();
+        toggleSplitView();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [toggleSplitView]);
 
   // External file watcher notifications
   useEffect(() => {
@@ -395,18 +620,34 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     });
   }, [closeDocument]);
 
-  // Global Keyboard Shortcuts
-
-
   const value = useMemo(
     () => ({
       documents,
       activeDocumentId,
       activeDocument,
       settings,
+      filesSettings,
       dirtyCloseCandidate,
       isQuickOpenVisible,
       isGoToLineVisible,
+
+      // Split view
+      isSplit,
+      splitDocumentId,
+      splitDocument,
+      splitRatio,
+      setSplitRatio,
+      openSplitView,
+      closeSplitView,
+      toggleSplitView,
+      setSplitDocumentId,
+
+      // Editor-only zoom
+      editorZoomLevel,
+      zoomIn,
+      zoomOut,
+      zoomReset,
+
       openDocument,
       closeDocument,
       closeAllDocuments,
@@ -428,9 +669,23 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
       activeDocumentId,
       activeDocument,
       settings,
+      filesSettings,
       dirtyCloseCandidate,
       isQuickOpenVisible,
       isGoToLineVisible,
+      isSplit,
+      splitDocumentId,
+      splitDocument,
+      splitRatio,
+      setSplitRatio,
+      openSplitView,
+      closeSplitView,
+      toggleSplitView,
+      setSplitDocumentId,
+      editorZoomLevel,
+      zoomIn,
+      zoomOut,
+      zoomReset,
       openDocument,
       closeDocument,
       closeAllDocuments,

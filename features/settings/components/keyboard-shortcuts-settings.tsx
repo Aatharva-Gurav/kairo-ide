@@ -45,9 +45,9 @@ export function KeyboardShortcutsSettings() {
   return (
     <div className="flex flex-col gap-4">
       {/* Header & Search */}
-      <div className="flex items-center justify-between gap-4 pb-2 border-b border-border">
+      <div className="flex items-center justify-between gap-4 pb-3 border-b border-border/80">
         <div>
-          <h2 className="text-sm font-bold text-foreground">Keyboard Shortcuts</h2>
+          <h2 className="text-sm font-semibold tracking-tight text-foreground">Keyboard Shortcuts</h2>
           <p className="text-xs text-muted-foreground mt-0.5">
             View, customize, or restore default keybindings across all workbench commands.
           </p>
@@ -66,19 +66,19 @@ export function KeyboardShortcutsSettings() {
       </div>
 
       {/* Filter Bar */}
-      <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-input bg-background text-xs">
-        <HugeiconsIcon icon={Search01Icon} className="size-3.5 text-muted-foreground shrink-0" />
+      <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-border/80 bg-background text-xs shadow-2xs">
+        <HugeiconsIcon icon={Search01Icon} className="size-3.5 text-muted-foreground/70 shrink-0" />
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Filter commands or shortcuts..."
-          className="flex-1 bg-transparent text-xs text-foreground placeholder:text-muted-foreground outline-none"
+          className="flex-1 bg-transparent text-xs text-foreground placeholder:text-muted-foreground/60 outline-none font-sans"
         />
         {search && (
           <button
             onClick={() => setSearch("")}
-            className="text-[10px] text-muted-foreground hover:text-foreground cursor-pointer"
+            className="text-[10px] text-muted-foreground hover:text-foreground px-1 py-0.5 rounded hover:bg-muted/60 transition-colors cursor-pointer"
           >
             Clear
           </button>
@@ -86,8 +86,8 @@ export function KeyboardShortcutsSettings() {
       </div>
 
       {/* Shortcuts Table */}
-      <div className="rounded-lg border border-border overflow-hidden bg-card/40">
-        <div className="grid grid-cols-[1fr_auto_auto] items-center px-4 py-2 bg-muted/40 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border select-none">
+      <div className="rounded-lg border border-border/80 overflow-hidden bg-card/60 shadow-2xs">
+        <div className="grid grid-cols-[1fr_auto_auto] items-center px-4 py-2 bg-muted/40 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/80 select-none">
           <span>Command</span>
           <span className="w-36 text-center">Keybinding</span>
           <span className="w-24 text-right pr-2">Actions</span>
@@ -99,30 +99,30 @@ export function KeyboardShortcutsSettings() {
               <div
                 key={command.id}
                 onDoubleClick={() => setEditingCommand(command)}
-                className="grid grid-cols-[1fr_auto_auto] items-center px-4 py-2.5 hover:bg-muted/30 transition-colors text-xs group select-none"
+                className="grid grid-cols-[1fr_auto_auto] items-center px-4 py-2 hover:bg-muted/40 transition-colors text-xs group select-none"
               >
                 <div className="flex flex-col min-w-0 pr-2">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-foreground truncate">
                       {command.title}
                     </span>
-                    <span className="text-[10px] uppercase font-mono px-1.5 py-0.2 rounded bg-muted text-muted-foreground border border-border/80">
+                    <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-muted/70 text-muted-foreground border border-border/70">
                       {command.category}
                     </span>
                     {source === "user" && (
-                      <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-primary/10 text-primary border border-primary/20">
+                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 font-medium">
                         Custom
                       </span>
                     )}
                   </div>
-                  <span className="text-[10px] font-mono text-muted-foreground/60 truncate">
+                  <span className="text-[10px] font-mono text-muted-foreground/60 truncate mt-0.5">
                     {command.id}
                   </span>
                 </div>
 
                 <div className="w-36 flex items-center justify-center">
                   {keybinding ? (
-                    <kbd className="px-2 py-0.5 rounded bg-muted border border-border text-[11px] font-mono font-semibold text-foreground shadow-2xs">
+                    <kbd className="kbd-shortcut font-medium text-foreground">
                       {keybinding}
                     </kbd>
                   ) : (
@@ -136,7 +136,7 @@ export function KeyboardShortcutsSettings() {
                     size="icon-xs"
                     onClick={() => setEditingCommand(command)}
                     title="Change keybinding"
-                    className="opacity-80 group-hover:opacity-100 cursor-pointer"
+                    className="opacity-70 group-hover:opacity-100 cursor-pointer active:scale-95 transition-all duration-120"
                   >
                     <HugeiconsIcon icon={Edit01Icon} className="size-3" />
                   </Button>

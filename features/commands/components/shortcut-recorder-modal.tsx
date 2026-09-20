@@ -82,15 +82,15 @@ function ShortcutRecorderContent({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-xs p-4 animate-in fade-in-0"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in-0"
     >
       <div
         ref={containerRef}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-2xl text-card-foreground animate-in zoom-in-95"
+        className="w-full max-w-md rounded-xl border border-border/80 bg-card p-5 shadow-2xl text-card-foreground animate-in zoom-in-95 duration-150"
       >
         <div className="flex flex-col gap-1">
-          <h3 className="text-sm font-bold text-foreground">
+          <h3 className="text-sm font-semibold tracking-tight text-foreground">
             Keyboard Shortcut: {command.title}
           </h3>
           <p className="text-xs text-muted-foreground">
@@ -99,12 +99,12 @@ function ShortcutRecorderContent({
         </div>
 
         {/* Shortcut Input Display */}
-        <div className="my-5 flex flex-col items-center justify-center p-4 rounded-lg border border-dashed border-border bg-muted/30">
-          <span className="text-[11px] text-muted-foreground mb-1.5 font-medium select-none">
-            {displayKey ? "Recorded Combination:" : "Press keys on keyboard..."}
+        <div className="my-5 flex flex-col items-center justify-center p-5 rounded-lg border border-dashed border-border/80 bg-muted/20">
+          <span className="text-[11px] text-muted-foreground mb-2 font-medium select-none">
+            {displayKey ? "Recorded Combination" : "Press keys on keyboard..."}
           </span>
-          <div className="h-10 px-4 rounded-md bg-background border border-border flex items-center justify-center shadow-inner min-w-[140px]">
-            <span className="text-sm font-bold font-mono tracking-wide text-foreground">
+          <div className="h-10 px-4 rounded-md bg-background border border-border/80 flex items-center justify-center shadow-2xs min-w-[140px]">
+            <span className="text-sm font-semibold font-mono tracking-wide text-foreground">
               {displayKey || "..."}
             </span>
           </div>
@@ -115,9 +115,9 @@ function ShortcutRecorderContent({
           <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-foreground flex items-start gap-2.5">
             <HugeiconsIcon icon={AlertCircleIcon} className="size-4 text-amber-500 shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="font-semibold text-amber-500">Shortcut Conflict</p>
+              <p className="font-semibold text-amber-600 dark:text-amber-400">Shortcut Conflict</p>
               <p className="text-muted-foreground mt-0.5 leading-relaxed text-[11px]">
-                <strong className="text-foreground">{conflict.key}</strong> is already assigned to{" "}
+                <strong className="text-foreground font-mono">{conflict.key}</strong> is already assigned to{" "}
                 <strong className="text-foreground">&ldquo;{conflict.existingCommand.title}&rdquo;</strong>.
                 Saving will reassign this shortcut.
               </p>
@@ -125,7 +125,7 @@ function ShortcutRecorderContent({
           </div>
         )}
 
-        <div className="flex items-center justify-between gap-2 pt-2 border-t border-border">
+        <div className="flex items-center justify-between gap-2 pt-3 border-t border-border/60">
           <div className="flex items-center gap-1.5">
             <Button variant="ghost" size="xs" onClick={handleReset} className="cursor-pointer">
               Default

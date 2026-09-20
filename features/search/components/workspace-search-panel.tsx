@@ -64,16 +64,16 @@ export function WorkspaceSearchPanel() {
   return (
     <div className="flex flex-1 flex-col h-full w-full overflow-hidden bg-sidebar select-none text-sidebar-foreground">
       {/* Search Header */}
-      <div className="flex items-center justify-between px-2.5 py-2 border-b border-sidebar-border shrink-0">
-        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      <div className="flex items-center justify-between px-2.5 py-2 border-b border-sidebar-border/80 shrink-0">
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground font-mono">
           Search
         </span>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
           <button
             type="button"
             onClick={() => performSearch()}
             title="Refresh Search"
-            className="p-1 rounded hover:bg-sidebar-accent text-muted-foreground hover:text-foreground cursor-pointer"
+            className="p-1 rounded hover:bg-sidebar-accent hover:text-sidebar-foreground text-muted-foreground cursor-pointer transition-colors"
           >
             <HugeiconsIcon
               icon={RefreshIcon}
@@ -84,7 +84,7 @@ export function WorkspaceSearchPanel() {
             type="button"
             onClick={clearSearch}
             title="Clear Search"
-            className="p-1 rounded hover:bg-sidebar-accent text-muted-foreground hover:text-foreground cursor-pointer"
+            className="p-1 rounded hover:bg-sidebar-accent hover:text-sidebar-foreground text-muted-foreground cursor-pointer transition-colors"
           >
             <HugeiconsIcon icon={Delete02Icon} className="size-3.5" />
           </button>
@@ -92,7 +92,7 @@ export function WorkspaceSearchPanel() {
             type="button"
             onClick={collapseAllFiles}
             title="Collapse All Results"
-            className="p-1 rounded hover:bg-sidebar-accent text-muted-foreground hover:text-foreground cursor-pointer text-[10px] font-mono"
+            className="px-1 py-0.5 rounded hover:bg-sidebar-accent hover:text-sidebar-foreground text-muted-foreground cursor-pointer text-[10px] font-mono transition-colors"
           >
             [-]
           </button>
@@ -100,7 +100,7 @@ export function WorkspaceSearchPanel() {
             type="button"
             onClick={expandAllFiles}
             title="Expand All Results"
-            className="p-1 rounded hover:bg-sidebar-accent text-muted-foreground hover:text-foreground cursor-pointer text-[10px] font-mono"
+            className="px-1 py-0.5 rounded hover:bg-sidebar-accent hover:text-sidebar-foreground text-muted-foreground cursor-pointer text-[10px] font-mono transition-colors"
           >
             [+]
           </button>
@@ -108,18 +108,18 @@ export function WorkspaceSearchPanel() {
       </div>
 
       {/* Query and Replace Controls */}
-      <div className="px-2.5 py-2.5 border-b border-sidebar-border flex flex-col gap-2 shrink-0">
+      <div className="px-2.5 py-2 border-b border-sidebar-border/80 flex flex-col gap-2 shrink-0">
         {/* Search input row */}
         <div className="flex items-center gap-1 w-full">
           <button
             type="button"
             onClick={toggleReplaceOpen}
             title="Toggle Replace"
-            className="p-1 rounded hover:bg-sidebar-accent text-muted-foreground hover:text-foreground cursor-pointer shrink-0"
+            className="p-1 rounded hover:bg-sidebar-accent hover:text-sidebar-foreground text-muted-foreground cursor-pointer shrink-0 transition-colors"
           >
             <HugeiconsIcon
               icon={isReplaceOpen ? ArrowDown01Icon : ArrowRight01Icon}
-              className="size-3"
+              className="size-3 transition-transform"
             />
           </button>
 
@@ -130,7 +130,7 @@ export function WorkspaceSearchPanel() {
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Search..."
-              className="h-7 w-full rounded-md bg-input/40 px-2 pr-18 text-xs text-foreground outline-none ring-1 ring-sidebar-ring border border-input font-sans placeholder:text-muted-foreground"
+              className="h-6.5 w-full rounded border border-sidebar-border/80 bg-background/50 px-2 pr-16 text-xs text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-sidebar-ring focus:ring-1 focus:ring-sidebar-ring font-sans transition-colors"
             />
 
             {/* In-input option toggles */}
@@ -140,10 +140,10 @@ export function WorkspaceSearchPanel() {
                 onClick={() => updateOption("isCaseSensitive", !options.isCaseSensitive)}
                 title="Match Case (Alt+C)"
                 className={cn(
-                  "size-5 rounded flex items-center justify-center text-[10px] font-mono font-bold cursor-pointer transition-colors",
+                  "size-4.5 rounded flex items-center justify-center text-[10px] font-mono font-medium cursor-pointer transition-all duration-120 active:scale-90",
                   options.isCaseSensitive
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                    : "text-muted-foreground hover:bg-sidebar-accent"
+                    ? "bg-primary text-primary-foreground shadow-2xs font-semibold scale-100"
+                    : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
                 )}
               >
                 Aa
@@ -153,10 +153,10 @@ export function WorkspaceSearchPanel() {
                 onClick={() => updateOption("isWholeWord", !options.isWholeWord)}
                 title="Match Whole Word (Alt+W)"
                 className={cn(
-                  "size-5 rounded flex items-center justify-center text-[10px] font-mono font-bold cursor-pointer transition-colors",
+                  "size-4.5 rounded flex items-center justify-center text-[10px] font-mono font-medium cursor-pointer transition-all duration-120 active:scale-90",
                   options.isWholeWord
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                    : "text-muted-foreground hover:bg-sidebar-accent"
+                    ? "bg-primary text-primary-foreground shadow-2xs font-semibold scale-100"
+                    : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
                 )}
               >
                 \b
@@ -166,10 +166,10 @@ export function WorkspaceSearchPanel() {
                 onClick={() => updateOption("isRegex", !options.isRegex)}
                 title="Use Regular Expression (Alt+R)"
                 className={cn(
-                  "size-5 rounded flex items-center justify-center text-[10px] font-mono font-bold cursor-pointer transition-colors",
+                  "size-4.5 rounded flex items-center justify-center text-[10px] font-mono font-medium cursor-pointer transition-all duration-120 active:scale-90",
                   options.isRegex
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                    : "text-muted-foreground hover:bg-sidebar-accent"
+                    ? "bg-primary text-primary-foreground shadow-2xs font-semibold scale-100"
+                    : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
                 )}
               >
                 .*
@@ -180,20 +180,20 @@ export function WorkspaceSearchPanel() {
 
         {/* Replace input row */}
         {isReplaceOpen && (
-          <div className="flex items-center gap-1.5 pl-4 w-full">
+          <div className="flex items-center gap-1.5 pl-4 w-full animate-in fade-in-0 slide-in-from-top-1 duration-150 ease-out">
             <input
               type="text"
               value={replaceQuery}
               onChange={(e) => setReplaceQuery(e.target.value)}
               placeholder="Replace..."
-              className="h-7 flex-1 min-w-0 rounded-md bg-input/40 px-2 text-xs text-foreground outline-none ring-1 ring-sidebar-ring border border-input font-sans placeholder:text-muted-foreground"
+              className="h-6.5 flex-1 min-w-0 rounded border border-sidebar-border/80 bg-background/50 px-2 text-xs text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-sidebar-ring focus:ring-1 focus:ring-sidebar-ring font-sans transition-colors"
             />
             <button
               type="button"
               disabled={totalMatches === 0 || isReplacing}
               onClick={requestReplaceAll}
               title="Replace All"
-              className="h-7 px-2 rounded-md bg-sidebar-primary text-sidebar-primary-foreground text-xs font-medium hover:bg-sidebar-primary/90 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed transition-opacity shrink-0"
+              className="h-6.5 px-2.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed transition-all duration-120 active:scale-95 shadow-2xs shrink-0"
             >
               Replace All
             </button>
@@ -205,39 +205,39 @@ export function WorkspaceSearchPanel() {
           <button
             type="button"
             onClick={() => setShowFilters((prev) => !prev)}
-            className="flex items-center gap-1 hover:text-foreground cursor-pointer shrink-0"
+            className="flex items-center gap-1 text-muted-foreground hover:text-sidebar-foreground cursor-pointer shrink-0 transition-colors active:scale-95"
           >
             <HugeiconsIcon icon={FilterIcon} className="size-3" />
             <span>{showFilters ? "Hide include/exclude" : "Filter files"}</span>
           </button>
           {query.trim() && (
-            <span className="truncate max-w-[110px] text-right" title={`${totalMatches} result${totalMatches !== 1 ? "s" : ""} in ${results.length} file${results.length !== 1 ? "s" : ""}`}>
-              {totalMatches} result{totalMatches !== 1 ? "s" : ""}
+            <span className="truncate max-w-[120px] text-right font-mono text-[10px] text-muted-foreground animate-kairo-pop" title={`${totalMatches} result${totalMatches !== 1 ? "s" : ""} in ${results.length} file${results.length !== 1 ? "s" : ""}`}>
+              {totalMatches} match{totalMatches !== 1 ? "es" : ""}
             </span>
           )}
         </div>
 
         {/* Expandable Include / Exclude Inputs */}
         {showFilters && (
-          <div className="flex flex-col gap-1.5 pt-1 text-xs">
+          <div className="flex flex-col gap-1.5 pt-1 text-xs animate-in fade-in-0 slide-in-from-top-1 duration-150 ease-out">
             <div>
-              <label className="text-[10px] text-muted-foreground">files to include</label>
+              <label className="text-[10px] text-muted-foreground font-mono">files to include</label>
               <input
                 type="text"
                 value={options.includePattern}
                 onChange={(e) => updateOption("includePattern", e.target.value)}
                 placeholder="e.g. *.ts, src/**"
-                className="h-6 w-full rounded bg-input/30 px-1.5 text-xs text-foreground outline-none border border-input font-mono mt-0.5"
+                className="h-6 w-full rounded border border-sidebar-border/80 bg-background/50 px-2 text-xs text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-sidebar-ring focus:ring-1 focus:ring-sidebar-ring font-mono mt-0.5 transition-colors"
               />
             </div>
             <div>
-              <label className="text-[10px] text-muted-foreground">files to exclude</label>
+              <label className="text-[10px] text-muted-foreground font-mono">files to exclude</label>
               <input
                 type="text"
                 value={options.excludePattern}
                 onChange={(e) => updateOption("excludePattern", e.target.value)}
                 placeholder="e.g. *.test.ts, dist/**"
-                className="h-6 w-full rounded bg-input/30 px-1.5 text-xs text-foreground outline-none border border-input font-mono mt-0.5"
+                className="h-6 w-full rounded border border-sidebar-border/80 bg-background/50 px-2 text-xs text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-sidebar-ring focus:ring-1 focus:ring-sidebar-ring font-mono mt-0.5 transition-colors"
               />
             </div>
           </div>
@@ -262,12 +262,15 @@ export function WorkspaceSearchPanel() {
                   {/* File Header Row */}
                   <div
                     onClick={() => toggleFileExpand(file.filePath)}
-                    className="flex items-center justify-between px-2 py-1 rounded hover:bg-sidebar-accent cursor-pointer group transition-colors"
+                    className="flex items-center justify-between px-2 py-1 rounded hover:bg-sidebar-accent cursor-pointer group transition-all duration-120 active:scale-[0.99]"
                   >
                     <div className="flex items-center gap-1.5 overflow-hidden">
                       <HugeiconsIcon
-                        icon={isExpanded ? ArrowDown01Icon : ArrowRight01Icon}
-                        className="size-3 text-muted-foreground shrink-0"
+                        icon={ArrowRight01Icon}
+                        className={cn(
+                          "size-3 text-muted-foreground shrink-0 transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)]",
+                          isExpanded && "rotate-90"
+                        )}
                       />
                       <FileIcon name={file.fileName} isDirectory={false} className="size-3.5 shrink-0" />
                       <span className="font-medium text-foreground truncate font-mono">
@@ -278,14 +281,14 @@ export function WorkspaceSearchPanel() {
                       </span>
                     </div>
 
-                    <span className="rounded-full bg-sidebar-accent px-1.5 py-0.2 text-[10px] font-mono font-medium text-sidebar-accent-foreground shrink-0">
+                    <span className="rounded-full bg-sidebar-accent/80 px-1.5 py-0.2 text-[10px] font-mono font-medium text-sidebar-accent-foreground shrink-0">
                       {file.matches.length}
                     </span>
                   </div>
 
                   {/* Match items inside this file */}
                   {isExpanded && (
-                    <div className="flex flex-col pl-4 border-l border-sidebar-border ml-3 mt-0.5">
+                    <div className="flex flex-col pl-4 border-l border-sidebar-border ml-3 mt-0.5 animate-in fade-in-0 slide-in-from-top-1 duration-150 ease-out origin-top">
                       {file.matches.map((match, mIdx) => (
                         <SearchResultItem
                           key={`${match.filePath}:${match.lineNumber}:${match.column}:${mIdx}`}
