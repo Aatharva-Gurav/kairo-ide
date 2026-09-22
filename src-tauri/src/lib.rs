@@ -51,6 +51,8 @@ pub fn run() {
       window_toggle_maximize,
       window_close,
       window_is_maximized,
+      window_set_theme,
+      window_toggle_fullscreen,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

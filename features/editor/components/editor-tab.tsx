@@ -56,9 +56,9 @@ export function EditorTab({ document, isActive, onSelect, onClose }: EditorTabPr
         onContextMenu={handleContextMenu}
         title={document.path}
         className={cn(
-          "group relative flex h-9 shrink-0 items-center gap-2 border-r border-border/70 px-3 text-xs cursor-pointer select-none transition-all duration-140 ease-out animate-tab-enter",
+          "group relative flex h-9 shrink-0 items-center gap-2 border-r border-border/70 px-3 text-xs cursor-pointer select-none transition-colors duration-120 ease-out animate-tab-enter",
           isActive
-            ? "bg-background text-foreground font-medium"
+            ? "bg-background text-foreground font-semibold shadow-2xs"
             : "bg-sidebar/40 text-muted-foreground hover:bg-sidebar/70 hover:text-foreground"
         )}
       >
@@ -70,7 +70,11 @@ export function EditorTab({ document, isActive, onSelect, onClose }: EditorTabPr
           )}
         />
 
-        <FileIcon name={document.title} isDirectory={false} className="size-3.5 shrink-0 transition-transform duration-140 group-hover:scale-105" />
+        <FileIcon
+          name={document.title}
+          isDirectory={false}
+          className="size-3.5 shrink-0 transition-transform duration-140 group-hover:scale-105"
+        />
         <span className="truncate max-w-[140px] tracking-tight">{document.title}</span>
 
         {/* Dirty indicator or close button */}
@@ -94,8 +98,8 @@ export function EditorTab({ document, isActive, onSelect, onClose }: EditorTabPr
               onClose();
             }}
             className={cn(
-              "rounded p-0.5 hover:bg-muted/80 text-muted-foreground hover:text-foreground cursor-pointer transition-colors duration-140 active:scale-90",
-              document.isDirty ? "hidden group-hover:flex" : "opacity-0 group-hover:opacity-100 group-hover:delay-[30ms]",
+              "rounded p-0.5 hover:bg-muted/80 text-muted-foreground hover:text-foreground cursor-pointer transition-colors duration-100 active:scale-90",
+              document.isDirty ? "hidden group-hover:flex" : "opacity-0 group-hover:opacity-100",
               isActive && !document.isDirty && "opacity-70 hover:opacity-100"
             )}
           >
@@ -108,15 +112,19 @@ export function EditorTab({ document, isActive, onSelect, onClose }: EditorTabPr
       {contextMenu && (
         <div
           ref={menuRef}
-          style={{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }}
-          className="fixed z-50 min-w-[170px] rounded-lg border border-border/90 bg-popover/95 backdrop-blur-md p-1 shadow-2xl text-xs text-popover-foreground animate-in fade-in-0 zoom-in-95 duration-120 delay-subtle ease-out origin-top-left"
+          style={{
+            top: `${contextMenu.y}px`,
+            left: `${contextMenu.x}px`,
+            boxShadow: "var(--shadow-elevation-high)",
+          }}
+          className="fixed z-50 min-w-[180px] rounded-lg border border-border/80 bg-popover/98 backdrop-blur-md p-1 shadow-2xl text-xs text-popover-foreground animate-in fade-in-0 zoom-in-95 duration-120 ease-out origin-top-left"
         >
           <button
             onClick={() => {
               onClose();
               setContextMenu(null);
             }}
-            className="flex w-full items-center px-2.5 py-1.5 rounded hover:bg-accent hover:text-accent-foreground cursor-pointer text-left transition-colors"
+            className="flex w-full items-center px-2.5 py-1.5 rounded-md hover:bg-accent hover:text-accent-foreground cursor-pointer text-left transition-colors duration-100"
           >
             Close
           </button>
@@ -125,7 +133,7 @@ export function EditorTab({ document, isActive, onSelect, onClose }: EditorTabPr
               closeOtherDocuments(document.path);
               setContextMenu(null);
             }}
-            className="flex w-full items-center px-2.5 py-1.5 rounded hover:bg-accent hover:text-accent-foreground cursor-pointer text-left transition-colors"
+            className="flex w-full items-center px-2.5 py-1.5 rounded-md hover:bg-accent hover:text-accent-foreground cursor-pointer text-left transition-colors duration-100"
           >
             Close Others
           </button>
@@ -134,17 +142,17 @@ export function EditorTab({ document, isActive, onSelect, onClose }: EditorTabPr
               closeAllDocuments();
               setContextMenu(null);
             }}
-            className="flex w-full items-center px-2.5 py-1.5 rounded hover:bg-accent hover:text-accent-foreground cursor-pointer text-left transition-colors"
+            className="flex w-full items-center px-2.5 py-1.5 rounded-md hover:bg-accent hover:text-accent-foreground cursor-pointer text-left transition-colors duration-100"
           >
             Close All
           </button>
-          <div className="h-px bg-border/80 my-1" />
+          <div className="h-px bg-border/70 my-1 mx-1" />
           <button
             onClick={() => {
               navigator.clipboard.writeText(document.path);
               setContextMenu(null);
             }}
-            className="flex w-full items-center px-2.5 py-1.5 rounded hover:bg-accent hover:text-accent-foreground cursor-pointer text-left transition-colors"
+            className="flex w-full items-center px-2.5 py-1.5 rounded-md hover:bg-accent hover:text-accent-foreground cursor-pointer text-left transition-colors duration-100"
           >
             Copy Absolute Path
           </button>
@@ -153,7 +161,7 @@ export function EditorTab({ document, isActive, onSelect, onClose }: EditorTabPr
               revealInExplorer(document.path);
               setContextMenu(null);
             }}
-            className="flex w-full items-center px-2.5 py-1.5 rounded hover:bg-accent hover:text-accent-foreground cursor-pointer text-left transition-colors"
+            className="flex w-full items-center px-2.5 py-1.5 rounded-md hover:bg-accent hover:text-accent-foreground cursor-pointer text-left transition-colors duration-100"
           >
             Reveal in Explorer
           </button>

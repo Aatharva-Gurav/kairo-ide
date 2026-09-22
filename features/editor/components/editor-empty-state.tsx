@@ -5,9 +5,10 @@ import { useEditor } from "../store";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { CodeIcon, Search01Icon, Folder01Icon } from "@hugeicons/core-free-icons";
 import { KairoBrandIcon } from "@/components/kairo-brand-icon";
+import { ideEvents } from "@/lib/events";
 
 export function EditorEmptyState() {
-  const { setQuickOpenVisible } = useEditor();
+  const { setQuickOpenVisible, formatActiveDocument } = useEditor();
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center p-8 text-center select-none bg-background animate-in fade-in-50 zoom-in-95 duration-200 delay-subtle">
@@ -22,9 +23,10 @@ export function EditorEmptyState() {
 
       {/* Keyboard Shortcuts Reference */}
       <div className="mt-6 flex flex-col gap-1 text-xs max-w-xs w-full">
-        <div
+        <button
+          type="button"
           onClick={() => setQuickOpenVisible(true)}
-          className="group flex items-center justify-between px-3 py-1.5 cursor-pointer hover:bg-muted/40 rounded-lg text-muted-foreground hover:text-foreground transition-colors duration-120 ease-out active:scale-[0.98]"
+          className="group flex items-center justify-between px-3 py-1.5 cursor-pointer hover:bg-muted/40 rounded-lg text-muted-foreground hover:text-foreground transition-colors duration-120 ease-out active:scale-[0.98] text-left"
         >
           <div className="flex items-center gap-2">
             <HugeiconsIcon icon={Folder01Icon} className="size-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
@@ -33,9 +35,13 @@ export function EditorEmptyState() {
           <kbd className="kbd-shortcut font-medium">
             Ctrl + P
           </kbd>
-        </div>
+        </button>
 
-        <div className="group flex items-center justify-between px-3 py-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/40 rounded-lg transition-colors duration-120">
+        <button
+          type="button"
+          onClick={() => ideEvents.emit("sidebar:switch-tab", "search")}
+          className="group flex items-center justify-between px-3 py-1.5 cursor-pointer hover:bg-muted/40 rounded-lg text-muted-foreground hover:text-foreground transition-colors duration-120 ease-out active:scale-[0.98] text-left"
+        >
           <div className="flex items-center gap-2">
             <HugeiconsIcon icon={Search01Icon} className="size-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
             <span>Find in Workspace</span>
@@ -43,9 +49,13 @@ export function EditorEmptyState() {
           <kbd className="kbd-shortcut font-medium">
             Ctrl + Shift + F
           </kbd>
-        </div>
+        </button>
 
-        <div className="group flex items-center justify-between px-3 py-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/40 rounded-lg transition-colors duration-120">
+        <button
+          type="button"
+          onClick={() => formatActiveDocument()}
+          className="group flex items-center justify-between px-3 py-1.5 cursor-pointer hover:bg-muted/40 rounded-lg text-muted-foreground hover:text-foreground transition-colors duration-120 ease-out active:scale-[0.98] text-left"
+        >
           <div className="flex items-center gap-2">
             <HugeiconsIcon icon={CodeIcon} className="size-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
             <span>Format Document</span>
@@ -53,7 +63,7 @@ export function EditorEmptyState() {
           <kbd className="kbd-shortcut font-medium">
             Shift + Alt + F
           </kbd>
-        </div>
+        </button>
       </div>
     </div>
   );

@@ -125,13 +125,11 @@ export function EditorWorkspace() {
             <div
               onMouseDown={handleMouseDown}
               className={cn(
-                "w-1 h-full cursor-col-resize hover:bg-sidebar-primary/60 transition-colors z-20 shrink-0 bg-border/80 flex items-center justify-center group",
                 "w-1.5 h-full cursor-col-resize hover:bg-sidebar-primary/50 transition-colors z-20 shrink-0 bg-border/70 flex items-center justify-center group",
                 isDragging && "bg-sidebar-primary ring-1 ring-sidebar-primary"
               )}
               title="Drag to resize split view"
             >
-              <div className="w-0.5 h-6 rounded-full bg-muted-foreground/40 group-hover:bg-sidebar-primary" />
               <div className="w-0.5 h-8 rounded-full bg-muted-foreground/30 group-hover:bg-sidebar-primary transition-colors" />
             </div>
 

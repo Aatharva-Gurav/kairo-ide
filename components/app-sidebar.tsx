@@ -51,13 +51,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         aria-label={open ? "Hide Sidebar (Ctrl+B)" : "Show Sidebar (Ctrl+B)"}
         title={open ? "Hide Sidebar (Ctrl+B)" : "Show Sidebar (Ctrl+B)"}
         className={cn(
-          "fixed z-40 flex items-center justify-center transition-all duration-150 ease-out cursor-pointer select-none size-7 rounded-md active:scale-95 border shadow-2xs backdrop-blur-md focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sidebar-ring",
+          "fixed z-40 flex items-center justify-center transition-all duration-150 ease-out cursor-pointer select-none size-7 rounded-md active:scale-95 border backdrop-blur-md focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sidebar-ring shadow-xs",
           open
-            ? "top-[42px] left-[calc(var(--sidebar-width)-44px)] border-sidebar-border/80 bg-sidebar/95 text-sidebar-foreground hover:bg-sidebar-accent hover:border-sidebar-primary/50"
-            : "top-[36px] left-2 border-border/80 bg-background/95 text-muted-foreground hover:text-foreground shadow-2xs hover:bg-accent hover:border-sidebar-primary/50"
+            ? "top-[40px] left-[calc(var(--sidebar-width)-42px)] border-sidebar-border/80 bg-sidebar/95 text-sidebar-foreground hover:bg-sidebar-accent hover:border-sidebar-primary/50"
+            : "top-[36px] left-2 border-border/80 bg-background/95 text-muted-foreground hover:text-foreground shadow-xs hover:bg-accent hover:border-sidebar-primary/50"
         )}
       >
-        <div className="flex items-center justify-center size-5 rounded bg-sidebar-accent/40 dark:bg-sidebar-accent/30 transition-transform duration-200">
+        <div className="flex items-center justify-center size-5 rounded bg-sidebar-accent/50 dark:bg-sidebar-accent/30 transition-transform duration-200">
           <HugeiconsIcon
             icon={open ? SidebarLeftIcon : SidebarRightIcon}
             className={cn(
@@ -85,7 +85,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarHeader>
         ) : (
           <SidebarHeader className="h-10 justify-center px-2.5 border-b border-sidebar-border/80 pr-12">
-            <div className="relative flex items-center p-0.5 rounded-lg bg-sidebar-accent/40 border border-sidebar-border/60 min-w-0">
+            <div className="relative flex items-center p-0.5 rounded-lg bg-sidebar-accent/40 border border-sidebar-border/60 min-w-0 shadow-2xs">
               <button
                 type="button"
                 onClick={() => setActiveTab("explorer")}
@@ -135,14 +135,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           )}
         </SidebarContent>
 
-        <SidebarFooter className="border-t border-sidebar-border/70 p-1.5 bg-sidebar/80">
+        <SidebarFooter className="border-t border-sidebar-border/70 p-1.5 bg-sidebar/80 backdrop-blur-xs">
           <button
             type="button"
             onClick={() => openSettings()}
             title="Open Settings (Ctrl+,)"
             className="group flex items-center gap-2 w-full px-2.5 py-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/60 transition-all duration-140 cursor-pointer select-none active:scale-[0.98]"
           >
-            <HugeiconsIcon icon={Settings01Icon} className="size-3.5 transition-transform duration-200 ease-out group-hover:rotate-45 text-muted-foreground group-hover:text-sidebar-foreground" />
+            <HugeiconsIcon icon={Settings01Icon} className="size-3.5 transition-transform duration-300 ease-out group-hover:rotate-45 text-muted-foreground group-hover:text-sidebar-foreground" />
             <span className="tracking-tight">Settings</span>
             <kbd className="ml-auto kbd-shortcut transition-colors group-hover:border-sidebar-primary/40 group-hover:text-sidebar-foreground">
               {KeybindingService.formatDisplay("ctrl+,")}

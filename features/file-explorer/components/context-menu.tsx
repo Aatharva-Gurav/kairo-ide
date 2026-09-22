@@ -78,8 +78,8 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
 
   if (!state.isOpen) return null;
 
-  const menuWidth = 210;
-  const menuHeight = 320;
+  const menuWidth = 220;
+  const menuHeight = 340;
   const x = Math.min(state.x, window.innerWidth - menuWidth - 10);
   const y = Math.min(state.y, window.innerHeight - menuHeight - 10);
 
@@ -97,51 +97,55 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
   return (
     <div
       ref={menuRef}
-      style={{ left: `${x}px`, top: `${y}px` }}
-      className="fixed z-50 min-w-[210px] rounded-md border border-border bg-popover p-1 shadow-md text-popover-foreground text-xs select-none animate-in fade-in-0 zoom-in-95"
+      style={{
+        left: `${x}px`,
+        top: `${y}px`,
+        boxShadow: "var(--shadow-elevation-high)",
+      }}
+      className="fixed z-50 min-w-[215px] rounded-lg border border-border/80 bg-popover/98 backdrop-blur-md p-1 text-popover-foreground text-xs select-none animate-in fade-in-0 zoom-in-95 duration-120 ease-out origin-top-left"
     >
       {/* Multi-Selection Context Menu */}
       {isMultiSelect && (
         <>
-          <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+          <div className="px-2.5 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider font-mono">
             {selectedPaths.size} Items Selected
           </div>
-          <div className="my-1 h-px bg-border" />
+          <div className="my-1 h-px bg-border/70 mx-1" />
           <button
             onClick={() => handleAction(() => copySelected())}
-            className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer"
+            className="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
             <div className="flex items-center gap-2">
-              <HugeiconsIcon icon={Copy01Icon} className="size-3.5" />
+              <HugeiconsIcon icon={Copy01Icon} className="size-3.5 text-muted-foreground" />
               <span>Copy</span>
             </div>
-            <span className="text-[10px] text-muted-foreground">Ctrl+C</span>
+            <kbd className="kbd-shortcut font-mono text-[9px] text-muted-foreground/80">Ctrl+C</kbd>
           </button>
           <button
             onClick={() => handleAction(() => cutSelected())}
-            className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer"
+            className="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
             <div className="flex items-center gap-2">
-              <HugeiconsIcon icon={ScissorsIcon} className="size-3.5" />
+              <HugeiconsIcon icon={ScissorsIcon} className="size-3.5 text-muted-foreground" />
               <span>Cut</span>
             </div>
-            <span className="text-[10px] text-muted-foreground">Ctrl+X</span>
+            <kbd className="kbd-shortcut font-mono text-[9px] text-muted-foreground/80">Ctrl+X</kbd>
           </button>
-          <div className="my-1 h-px bg-border" />
+          <div className="my-1 h-px bg-border/70 mx-1" />
           <button
             onClick={() => handleAction(() => promptDelete())}
-            className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-destructive hover:bg-destructive/10 cursor-pointer"
+            className="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left text-destructive hover:bg-destructive/15 cursor-pointer transition-colors duration-100"
           >
             <div className="flex items-center gap-2">
               <HugeiconsIcon icon={Delete02Icon} className="size-3.5" />
               <span>Delete</span>
             </div>
-            <span className="text-[10px] text-destructive/70">Del</span>
+            <kbd className="kbd-shortcut font-mono text-[9px] text-destructive/80">Del</kbd>
           </button>
-          <div className="my-1 h-px bg-border" />
+          <div className="my-1 h-px bg-border/70 mx-1" />
           <button
             onClick={() => handleAction(() => clearSelection())}
-            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer"
+            className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-muted-foreground hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
             <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" />
             <span>Deselect All</span>
@@ -154,89 +158,89 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
         <>
           <button
             onClick={() => handleAction(() => openFile(node))}
-            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer"
+            className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={File01Icon} className="size-3.5" />
+            <HugeiconsIcon icon={File01Icon} className="size-3.5 text-muted-foreground" />
             <span>Open</span>
           </button>
           <button
             onClick={() => handleAction(() => openToSide(node))}
-            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer"
+            className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={ArrowRight01Icon} className="size-3.5" />
+            <HugeiconsIcon icon={ArrowRight01Icon} className="size-3.5 text-muted-foreground" />
             <span>Open to Side</span>
           </button>
           <button
             onClick={() => handleAction(() => revealInFileManager(node))}
-            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer"
+            className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={Folder01Icon} className="size-3.5" />
+            <HugeiconsIcon icon={Folder01Icon} className="size-3.5 text-muted-foreground" />
             <span>Reveal in File Manager</span>
           </button>
-          <div className="my-1 h-px bg-border" />
+          <div className="my-1 h-px bg-border/70 mx-1" />
           <button
             onClick={() => handleAction(() => copyAbsolutePath(node))}
-            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer"
+            className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={Copy02Icon} className="size-3.5" />
+            <HugeiconsIcon icon={Copy02Icon} className="size-3.5 text-muted-foreground" />
             <span>Copy Path</span>
           </button>
           <button
             onClick={() => handleAction(() => copyRelativePath(node))}
-            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer"
+            className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={Copy02Icon} className="size-3.5" />
+            <HugeiconsIcon icon={Copy02Icon} className="size-3.5 text-muted-foreground" />
             <span>Copy Relative Path</span>
           </button>
-          <div className="my-1 h-px bg-border" />
+          <div className="my-1 h-px bg-border/70 mx-1" />
           <button
             onClick={() => handleAction(() => startRename(node))}
-            className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer"
+            className="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
             <div className="flex items-center gap-2">
-              <HugeiconsIcon icon={Edit02Icon} className="size-3.5" />
+              <HugeiconsIcon icon={Edit02Icon} className="size-3.5 text-muted-foreground" />
               <span>Rename</span>
             </div>
-            <span className="text-[10px] text-muted-foreground">F2</span>
+            <kbd className="kbd-shortcut font-mono text-[9px] text-muted-foreground/80">F2</kbd>
           </button>
           <button
             onClick={() => handleAction(() => duplicateNode(node))}
-            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer"
+            className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={Copy02Icon} className="size-3.5" />
+            <HugeiconsIcon icon={Copy02Icon} className="size-3.5 text-muted-foreground" />
             <span>Duplicate</span>
           </button>
-          <div className="my-1 h-px bg-border" />
+          <div className="my-1 h-px bg-border/70 mx-1" />
           <button
             onClick={() => handleAction(() => copySelected([node]))}
-            className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer"
+            className="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
             <div className="flex items-center gap-2">
-              <HugeiconsIcon icon={Copy01Icon} className="size-3.5" />
+              <HugeiconsIcon icon={Copy01Icon} className="size-3.5 text-muted-foreground" />
               <span>Copy</span>
             </div>
-            <span className="text-[10px] text-muted-foreground">Ctrl+C</span>
+            <kbd className="kbd-shortcut font-mono text-[9px] text-muted-foreground/80">Ctrl+C</kbd>
           </button>
           <button
             onClick={() => handleAction(() => cutSelected([node]))}
-            className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer"
+            className="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
             <div className="flex items-center gap-2">
-              <HugeiconsIcon icon={ScissorsIcon} className="size-3.5" />
+              <HugeiconsIcon icon={ScissorsIcon} className="size-3.5 text-muted-foreground" />
               <span>Cut</span>
             </div>
-            <span className="text-[10px] text-muted-foreground">Ctrl+X</span>
+            <kbd className="kbd-shortcut font-mono text-[9px] text-muted-foreground/80">Ctrl+X</kbd>
           </button>
-          <div className="my-1 h-px bg-border" />
+          <div className="my-1 h-px bg-border/70 mx-1" />
           <button
             onClick={() => handleAction(() => promptDelete(node))}
-            className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-destructive hover:bg-destructive/10 cursor-pointer"
+            className="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left text-destructive hover:bg-destructive/15 cursor-pointer transition-colors duration-100"
           >
             <div className="flex items-center gap-2">
               <HugeiconsIcon icon={Delete02Icon} className="size-3.5" />
               <span>Delete</span>
             </div>
-            <span className="text-[10px] text-destructive/70">Del</span>
+            <kbd className="kbd-shortcut font-mono text-[9px] text-destructive/80">Del</kbd>
           </button>
         </>
       )}
@@ -246,96 +250,96 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
         <>
           <button
             onClick={() => handleAction(() => startCreateFile(node.path))}
-            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer"
+            className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={FileAddIcon} className="size-3.5" />
+            <HugeiconsIcon icon={FileAddIcon} className="size-3.5 text-muted-foreground" />
             <span>New File...</span>
           </button>
           <button
             onClick={() => handleAction(() => startCreateFolder(node.path))}
-            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer"
+            className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={FolderAddIcon} className="size-3.5" />
+            <HugeiconsIcon icon={FolderAddIcon} className="size-3.5 text-muted-foreground" />
             <span>New Folder...</span>
           </button>
           <button
             onClick={() => handleAction(() => revealInFileManager(node))}
-            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer"
+            className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={Folder01Icon} className="size-3.5" />
+            <HugeiconsIcon icon={Folder01Icon} className="size-3.5 text-muted-foreground" />
             <span>Reveal in File Manager</span>
           </button>
-          <div className="my-1 h-px bg-border" />
+          <div className="my-1 h-px bg-border/70 mx-1" />
           <button
             onClick={() => handleAction(() => copyAbsolutePath(node))}
-            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer"
+            className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={Copy02Icon} className="size-3.5" />
+            <HugeiconsIcon icon={Copy02Icon} className="size-3.5 text-muted-foreground" />
             <span>Copy Path</span>
           </button>
           <button
             onClick={() => handleAction(() => copyRelativePath(node))}
-            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer"
+            className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={Copy02Icon} className="size-3.5" />
+            <HugeiconsIcon icon={Copy02Icon} className="size-3.5 text-muted-foreground" />
             <span>Copy Relative Path</span>
           </button>
-          <div className="my-1 h-px bg-border" />
+          <div className="my-1 h-px bg-border/70 mx-1" />
           <button
             onClick={() => handleAction(() => copySelected([node]))}
-            className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer"
+            className="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
             <div className="flex items-center gap-2">
-              <HugeiconsIcon icon={Copy01Icon} className="size-3.5" />
+              <HugeiconsIcon icon={Copy01Icon} className="size-3.5 text-muted-foreground" />
               <span>Copy</span>
             </div>
-            <span className="text-[10px] text-muted-foreground">Ctrl+C</span>
+            <kbd className="kbd-shortcut font-mono text-[9px] text-muted-foreground/80">Ctrl+C</kbd>
           </button>
           <button
             onClick={() => handleAction(() => cutSelected([node]))}
-            className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer"
+            className="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
             <div className="flex items-center gap-2">
-              <HugeiconsIcon icon={ScissorsIcon} className="size-3.5" />
+              <HugeiconsIcon icon={ScissorsIcon} className="size-3.5 text-muted-foreground" />
               <span>Cut</span>
             </div>
-            <span className="text-[10px] text-muted-foreground">Ctrl+X</span>
+            <kbd className="kbd-shortcut font-mono text-[9px] text-muted-foreground/80">Ctrl+X</kbd>
           </button>
           <button
             disabled={!clipboard}
             onClick={() => handleAction(() => pasteNode(node))}
-            className={`flex w-full items-center justify-between rounded px-2 py-1.5 text-left ${
+            className={`flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left transition-colors duration-100 ${
               clipboard
-                ? "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer"
+                ? "hover:bg-accent hover:text-accent-foreground cursor-pointer"
                 : "opacity-40 cursor-not-allowed"
             }`}
           >
             <div className="flex items-center gap-2">
-              <HugeiconsIcon icon={ClipboardPasteIcon} className="size-3.5" />
+              <HugeiconsIcon icon={ClipboardPasteIcon} className="size-3.5 text-muted-foreground" />
               <span>Paste</span>
             </div>
-            <span className="text-[10px] text-muted-foreground">Ctrl+V</span>
+            <kbd className="kbd-shortcut font-mono text-[9px] text-muted-foreground/80">Ctrl+V</kbd>
           </button>
-          <div className="my-1 h-px bg-border" />
+          <div className="my-1 h-px bg-border/70 mx-1" />
           <button
             onClick={() => handleAction(() => startRename(node))}
-            className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer"
+            className="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
             <div className="flex items-center gap-2">
-              <HugeiconsIcon icon={Edit02Icon} className="size-3.5" />
+              <HugeiconsIcon icon={Edit02Icon} className="size-3.5 text-muted-foreground" />
               <span>Rename</span>
             </div>
-            <span className="text-[10px] text-muted-foreground">F2</span>
+            <kbd className="kbd-shortcut font-mono text-[9px] text-muted-foreground/80">F2</kbd>
           </button>
           <button
             onClick={() => handleAction(() => promptDelete(node))}
-            className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-destructive hover:bg-destructive/10 cursor-pointer"
+            className="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left text-destructive hover:bg-destructive/15 cursor-pointer transition-colors duration-100"
           >
             <div className="flex items-center gap-2">
               <HugeiconsIcon icon={Delete02Icon} className="size-3.5" />
               <span>Delete</span>
             </div>
-            <span className="text-[10px] text-destructive/70">Del</span>
+            <kbd className="kbd-shortcut font-mono text-[9px] text-destructive/80">Del</kbd>
           </button>
         </>
       )}
@@ -345,52 +349,52 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
         <>
           <button
             onClick={() => handleAction(() => startCreateFile(activeWorkspace.rootPath))}
-            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer"
+            className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={FileAddIcon} className="size-3.5" />
+            <HugeiconsIcon icon={FileAddIcon} className="size-3.5 text-muted-foreground" />
             <span>New File...</span>
           </button>
           <button
             onClick={() => handleAction(() => startCreateFolder(activeWorkspace.rootPath))}
-            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer"
+            className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={FolderAddIcon} className="size-3.5" />
+            <HugeiconsIcon icon={FolderAddIcon} className="size-3.5 text-muted-foreground" />
             <span>New Folder...</span>
           </button>
           <button
             disabled={!clipboard}
             onClick={() => handleAction(() => pasteNode(null))}
-            className={`flex w-full items-center justify-between rounded px-2 py-1.5 text-left ${
+            className={`flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left transition-colors duration-100 ${
               clipboard
-                ? "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer"
+                ? "hover:bg-accent hover:text-accent-foreground cursor-pointer"
                 : "opacity-40 cursor-not-allowed"
             }`}
           >
             <div className="flex items-center gap-2">
-              <HugeiconsIcon icon={ClipboardPasteIcon} className="size-3.5" />
+              <HugeiconsIcon icon={ClipboardPasteIcon} className="size-3.5 text-muted-foreground" />
               <span>Paste</span>
             </div>
-            <span className="text-[10px] text-muted-foreground">Ctrl+V</span>
+            <kbd className="kbd-shortcut font-mono text-[9px] text-muted-foreground/80">Ctrl+V</kbd>
           </button>
-          <div className="my-1 h-px bg-border" />
+          <div className="my-1 h-px bg-border/70 mx-1" />
           <button
             onClick={() => handleAction(() => collapseAll())}
-            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer"
+            className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={CollapseIcon} className="size-3.5" />
+            <HugeiconsIcon icon={CollapseIcon} className="size-3.5 text-muted-foreground" />
             <span>Collapse All Folders</span>
           </button>
           <button
             onClick={() => handleAction(() => refresh())}
-            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer"
+            className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={RefreshIcon} className="size-3.5" />
+            <HugeiconsIcon icon={RefreshIcon} className="size-3.5 text-muted-foreground" />
             <span>Refresh</span>
           </button>
-          <div className="my-1 h-px bg-border" />
+          <div className="my-1 h-px bg-border/70 mx-1" />
           <button
             onClick={() => handleAction(() => closeWorkspace())}
-            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-destructive hover:bg-destructive/10 cursor-pointer"
+            className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-destructive hover:bg-destructive/15 cursor-pointer transition-colors duration-100"
           >
             <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" />
             <span>Close Workspace</span>

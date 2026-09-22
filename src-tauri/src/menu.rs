@@ -499,3 +499,20 @@ pub fn window_is_maximized<R: Runtime>(window: tauri::Window<R>) -> Result<bool,
     window.is_maximized().map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+pub fn window_set_theme<R: Runtime>(window: tauri::Window<R>, theme: String) -> Result<(), String> {
+    let t = match theme.as_str() {
+        "light" => Some(tauri::Theme::Light),
+        "dark" => Some(tauri::Theme::Dark),
+        _ => None,
+    };
+    window.set_theme(t).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn window_toggle_fullscreen<R: Runtime>(window: tauri::Window<R>) -> Result<bool, String> {
+    let is_fs = window.is_fullscreen().map_err(|e| e.to_string())?;
+    window.set_fullscreen(!is_fs).map_err(|e| e.to_string())?;
+    Ok(!is_fs)
+}
+

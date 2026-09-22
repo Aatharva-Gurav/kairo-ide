@@ -171,10 +171,10 @@ export function FileTreeNode({
         }}
         style={{ paddingLeft: `${depth * 14 + 6}px` }}
         className={cn(
-          "group relative flex h-6.5 w-full items-center gap-1.5 pr-2 text-xs transition-all duration-120 delay-[20ms] ease-out cursor-pointer rounded-xs active:scale-[0.99] active:delay-0",
+          "group relative flex h-6.5 w-full items-center gap-1.5 pr-2 text-xs transition-colors duration-100 ease-out cursor-pointer rounded-xs select-none",
           isSelected
-            ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-2xs before:absolute before:left-0 before:top-0.5 before:bottom-0.5 before:w-0.5 before:bg-sidebar-primary before:rounded-r-full"
-            : "text-sidebar-foreground/90 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
+            ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-2xs before:absolute before:left-0 before:top-1 before:bottom-1 before:w-0.5 before:bg-sidebar-primary before:rounded-r-full"
+            : "text-sidebar-foreground/90 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
           isCut && "opacity-45",
           isDragOver && "bg-sidebar-primary/20 ring-1 ring-sidebar-primary/80 ring-inset"
         )}

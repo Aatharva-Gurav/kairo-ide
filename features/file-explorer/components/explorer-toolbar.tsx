@@ -67,7 +67,7 @@ export function ExplorerToolbar() {
   if (!activeWorkspace) return null;
 
   return (
-    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-0.5 px-2 py-1 rounded-full border border-sidebar-border/90 bg-sidebar/95 backdrop-blur-md shadow-md text-muted-foreground select-none max-w-[calc(100%-1.5rem)] transition-all duration-150 hover:shadow-lg hover:border-sidebar-primary/50 animate-in fade-in-0 slide-from-bottom-2">
+    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-0.5 px-2 py-1 rounded-full border border-sidebar-border/90 bg-sidebar/95 backdrop-blur-md text-muted-foreground select-none max-w-[calc(100%-1.5rem)] transition-all duration-150 hover:border-sidebar-primary/50 shadow-md hover:shadow-lg animate-in fade-in-0 slide-from-bottom-2">
       {/* File & Folder Actions */}
       <button
         onClick={() => startCreateFile(activeWorkspace.rootPath)}
