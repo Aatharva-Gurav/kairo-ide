@@ -18,6 +18,15 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Kairo IDE",
   description: "Modern desktop IDE built with Next.js and Tauri",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon.png", type: "image/png", sizes: "512x512" },
+    ],
+    apple: [
+      { url: "/icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
 };
 
 import { ErrorBoundaryGuard } from "@/components/error-boundary-guard";
