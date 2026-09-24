@@ -14,7 +14,7 @@ import {
   EmptyDescription,
   EmptyContent,
 } from "@/components/ui/empty";
-import { WorkspaceProvider, useWorkspace } from "@/features/workspace/store";
+import { useWorkspace } from "@/features/workspace/store";
 import { FileExplorerProvider } from "@/features/file-explorer/store";
 import { EditorProvider, useEditor } from "@/features/editor/store";
 import { SearchProvider } from "@/features/search/store";
@@ -59,39 +59,38 @@ function PageContent() {
   );
 }
 
-import { SettingsProvider } from "@/features/settings/store";
 import { CommandProvider } from "@/features/commands/store";
+import { AuthGuard } from "@/components/auth-guard";
 
 export default function Page() {
   return (
-    <IconThemeProvider>
-      <WorkspaceProvider>
-        <SettingsProvider>
-          <FileExplorerProvider>
-            <EditorProvider>
-              <SearchProvider>
-                <SidebarProvider
-                  style={
-                    {
-                      "--sidebar-width": "19rem",
-                    } as React.CSSProperties
-                  }
-                >
-                  <CommandProvider>
-                    <div className="flex flex-col h-screen w-screen overflow-hidden">
-                      <AppTitleBar />
-                      <div className="flex flex-1 overflow-hidden relative">
-                        <AppSidebar />
-                        <PageContent />
-                      </div>
+    <AuthGuard>
+      <IconThemeProvider>
+        <FileExplorerProvider>
+          <EditorProvider>
+            <SearchProvider>
+              <SidebarProvider
+                style={
+                  {
+                    "--sidebar-width": "19rem",
+                  } as React.CSSProperties
+                }
+              >
+                <CommandProvider>
+                  <div className="flex flex-col h-screen w-screen overflow-hidden">
+                    <AppTitleBar />
+                    <div className="flex flex-1 overflow-hidden relative">
+                      <AppSidebar />
+                      <PageContent />
                     </div>
-                  </CommandProvider>
-                </SidebarProvider>
-              </SearchProvider>
-            </EditorProvider>
-          </FileExplorerProvider>
-        </SettingsProvider>
-      </WorkspaceProvider>
-    </IconThemeProvider>
+                  </div>
+                </CommandProvider>
+              </SidebarProvider>
+            </SearchProvider>
+          </EditorProvider>
+        </FileExplorerProvider>
+      </IconThemeProvider>
+    </AuthGuard>
   );
 }
+

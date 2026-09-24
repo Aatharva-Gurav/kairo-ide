@@ -9,7 +9,11 @@ import { normalizePath } from "@/lib/tauri-ipc";
 
 export const SETTINGS_STORAGE_KEYS = {
   USER_SETTINGS: "kairo:user_settings",
+  LEGACY_USER_SETTINGS: "kairo:user_settings",
+  USER_SETTINGS_PREFIX: "kairo.settings.",
   WORKSPACE_SETTINGS_PREFIX: "kairo:workspace_settings:",
+  SETTINGS_VERSION_KEY: "kairo.settings.version",
+  CURRENT_VERSION: 1,
 } as const;
 
 export type SettingsChangeListener = (
@@ -81,6 +85,7 @@ function sanitizeValue(key: string, value: unknown, defaultValue: unknown): unkn
 }
 
 export class SettingsService {
+  private static activeUserId: string | null = null;
   private static userSettings: DeepPartial<IDESettings> = {};
   private static workspaceSettings: DeepPartial<IDESettings> = {};
   private static activeWorkspacePath: string | null = null;
@@ -89,9 +94,38 @@ export class SettingsService {
   private static initialized = false;
 
   /**
+   * Returns the user-scoped storage key for user preferences.
+   */
+  static getUserStorageKey(userId: string | null = this.activeUserId): string {
+    if (!userId) {
+      return `${SETTINGS_STORAGE_KEYS.USER_SETTINGS_PREFIX}guest`;
+    }
+    return `${SETTINGS_STORAGE_KEYS.USER_SETTINGS_PREFIX}${userId}`;
+  }
+
+  /**
+   * Switches the active user, scoping settings to that user and notifying listeners.
+   */
+  static setUser(userId: string | null): void {
+    if (this.activeUserId === userId && this.initialized) {
+      return;
+    }
+
+    this.activeUserId = userId;
+    this.userSettings = this.loadStoredUserSettings();
+    this.recalculateEffectiveSettings();
+    this.applyLiveSettings(this.effectiveSettings);
+    this.notifyListeners();
+  }
+
+  /**
    * Initializes the settings service, loading user settings and resolving effective settings.
    */
-  static init(): IDESettings {
+  static init(userId?: string | null): IDESettings {
+    if (userId !== undefined) {
+      this.activeUserId = userId;
+    }
+
     if (this.initialized) {
       return this.effectiveSettings;
     }
@@ -393,8 +427,23 @@ export class SettingsService {
     const storage = getStorage();
     if (!storage) return {};
 
+    const userKey = this.getUserStorageKey();
     try {
-      const raw = storage.getItem(SETTINGS_STORAGE_KEYS.USER_SETTINGS);
+      let raw = storage.getItem(userKey);
+
+      // Check legacy settings key for migration if scoped key does not exist yet
+      if (!raw) {
+        const legacy = storage.getItem(SETTINGS_STORAGE_KEYS.LEGACY_USER_SETTINGS);
+        if (legacy) {
+          raw = legacy;
+          try {
+            storage.setItem(userKey, legacy);
+          } catch {
+            // Ignore write errors during read
+          }
+        }
+      }
+
       if (!raw) return {};
       const parsed = JSON.parse(raw);
       return typeof parsed === "object" && parsed !== null ? parsed : {};
@@ -409,7 +458,18 @@ export class SettingsService {
     if (!storage) return;
 
     try {
-      storage.setItem(SETTINGS_STORAGE_KEYS.USER_SETTINGS, JSON.stringify(settings));
+      const userKey = this.getUserStorageKey();
+      const serialized = JSON.stringify(settings);
+      storage.setItem(userKey, serialized);
+      storage.setItem(
+        SETTINGS_STORAGE_KEYS.SETTINGS_VERSION_KEY,
+        String(SETTINGS_STORAGE_KEYS.CURRENT_VERSION)
+      );
+
+      // Mirror legacy key if guest/default for backward compatibility
+      if (!this.activeUserId) {
+        storage.setItem(SETTINGS_STORAGE_KEYS.LEGACY_USER_SETTINGS, serialized);
+      }
     } catch (error) {
       console.error("[SettingsService] Failed to persist user settings:", error);
     }

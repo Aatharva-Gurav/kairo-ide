@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/features/auth/store";
 import { useWorkspace } from "@/features/workspace/store";
 import { useEditor } from "@/features/editor/store";
 import { useSettings } from "@/features/settings/store";
@@ -49,6 +51,11 @@ export function AppTitleBar() {
   const { startCreateFile } = useFileExplorer();
   const { toggleSidebar } = useSidebar();
 
+  const router = useRouter();
+  const { user, profile, isOffline, logout, exitOfflineMode } = useAuth();
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+
   const [isMaximized, setIsMaximized] = useState(false);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
@@ -91,12 +98,15 @@ export function AppTitleBar() {
     invokeCommand("window_set_theme", { theme: isDark ? "dark" : "light" }).catch(() => {});
   }, [settings.appearance.theme, isTauri]);
 
-  // Dismiss menu on outside click
+  // Dismiss menus on outside click or escape
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (menuBarRef.current && !menuBarRef.current.contains(e.target as Node)) {
         setActiveMenu(null);
         setActiveSubmenu(null);
+      }
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
+        setIsProfileMenuOpen(false);
       }
     };
 
@@ -104,10 +114,11 @@ export function AppTitleBar() {
       if (e.key === "Escape") {
         setActiveMenu(null);
         setActiveSubmenu(null);
+        setIsProfileMenuOpen(false);
       }
     };
 
-    if (activeMenu) {
+    if (activeMenu || isProfileMenuOpen) {
       document.addEventListener("mousedown", handleClickOutside);
       document.addEventListener("keydown", handleKeyDown);
       return () => {
@@ -115,7 +126,7 @@ export function AppTitleBar() {
         document.removeEventListener("keydown", handleKeyDown);
       };
     }
-  }, [activeMenu]);
+  }, [activeMenu, isProfileMenuOpen]);
 
   // Window control handlers
   const handleMinimize = useCallback(async () => {
@@ -763,8 +774,94 @@ export function AppTitleBar() {
         </span>
       </div>
 
-      {/* Right section: Window Controls (Minimize, Maximize/Restore, Close) */}
+      {/* Right section: Window Controls & Top-Right User Profile */}
       <div className="flex items-center h-full z-20">
+        {/* User Profile Pill / Menu */}
+        <div ref={profileMenuRef} className="relative h-full flex items-center mr-1">
+          <button
+            type="button"
+            onClick={() => setIsProfileMenuOpen((prev) => !prev)}
+            title={
+              isOffline
+                ? "Offline / Local Developer Mode"
+                : user
+                ? `Signed in as ${profile?.displayName || user.email}`
+                : "Account"
+            }
+            className={cn(
+              "h-[22px] px-2 rounded-sm text-[11px] font-medium transition-all duration-100 flex items-center gap-1.5 focus:outline-none focus-visible:ring-1 focus-visible:ring-sidebar-ring cursor-pointer select-none",
+              isProfileMenuOpen
+                ? "bg-sidebar-accent text-sidebar-foreground shadow-2xs font-semibold"
+                : "text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent/70"
+            )}
+          >
+            {isOffline ? (
+              <span className="size-2 rounded-full bg-amber-500 ring-2 ring-amber-500/20" />
+            ) : (
+              <span className="size-2 rounded-full bg-emerald-500 ring-2 ring-emerald-500/20" />
+            )}
+            <span className="max-w-[120px] truncate">
+              {isOffline
+                ? "Offline Mode"
+                : profile?.displayName ||
+                  user?.user_metadata?.full_name ||
+                  (user?.email ? user.email.split("@")[0] : "Account")}
+            </span>
+          </button>
+
+          {/* Profile Dropdown Popup */}
+          {isProfileMenuOpen && (
+            <div
+              className="absolute top-[28px] right-0 z-50 min-w-[210px] rounded-lg border border-border/80 bg-popover/98 backdrop-blur-md p-1.5 shadow-2xl text-xs text-popover-foreground animate-in fade-in-0 zoom-in-95 duration-120 ease-out origin-top-right"
+              style={{
+                boxShadow: "var(--shadow-elevation-high)",
+              }}
+            >
+              <div className="px-2 py-1.5 mb-1 border-b border-border/60">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <div className="size-6 rounded-full bg-primary/10 text-primary font-bold text-[10px] flex items-center justify-center shrink-0">
+                    {(profile?.displayName || user?.email || "U")[0].toUpperCase()}
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="font-semibold text-foreground truncate text-xs">
+                      {isOffline ? "Local Developer" : profile?.displayName || "Developer"}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground truncate font-mono">
+                      {isOffline ? "Offline mode" : user?.email || "No email"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {isOffline ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsProfileMenuOpen(false);
+                    exitOfflineMode();
+                    router.push("/login");
+                  }}
+                  className="flex w-full items-center px-2 py-1.5 rounded-md text-left transition-colors duration-100 select-none cursor-pointer hover:bg-accent hover:text-accent-foreground text-primary font-medium"
+                >
+                  Sign In to Cloud
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setIsProfileMenuOpen(false);
+                    await logout();
+                    router.push("/login");
+                  }}
+                  className="flex w-full items-center px-2 py-1.5 rounded-md text-left transition-colors duration-100 select-none cursor-pointer text-destructive hover:bg-destructive/15 font-medium"
+                >
+                  Sign Out
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
         <button
           type="button"
           onClick={handleMinimize}

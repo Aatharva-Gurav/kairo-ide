@@ -6,7 +6,7 @@ import {
 
 export const DEFAULT_SETTINGS: IDESettings = {
   appearance: {
-    theme: "dark",
+    theme: "light",
     uiDensity: "normal",
     fontSize: 13,
     sidebarVisible: true,
@@ -71,7 +71,7 @@ export const SETTINGS_REGISTRY: SettingDefinition<any>[] = [
     label: "Color Theme",
     description: "Specifies the color theme used in the workbench and editor.",
     type: "select",
-    defaultValue: "dark",
+    defaultValue: "light",
     scope: "user",
     options: [
       { label: "Kairo Dark", value: "dark" },

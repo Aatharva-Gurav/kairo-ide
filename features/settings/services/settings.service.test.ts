@@ -24,7 +24,7 @@ describe("SettingsService", () => {
 
   it("loads default settings initially", () => {
     const effective = SettingsService.getEffectiveSettings();
-    expect(effective.appearance.theme).toBe("dark");
+    expect(effective.appearance.theme).toBe("light");
     expect(effective.editor.fontSize).toBe(13);
     expect(effective.editor.tabSize).toBe(2);
     expect(effective.editor.wordWrap).toBe("on");
@@ -33,7 +33,7 @@ describe("SettingsService", () => {
 
   it("reads single setting by keypath", () => {
     expect(SettingsService.getSetting<number>("editor.fontSize")).toBe(13);
-    expect(SettingsService.getSetting<string>("appearance.theme")).toBe("dark");
+    expect(SettingsService.getSetting<string>("appearance.theme")).toBe("light");
   });
 
   it("updates user setting and updates effective value", () => {
@@ -85,11 +85,11 @@ describe("SettingsService", () => {
 
   it("resets all user settings", () => {
     SettingsService.updateSetting("editor.fontSize", 20, "user");
-    SettingsService.updateSetting("appearance.theme", "light", "user");
+    SettingsService.updateSetting("appearance.theme", "dracula", "user");
 
     SettingsService.resetAll("user");
     expect(SettingsService.getSetting<number>("editor.fontSize")).toBe(13);
-    expect(SettingsService.getSetting<string>("appearance.theme")).toBe("dark");
+    expect(SettingsService.getSetting<string>("appearance.theme")).toBe("light");
   });
 
   it("validates and clamps number settings to bounds", () => {
@@ -102,7 +102,7 @@ describe("SettingsService", () => {
   });
 
   it("safely falls back to default on corrupted storage data", () => {
-    localStorage.setItem(SETTINGS_STORAGE_KEYS.USER_SETTINGS, "{ corrupt json ... ");
+    localStorage.setItem(SettingsService.getUserStorageKey(), "{ corrupt json ... ");
     SettingsService.init();
 
     // Must not crash and must return valid defaults
@@ -118,10 +118,46 @@ describe("SettingsService", () => {
       changedKeyRef = changedKey;
     });
 
-    SettingsService.updateSetting("appearance.theme", "light", "user");
+    SettingsService.updateSetting("appearance.theme", "dracula", "user");
     expect(notified).toBe(true);
     expect(changedKeyRef).toBe("appearance.theme");
 
     unsub();
+  });
+
+  it("isolates settings between different user accounts", () => {
+    // User A
+    SettingsService.setUser("user-a");
+    SettingsService.updateSetting("appearance.theme", "dracula", "user");
+    SettingsService.updateSetting("editor.fontSize", 16, "user");
+    expect(SettingsService.getSetting<string>("appearance.theme")).toBe("dracula");
+    expect(SettingsService.getSetting<number>("editor.fontSize")).toBe(16);
+
+    // Switch to User B
+    SettingsService.setUser("user-b");
+    expect(SettingsService.getSetting<string>("appearance.theme")).toBe("light");
+    expect(SettingsService.getSetting<number>("editor.fontSize")).toBe(13);
+    SettingsService.updateSetting("appearance.theme", "tokyo-night", "user");
+    expect(SettingsService.getSetting<string>("appearance.theme")).toBe("tokyo-night");
+
+    // Switch back to User A -> previous settings are preserved without bleeding
+    SettingsService.setUser("user-a");
+    expect(SettingsService.getSetting<string>("appearance.theme")).toBe("dracula");
+    expect(SettingsService.getSetting<number>("editor.fontSize")).toBe(16);
+  });
+
+  it("migrates legacy user settings if user-scoped key does not exist", () => {
+    localStorage.setItem(
+      SETTINGS_STORAGE_KEYS.LEGACY_USER_SETTINGS,
+      JSON.stringify({ appearance: { theme: "monokai" } })
+    );
+
+    SettingsService.setUser("migrated-user");
+    expect(SettingsService.getSetting<string>("appearance.theme")).toBe("monokai");
+
+    // Check migrated into user-scoped key
+    const scopedRaw = localStorage.getItem(SettingsService.getUserStorageKey("migrated-user"));
+    expect(scopedRaw).toBeDefined();
+    expect(JSON.parse(scopedRaw!).appearance.theme).toBe("monokai");
   });
 });

@@ -15,7 +15,7 @@ import {
   DeepPartial,
 } from "./types";
 import { SettingsService } from "./services/settings.service";
-import { useWorkspace } from "@/features/workspace/store";
+import { useWorkspaceOptional } from "@/features/workspace/store";
 
 export type SettingsViewTab = SettingsCategory | "shortcuts";
 
@@ -46,7 +46,8 @@ export interface SettingsContextValue {
 const SettingsContext = createContext<SettingsContextValue | null>(null);
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
-  const { activeWorkspace } = useWorkspace();
+  const workspaceContext = useWorkspaceOptional();
+  const activeWorkspace = workspaceContext?.activeWorkspace ?? null;
   const [settings, setSettings] = useState<IDESettings>(() => SettingsService.init());
   const [userSettings, setUserSettings] = useState<DeepPartial<IDESettings>>(() =>
     SettingsService.getUserSettings()
@@ -173,10 +174,43 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;
 }
 
+const defaultSettingsFallback: SettingsContextValue = {
+  settings: SettingsService.getEffectiveSettings(),
+  userSettings: SettingsService.getUserSettings(),
+  workspaceSettings: SettingsService.getWorkspaceSettings(),
+  activeScope: "user",
+  setActiveScope: () => {},
+  isSettingsModalOpen: false,
+  setSettingsModalOpen: () => {},
+  activeCategory: "appearance",
+  setActiveCategory: () => {},
+  searchQuery: "",
+  setSearchQuery: () => {},
+  openSettings: () => {},
+  closeSettings: () => {},
+  getSetting: <T,>(key: string): T => SettingsService.getSetting<T>(key),
+  updateSetting: <T,>(key: string, value: T, scope?: "user" | "workspace") => {
+    SettingsService.updateSetting(key, value, scope || "user");
+  },
+  resetSetting: (key: string, scope?: "user" | "workspace") => {
+    SettingsService.resetSetting(key, scope);
+  },
+  resetCategory: (category: SettingsCategory, scope?: "user" | "workspace") => {
+    SettingsService.resetCategory(category, scope);
+  },
+  resetAll: (scope?: "user" | "workspace") => {
+    SettingsService.resetAll(scope);
+  },
+  isSettingModified: (key: string, scope?: SettingScope) => {
+    return SettingsService.isSettingModified(key, scope);
+  },
+};
+
 export function useSettings(): SettingsContextValue {
   const context = useContext(SettingsContext);
   if (!context) {
-    throw new Error("useSettings must be used within a SettingsProvider");
+    return defaultSettingsFallback;
   }
   return context;
 }
+

@@ -2,8 +2,12 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import { ErrorBoundaryGuard } from "@/components/error-boundary-guard";
+import { AuthProvider } from "@/features/auth/store";
+import { WorkspaceProvider } from "@/features/workspace/store";
+import { SettingsProvider } from "@/features/settings/store";
 
-const inter = Inter({subsets:['latin'],variable:'--font-sans'});
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,8 +33,6 @@ export const metadata: Metadata = {
   },
 };
 
-import { ErrorBoundaryGuard } from "@/components/error-boundary-guard";
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -39,12 +41,42 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={cn("dark h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", inter.variable)}
-      style={{ colorScheme: "dark" }}
+      className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", inter.variable)}
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col">
-        <ErrorBoundaryGuard>{children}</ErrorBoundaryGuard>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var raw = localStorage.getItem('kairo:user_settings');
+                  var theme = 'light';
+                  if (raw) {
+                    var parsed = JSON.parse(raw);
+                    if (parsed && parsed.appearance && parsed.appearance.theme) {
+                      theme = parsed.appearance.theme;
+                    }
+                  }
+                  var isDark = theme.indexOf('dark') !== -1 || theme.indexOf('tokyo') !== -1 || theme.indexOf('dracula') !== -1;
+                  document.documentElement.classList.add(isDark ? 'kairo-dark' : 'kairo-light');
+                  document.documentElement.setAttribute('data-theme', theme);
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
+      <body className="min-h-full flex flex-col bg-background text-foreground">
+        <ErrorBoundaryGuard>
+          <AuthProvider>
+            <WorkspaceProvider>
+              <SettingsProvider>{children}</SettingsProvider>
+            </WorkspaceProvider>
+          </AuthProvider>
+        </ErrorBoundaryGuard>
       </body>
     </html>
   );
 }
+

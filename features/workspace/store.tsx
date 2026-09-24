@@ -195,6 +195,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+export function useWorkspaceOptional() {
+  return useContext(WorkspaceContext);
+}
+
 export function useWorkspace() {
   const context = useContext(WorkspaceContext);
   if (!context) {
