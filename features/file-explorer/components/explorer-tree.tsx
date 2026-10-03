@@ -1,11 +1,12 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import { useFileExplorer } from "../store";
 import { useWorkspace } from "../../workspace/store";
 import { FileTreeNode, InlineCreationInput } from "./file-tree-node";
 import { FileSystemNode } from "../types";
-import { normalizePath, isDescendant } from "@/lib/tauri-ipc";
+import { normalizePath, dirname, isDescendant } from "@/lib/tauri-ipc";
+import { FileExplorerService } from "../service";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AlertCircleIcon, Cancel01Icon } from "@hugeicons/core-free-icons";
 
@@ -25,6 +26,7 @@ export function ExplorerTree({ onOpenContextMenu }: ExplorerTreeProps) {
     handleKeyDown,
     handleDrop,
     filterQuery,
+    refresh,
   } = useFileExplorer();
 
   const [isRootDragOver, setIsRootDragOver] = useState(false);
@@ -50,13 +52,22 @@ export function ExplorerTree({ onOpenContextMenu }: ExplorerTreeProps) {
 
     if (!activeWorkspace) return;
 
+    // Check for OS files / folders drag-and-drop
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0 && !e.dataTransfer.getData("text/plain")) {
+      const imported = await FileExplorerService.importExternalFiles(e.dataTransfer, activeWorkspace.rootPath);
+      if (imported.length > 0) {
+        await refresh(activeWorkspace.rootPath);
+      }
+      return;
+    }
+
     // Check if bulk JSON payload exists
     const jsonPayload = e.dataTransfer.getData("application/json");
     if (jsonPayload) {
       try {
         const paths: string[] = JSON.parse(jsonPayload);
         for (const p of paths) {
-          if (!isDescendant(p, activeWorkspace.rootPath) && p !== activeWorkspace.rootPath) {
+          if (dirname(p) !== activeWorkspace.rootPath && !isDescendant(p, activeWorkspace.rootPath) && p !== activeWorkspace.rootPath) {
             await handleDrop(p, activeWorkspace.rootPath);
           }
         }
@@ -69,6 +80,12 @@ export function ExplorerTree({ onOpenContextMenu }: ExplorerTreeProps) {
     const sourcePath = e.dataTransfer.getData("text/plain");
     if (!sourcePath || sourcePath === activeWorkspace.rootPath) return;
 
+    // Already directly under root
+    if (dirname(sourcePath) === activeWorkspace.rootPath) {
+      return;
+    }
+
+    // Cannot drop parent into its own child
     if (isDescendant(sourcePath, activeWorkspace.rootPath)) {
       return;
     }
@@ -96,10 +113,16 @@ export function ExplorerTree({ onOpenContextMenu }: ExplorerTreeProps) {
       onDragOver={handleRootDragOver}
       onDragLeave={handleRootDragLeave}
       onDrop={handleRootDrop}
-      className={`flex flex-col flex-1 min-h-0 w-full outline-none select-none overflow-y-auto no-scrollbar pt-1.5 pb-16 px-1 ${
-        isRootDragOver ? "bg-sidebar-primary/5" : ""
+      className={`relative flex flex-col flex-1 min-h-0 w-full outline-none select-none overflow-y-auto no-scrollbar pt-1.5 pb-16 px-1 transition-colors ${
+        isRootDragOver ? "bg-sidebar-primary/5 ring-1 ring-inset ring-sidebar-primary/30" : ""
       }`}
     >
+      {/* Visual drop indicator */}
+      {isRootDragOver && (
+        <div className="pointer-events-none sticky top-2 z-20 mx-2 mb-2 flex items-center justify-center rounded border border-dashed border-sidebar-primary/50 bg-sidebar-primary/10 py-2 text-[11px] font-medium text-sidebar-primary shadow-sm backdrop-blur-xs">
+          Drop files or folders to add to root
+        </div>
+      )}
       {/* Error alert banner */}
       {error && (
         <div className="mx-2 mb-2 flex items-start gap-2 rounded-md bg-destructive/10 p-2 text-xs text-destructive">

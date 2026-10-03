@@ -21,7 +21,7 @@ import { useWorkspace } from "../workspace/store";
 import { WorkspaceService } from "../workspace/service";
 import { SettingsService } from "@/features/settings/services/settings.service";
 import { ideEvents } from "@/lib/events";
-import { dirname, normalizePath, relativePath } from "@/lib/tauri-ipc";
+import { dirname, normalizePath, relativePath, getFileExtension } from "@/lib/tauri-ipc";
 
 export interface FileExplorerContextValue {
   // Tree & Display Nodes
@@ -623,6 +623,18 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
     const targetNorm = normalizePath(targetParent);
     if (targetNorm !== normalizePath(ws.rootPath)) {
       setExpandedPaths((prev) => new Set(prev).add(targetNorm));
+      // Pre-load directory children if not loaded so InlineCreationInput renders inside folder
+      FileExplorerService.readDirectory(targetNorm, showHiddenRef.current)
+        .then((children) => {
+          setNodes((prev) =>
+            updateNodeInTree(prev, targetNorm, (node) => ({
+              ...node,
+              isExpanded: true,
+              children,
+            }))
+          );
+        })
+        .catch(() => {});
     }
 
     setInlineAction({
@@ -648,6 +660,18 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
     const targetNorm = normalizePath(targetParent);
     if (targetNorm !== normalizePath(ws.rootPath)) {
       setExpandedPaths((prev) => new Set(prev).add(targetNorm));
+      // Pre-load directory children if not loaded so InlineCreationInput renders inside folder
+      FileExplorerService.readDirectory(targetNorm, showHiddenRef.current)
+        .then((children) => {
+          setNodes((prev) =>
+            updateNodeInTree(prev, targetNorm, (node) => ({
+              ...node,
+              isExpanded: true,
+              children,
+            }))
+          );
+        })
+        .catch(() => {});
     }
 
     setInlineAction({
@@ -687,21 +711,53 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
             cleanValue
           );
           await refresh(inlineAction.parentPath);
+          setExpandedPaths((prev) => new Set(prev).add(normalizePath(inlineAction.parentPath)));
           ideEvents.emit("file:created", {
             path: newFilePath,
             name: cleanValue,
             isDirectory: false,
           });
+
+          // Automatically select and open newly created file
+          const normNew = normalizePath(newFilePath);
+          setSelectedPaths(new Set([normNew]));
+          const newNode: FileSystemNode = {
+            id: normNew,
+            name: cleanValue,
+            path: normNew,
+            parentPath: inlineAction.parentPath,
+            type: "file",
+            fileExtension: getFileExtension(cleanValue),
+          };
+          setSelectedNode(newNode);
+          openFile(newNode);
         } else if (inlineAction.type === "create-folder") {
           const newDirPath = await FileExplorerService.createDirectory(
             inlineAction.parentPath,
             cleanValue
           );
           await refresh(inlineAction.parentPath);
+          setExpandedPaths((prev) => {
+            const next = new Set(prev);
+            next.add(normalizePath(inlineAction.parentPath));
+            next.add(normalizePath(newDirPath));
+            return next;
+          });
           ideEvents.emit("file:created", {
             path: newDirPath,
             name: cleanValue,
             isDirectory: true,
+          });
+          const normDir = normalizePath(newDirPath);
+          setSelectedPaths(new Set([normDir]));
+          setSelectedNode({
+            id: normDir,
+            name: cleanValue,
+            path: normDir,
+            parentPath: inlineAction.parentPath,
+            type: "directory",
+            children: [],
+            isExpanded: true,
           });
         } else if (inlineAction.type === "rename" && inlineAction.targetNodeId) {
           const targetNorm = normalizePath(inlineAction.targetNodeId);
@@ -982,7 +1038,12 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
         const normDest = normalizePath(targetDirPath);
         const sourceParent = dirname(normSrc);
 
+        if (normDest === sourceParent || normDest === normSrc) {
+          return true;
+        }
+
         const newPath = await FileExplorerService.move(normSrc, normDest);
+        setExpandedPaths((prev) => new Set(prev).add(normDest));
         await refresh(normDest);
         if (normalizePath(sourceParent) !== normDest) {
           await refresh(sourceParent);
@@ -993,6 +1054,14 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
           destPath: newPath,
           isDirectory: false,
         });
+
+        ideEvents.emit("file:renamed", {
+          oldPath: normSrc,
+          newPath,
+          isDirectory: false,
+        });
+
+        setSelectedPaths(new Set([normalizePath(newPath)]));
 
         return true;
       } catch (err: unknown) {

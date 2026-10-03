@@ -6,8 +6,10 @@ import { useFileExplorer } from "../store";
 import { FileIcon } from "./file-icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
-import { normalizePath, isDescendant } from "@/lib/tauri-ipc";
+import { normalizePath, isDescendant, dirname } from "@/lib/tauri-ipc";
 import { cn } from "@/lib/utils";
+import { FileExplorerService } from "../service";
+import { useEditor } from "@/features/editor/store";
 
 interface FileTreeNodeProps {
   node: FileSystemNode;
@@ -31,10 +33,13 @@ export function FileTreeNode({
     commitInlineAction,
     cancelInlineAction,
     handleDrop,
+    refresh,
   } = useFileExplorer();
 
+  const { documents } = useEditor();
   const [isDragOver, setIsDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const hoverTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const isDirectory = node.type === "directory";
   const nodeNorm = normalizePath(node.path);
@@ -44,6 +49,9 @@ export function FileTreeNode({
   const isCut =
     clipboard?.type === "cut" &&
     clipboard.sourceNodes.some((n) => normalizePath(n.path) === nodeNorm);
+  const isDirty =
+    !isDirectory &&
+    documents.some((d) => normalizePath(d.id) === nodeNorm && d.isDirty);
 
   const isRenaming =
     inlineAction?.type === "rename" &&
@@ -82,33 +90,57 @@ export function FileTreeNode({
   };
 
   const handleDragOver = (e: React.DragEvent) => {
-    if (!isDirectory) return;
     e.preventDefault();
     e.stopPropagation();
     e.dataTransfer.dropEffect = "move";
     setIsDragOver(true);
+
+    // Auto-expand folder on hover during drag (600ms)
+    if (isDirectory && !isExpanded && !hoverTimerRef.current) {
+      hoverTimerRef.current = setTimeout(() => {
+        toggleExpand(node);
+        hoverTimerRef.current = null;
+      }, 600);
+    }
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(false);
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
   };
 
   const handleNodeDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(false);
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
 
-    if (!isDirectory) return;
+    // Determine target directory: if folder, drop directly inside; if file, drop into file's parent directory
+    const targetDir = isDirectory ? node.path : (node.parentPath || dirname(node.path));
 
+    // 1. External files dropped from OS/Computer
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0 && !e.dataTransfer.getData("text/plain")) {
+      await FileExplorerService.importExternalFiles(e.dataTransfer, targetDir);
+      await refresh(targetDir);
+      return;
+    }
+
+    // 2. Multi-item internal drag payload
     const jsonPayload = e.dataTransfer.getData("application/json");
     if (jsonPayload) {
       try {
         const paths: string[] = JSON.parse(jsonPayload);
         for (const p of paths) {
-          if (!isDescendant(p, node.path) && p !== node.path) {
-            await handleDrop(p, node.path);
+          if (!isDescendant(p, targetDir) && p !== targetDir && dirname(p) !== targetDir) {
+            await handleDrop(p, targetDir);
           }
         }
         return;
@@ -117,14 +149,15 @@ export function FileTreeNode({
       }
     }
 
+    // 3. Single-item internal drag
     const sourcePath = e.dataTransfer.getData("text/plain");
-    if (!sourcePath || sourcePath === node.path) return;
+    if (!sourcePath || sourcePath === targetDir || dirname(sourcePath) === targetDir) return;
 
-    if (isDescendant(sourcePath, node.path)) {
+    if (isDescendant(sourcePath, targetDir)) {
       return;
     }
 
-    await handleDrop(sourcePath, node.path);
+    await handleDrop(sourcePath, targetDir);
   };
 
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -222,12 +255,20 @@ export function FileTreeNode({
             onKeyDown={handleInputKeyDown}
             onBlur={handleInputBlur}
             onClick={(e) => e.stopPropagation()}
-            className="h-5.5 flex-1 rounded bg-background border border-sidebar-ring px-1.5 py-0 text-xs text-foreground font-sans outline-none shadow-2xs focus:ring-1 focus:ring-sidebar-ring"
+            className="h-5.5 flex-1 rounded bg-background border border-sidebar-ring px-1.5 py-0.5 text-xs leading-normal text-foreground font-sans outline-none shadow-2xs focus:ring-1 focus:ring-sidebar-ring"
           />
         ) : (
-          <span className="truncate leading-none text-left tracking-tight" title={node.name}>
+          <span className="truncate min-w-0 flex-1 leading-5 py-0.5 text-left tracking-tight" title={node.name}>
             {node.name}
           </span>
+        )}
+
+        {/* Unsaved changes indicator */}
+        {isDirty && (
+          <span
+            className="size-1.5 rounded-full bg-sidebar-primary shrink-0 ml-auto mr-0.5"
+            title="Unsaved changes"
+          />
         )}
       </div>
 
@@ -315,7 +356,7 @@ export function InlineCreationInput({
         placeholder={isDirectory ? "folder name..." : "file name..."}
         onKeyDown={handleKeyDown}
         onBlur={handleBlur}
-        className="h-5.5 flex-1 rounded bg-background border border-sidebar-ring px-1.5 py-0 text-xs text-foreground font-sans outline-none shadow-2xs focus:ring-1 focus:ring-sidebar-ring placeholder:text-muted-foreground/50"
+        className="h-5.5 flex-1 rounded bg-background border border-sidebar-ring px-1.5 py-0.5 text-xs leading-normal text-foreground font-sans outline-none shadow-2xs focus:ring-1 focus:ring-sidebar-ring placeholder:text-muted-foreground/50"
       />
     </div>
   );

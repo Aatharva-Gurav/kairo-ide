@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { ContextMenuState } from "../types";
 import { useFileExplorer } from "../store";
 import { useWorkspace } from "../../workspace/store";
@@ -69,19 +70,23 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
     if (state.isOpen) {
       document.addEventListener("mousedown", handleClickOutside);
       document.addEventListener("keydown", handleKeyDown);
+      window.addEventListener("resize", onClose);
+      window.addEventListener("blur", onClose);
       return () => {
         document.removeEventListener("mousedown", handleClickOutside);
         document.removeEventListener("keydown", handleKeyDown);
+        window.removeEventListener("resize", onClose);
+        window.removeEventListener("blur", onClose);
       };
     }
   }, [state.isOpen, onClose]);
 
-  if (!state.isOpen) return null;
+  if (!state.isOpen || typeof document === "undefined") return null;
 
   const menuWidth = 220;
-  const menuHeight = 340;
-  const x = Math.min(state.x, window.innerWidth - menuWidth - 10);
-  const y = Math.min(state.y, window.innerHeight - menuHeight - 10);
+  const menuHeight = 360;
+  const x = Math.max(10, Math.min(state.x, window.innerWidth - menuWidth - 10));
+  const y = Math.max(10, Math.min(state.y, window.innerHeight - menuHeight - 10));
 
   const node = state.node;
   const isMultiSelect = selectedPaths.size > 1;
@@ -94,7 +99,7 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
     onClose();
   };
 
-  return (
+  return createPortal(
     <div
       ref={menuRef}
       style={{
@@ -102,7 +107,7 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
         top: `${y}px`,
         boxShadow: "var(--shadow-elevation-high)",
       }}
-      className="fixed z-50 min-w-[215px] rounded-lg border border-border/80 bg-popover/98 backdrop-blur-md p-1 text-popover-foreground text-xs select-none animate-in fade-in-0 zoom-in-95 duration-120 ease-out origin-top-left"
+      className="fixed z-[100] min-w-[215px] rounded-lg border border-border/80 bg-popover/98 backdrop-blur-md p-1 text-popover-foreground text-xs select-none animate-in fade-in-0 zoom-in-95 duration-120 ease-out origin-top-left"
     >
       {/* Multi-Selection Context Menu */}
       {isMultiSelect && (
@@ -401,6 +406,7 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
           </button>
         </>
       )}
-    </div>
+    </div>,
+    document.body
   );
 }

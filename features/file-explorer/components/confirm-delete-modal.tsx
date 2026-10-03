@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useFileExplorer } from "../store";
 import { Button } from "@/components/ui/button";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -25,13 +26,13 @@ export function ConfirmDeleteModal() {
     }
   }, [isOpen, cancelDelete]);
 
-  if (!isOpen) return null;
+  if (!isOpen || typeof document === "undefined") return null;
 
   const isMultiple = candidates.length > 1;
   const hasDirectory = candidates.some((n) => n.type === "directory");
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in-0 duration-150 ease-out">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in-0 duration-150 ease-out">
       <div
         className="w-full max-w-md rounded-xl border border-border/80 bg-card p-5 shadow-2xl text-card-foreground animate-in zoom-in-95 duration-150 delay-subtle ease-[cubic-bezier(0.16,1,0.3,1)]"
         role="dialog"
@@ -106,6 +107,7 @@ export function ConfirmDeleteModal() {
           </Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

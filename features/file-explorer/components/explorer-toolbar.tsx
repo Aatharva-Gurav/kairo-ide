@@ -70,16 +70,16 @@ export function ExplorerToolbar() {
     <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-0.5 px-2 py-1 rounded-full border border-sidebar-border/90 bg-sidebar/95 backdrop-blur-md text-muted-foreground select-none max-w-[calc(100%-1.5rem)] transition-all duration-150 hover:border-sidebar-primary/50 shadow-md hover:shadow-lg animate-in fade-in-0 slide-from-bottom-2">
       {/* File & Folder Actions */}
       <button
-        onClick={() => startCreateFile(activeWorkspace.rootPath)}
+        onClick={() => startCreateFile()}
         className="p-1 rounded-full hover:bg-sidebar-accent hover:text-sidebar-foreground cursor-pointer transition-colors duration-140 active:scale-95"
-        title="New File..."
+        title="New File (in selected folder or root)"
       >
         <HugeiconsIcon icon={FileAddIcon} className="size-3.5" />
       </button>
       <button
-        onClick={() => startCreateFolder(activeWorkspace.rootPath)}
+        onClick={() => startCreateFolder()}
         className="p-1 rounded-full hover:bg-sidebar-accent hover:text-sidebar-foreground cursor-pointer transition-colors duration-140 active:scale-95"
-        title="New Folder..."
+        title="New Folder (in selected folder or root)"
       >
         <HugeiconsIcon icon={FolderAddIcon} className="size-3.5" />
       </button>

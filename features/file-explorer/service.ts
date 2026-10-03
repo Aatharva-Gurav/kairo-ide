@@ -7,6 +7,7 @@ import {
   getFileExtension,
   dirname,
   revealInFileManager,
+  writeFileContent,
 } from "@/lib/tauri-ipc";
 import { FileSystemNode, ExplorerSortConfig } from "./types";
 import { directoryCache } from "./cache";
@@ -339,5 +340,112 @@ export class FileExplorerService {
    */
   static async reveal(path: string): Promise<void> {
     await revealInFileManager(path);
+  }
+
+  /**
+   * Imports files or folders dropped from the operating system into a project directory.
+   * Handles both native desktop Tauri environment (with native file paths)
+   * and browser environments (using File and webkitGetAsEntry).
+   */
+  static async importExternalFiles(
+    dataTransfer: DataTransfer,
+    destDirPath: string
+  ): Promise<string[]> {
+    const normDestDir = normalizePath(destDirPath);
+    const importedPaths: string[] = [];
+
+    // Helper to recursively process webkit directory entries
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const processDirectoryEntry = async (dirEntry: any, targetParent: string) => {
+      const createdDir = await this.createDirectory(targetParent, dirEntry.name);
+      importedPaths.push(createdDir);
+
+      const dirReader = dirEntry.createReader();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const readEntries = (): Promise<any[]> =>
+        new Promise((resolve, reject) => dirReader.readEntries(resolve, reject));
+
+      let entries = await readEntries();
+      while (entries.length > 0) {
+        for (const entry of entries) {
+          if (entry.isFile) {
+            const file: File = await new Promise((resolve, reject) =>
+              entry.file(resolve, reject)
+            );
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const nativePath = (file as any).path;
+            if (nativePath) {
+              const copied = await this.copy(nativePath, createdDir);
+              importedPaths.push(copied);
+            } else {
+              const content = await file.text();
+              const fullPath = joinPath(createdDir, file.name);
+              await writeFileContent(fullPath, content);
+              importedPaths.push(fullPath);
+            }
+          } else if (entry.isDirectory) {
+            await processDirectoryEntry(entry, createdDir);
+          }
+        }
+        entries = await readEntries();
+      }
+    };
+
+    // Try webkit entries first if available (supports folders)
+    const items = dataTransfer.items;
+    let hasWebkitEntries = false;
+
+    if (items && items.length > 0) {
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const entry =
+          typeof (item as any).webkitGetAsEntry === "function"
+            ? (item as any).webkitGetAsEntry()
+            : null;
+        if (entry) {
+          hasWebkitEntries = true;
+          if (entry.isDirectory) {
+            await processDirectoryEntry(entry, normDestDir);
+          } else if (entry.isFile) {
+            const file: File = await new Promise((resolve, reject) =>
+              entry.file(resolve, reject)
+            );
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const nativePath = (file as any).path;
+            if (nativePath) {
+              const copied = await this.copy(nativePath, normDestDir);
+              importedPaths.push(copied);
+            } else {
+              const content = await file.text();
+              const fullPath = joinPath(normDestDir, file.name);
+              await writeFileContent(fullPath, content);
+              importedPaths.push(fullPath);
+            }
+          }
+        }
+      }
+    }
+
+    // Fallback to standard dataTransfer.files
+    if (!hasWebkitEntries && dataTransfer.files && dataTransfer.files.length > 0) {
+      for (let i = 0; i < dataTransfer.files.length; i++) {
+        const file = dataTransfer.files[i];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const nativePath = (file as any).path;
+        if (nativePath) {
+          const copied = await this.copy(nativePath, normDestDir);
+          importedPaths.push(copied);
+        } else {
+          const content = await file.text();
+          const fullPath = joinPath(normDestDir, file.name);
+          await writeFileContent(fullPath, content);
+          importedPaths.push(fullPath);
+        }
+      }
+    }
+
+    directoryCache.invalidate(normDestDir);
+    return importedPaths;
   }
 }

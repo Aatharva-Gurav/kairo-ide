@@ -650,20 +650,33 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
         const normOld = normalizePath(oldPath);
         const normNew = normalizePath(newPath);
         setDocuments((prev) =>
-          prev.map((doc) =>
-            doc.id === normOld
-              ? {
-                  ...doc,
-                  id: normNew,
-                  path: normNew,
-                  title: basename(normNew),
-                  language: doc.language,
-                }
-              : doc
-          )
+          prev.map((doc) => {
+            if (doc.id === normOld) {
+              return {
+                ...doc,
+                id: normNew,
+                path: normNew,
+                title: basename(normNew),
+                language: doc.language,
+              };
+            }
+            if (doc.id.startsWith(normOld + "/")) {
+              const sub = doc.id.slice(normOld.length);
+              const updated = normNew + sub;
+              return {
+                ...doc,
+                id: updated,
+                path: updated,
+                title: basename(updated),
+              };
+            }
+            return doc;
+          })
         );
         if (activeDocumentIdRef.current === normOld) {
           setActiveDocumentIdState(normNew);
+        } else if (activeDocumentIdRef.current?.startsWith(normOld + "/")) {
+          setActiveDocumentIdState(normNew + activeDocumentIdRef.current.slice(normOld.length));
         }
       }),
 
