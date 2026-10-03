@@ -37,6 +37,10 @@ const CATEGORY_TITLES: Record<SettingsCategory, { title: string; description: st
     title: "Keyboard Dispatch",
     description: "Configure keyboard dispatch mode and input trapping rules.",
   },
+  suggestions: {
+    title: "Code Suggestions",
+    description: "Configure code completions, quick suggestions, trigger characters, and preview behavior.",
+  },
 };
 
 export function SettingsCategoryView() {

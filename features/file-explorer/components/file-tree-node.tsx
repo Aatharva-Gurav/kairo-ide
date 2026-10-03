@@ -151,7 +151,13 @@ export function FileTreeNode({
 
     // 3. Single-item internal drag
     const sourcePath = e.dataTransfer.getData("text/plain");
-    if (!sourcePath || sourcePath === targetDir || dirname(sourcePath) === targetDir) return;
+    if (
+      !sourcePath ||
+      sourcePath.toLowerCase() === targetDir.toLowerCase() ||
+      dirname(sourcePath).toLowerCase() === targetDir.toLowerCase()
+    ) {
+      return;
+    }
 
     if (isDescendant(sourcePath, targetDir)) {
       return;
@@ -177,6 +183,9 @@ export function FileTreeNode({
   return (
     <div className="flex flex-col select-none">
       <div
+        data-node-path={node.path}
+        data-folder-path={isDirectory ? node.path : (node.parentPath || dirname(node.path))}
+        data-is-directory={isDirectory ? "true" : "false"}
         draggable={!isRenaming}
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
@@ -294,8 +303,15 @@ export function FileTreeNode({
             ))
           ) : !node.isLoading && !isCreatingChild ? (
             <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleNodeDrop}
+              data-folder-path={node.path}
               style={{ paddingLeft: `${(depth + 1) * 14 + 20}px` }}
-              className="py-1 text-[11px] text-muted-foreground/60 italic animate-in fade-in-50 duration-100"
+              className={cn(
+                "py-1 text-[11px] text-muted-foreground/60 italic animate-in fade-in-50 duration-100 rounded transition-colors",
+                isDragOver && "bg-sidebar-primary/20 text-sidebar-primary font-medium"
+              )}
             >
               (empty)
             </div>

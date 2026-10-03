@@ -3,12 +3,40 @@
 import React from "react";
 import { useEditor } from "../store";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { CodeIcon, Search01Icon, Folder01Icon } from "@hugeicons/core-free-icons";
+import { CodeIcon, Search01Icon, Folder01Icon, File01Icon } from "@hugeicons/core-free-icons";
 import { KairoBrandIcon } from "@/components/kairo-brand-icon";
 import { ideEvents } from "@/lib/events";
+import { isTauriEnvironment, invokeCommand } from "@/lib/tauri-ipc";
 
 export function EditorEmptyState() {
-  const { setQuickOpenVisible, formatActiveDocument } = useEditor();
+  const { setQuickOpenVisible, formatActiveDocument, openDocument } = useEditor();
+
+  const handleOpenFile = async () => {
+    try {
+      if (isTauriEnvironment()) {
+        const picked = await invokeCommand<string | null>("workspace_pick_file");
+        if (picked) {
+          await openDocument(picked);
+        }
+      } else {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.onchange = async () => {
+          const file = input.files?.[0];
+          if (file) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const nativePath = (file as any).path;
+            if (nativePath) {
+              await openDocument(nativePath);
+            }
+          }
+        };
+        input.click();
+      }
+    } catch (err) {
+      console.error("Failed to open file:", err);
+    }
+  };
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center p-8 text-center select-none bg-background animate-in fade-in-50 zoom-in-95 duration-200 delay-subtle">
@@ -23,6 +51,20 @@ export function EditorEmptyState() {
 
       {/* Keyboard Shortcuts Reference */}
       <div className="mt-6 flex flex-col gap-1 text-xs max-w-xs w-full">
+        <button
+          type="button"
+          onClick={handleOpenFile}
+          className="group flex items-center justify-between px-3 py-1.5 cursor-pointer hover:bg-muted/40 rounded-lg text-muted-foreground hover:text-foreground transition-colors duration-120 ease-out active:scale-[0.98] text-left"
+        >
+          <div className="flex items-center gap-2">
+            <HugeiconsIcon icon={File01Icon} className="size-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
+            <span className="font-medium">Open File</span>
+          </div>
+          <kbd className="kbd-shortcut font-medium">
+            Ctrl + O
+          </kbd>
+        </button>
+
         <button
           type="button"
           onClick={() => setQuickOpenVisible(true)}

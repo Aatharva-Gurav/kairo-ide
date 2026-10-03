@@ -113,6 +113,8 @@ export function ExplorerTree({ onOpenContextMenu }: ExplorerTreeProps) {
       onDragOver={handleRootDragOver}
       onDragLeave={handleRootDragLeave}
       onDrop={handleRootDrop}
+      data-file-explorer="true"
+      data-folder-path={activeWorkspace.rootPath}
       className={`relative flex flex-col flex-1 min-h-0 w-full outline-none select-none overflow-y-auto no-scrollbar pt-1.5 pb-16 px-1 transition-colors ${
         isRootDragOver ? "bg-sidebar-primary/5 ring-1 ring-inset ring-sidebar-primary/30" : ""
       }`}

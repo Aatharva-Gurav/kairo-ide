@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import Editor, { loader } from "@monaco-editor/react";
 import * as monaco from "monaco-editor";
 import { useEditor } from "../store";
+import { useSettings } from "@/features/settings/store";
 import { ModelService } from "../services/model.service";
 import { IntelliSenseService } from "../services/intellisense.service";
 import { NavigationService } from "../services/navigation.service";
@@ -313,6 +314,8 @@ interface MonacoEditorViewProps {
 
 export function MonacoEditorView({ document, onCursorChange }: MonacoEditorViewProps) {
   const { settings, updateContent, monacoEditorRef } = useEditor();
+  const { settings: ideSettings } = useSettings();
+  const suggestions = ideSettings.suggestions;
   const [currentTheme, setCurrentTheme] = useState("kairo-dark");
   const containerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -521,29 +524,30 @@ export function MonacoEditorView({ document, onCursorChange }: MonacoEditorViewP
           scrollBeyondLastLine: false,
           fixedOverflowWidgets: false,
           padding: { top: 8, bottom: 8 },
-          suggestFontSize: 12,
-          suggestLineHeight: 24,
-          quickSuggestions: {
-            other: true,
-            comments: true,
-            strings: true,
-          },
+          suggestFontSize: suggestions?.fontSize ?? 12,
+          suggestLineHeight: Math.round((suggestions?.fontSize ?? 12) * 2),
+          quickSuggestions:
+            suggestions?.enabled !== false && (suggestions?.quickSuggestions ?? true)
+              ? { other: true, comments: true, strings: true }
+              : false,
           quickSuggestionsDelay: 10,
-          suggestOnTriggerCharacters: true,
-          acceptSuggestionOnEnter: "on",
-          tabCompletion: "on",
+          suggestOnTriggerCharacters:
+            suggestions?.enabled !== false && (suggestions?.suggestOnTriggerCharacters ?? true),
+          acceptSuggestionOnEnter: suggestions?.acceptSuggestionOnEnter ?? "on",
+          tabCompletion: (suggestions?.tabCompletion ?? "on") as "on" | "off" | "onlySnippets",
+          snippetSuggestions: (suggestions?.snippetSuggestions ?? "inline") as "top" | "inline" | "bottom" | "none",
           wordBasedSuggestions: "allDocuments",
           suggest: {
-            showIcons: true,
+            showIcons: suggestions?.showIcons ?? true,
             showStatusBar: true,
-            preview: true,
+            preview: suggestions?.preview ?? true,
             previewMode: "subwordSmart",
             shareSuggestSelections: true,
             filterGraceful: true,
             localityBonus: true,
             snippetsPreventQuickSuggestions: false,
             showWords: true,
-            showSnippets: true,
+            showSnippets: suggestions?.snippetSuggestions !== "none",
             showKeywords: true,
             showFunctions: true,
             showClasses: true,

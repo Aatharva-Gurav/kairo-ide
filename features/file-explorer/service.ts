@@ -296,7 +296,7 @@ export class FileExplorerService {
     const srcName = normSrc.split("/").pop() || "item";
     const destPath = joinPath(normDestDir, srcName);
 
-    if (normSrc === destPath) {
+    if (normSrc.toLowerCase() === destPath.toLowerCase()) {
       return destPath;
     }
 
@@ -305,8 +305,7 @@ export class FileExplorerService {
       destPath,
     });
 
-    directoryCache.invalidateParent(normSrc);
-    directoryCache.invalidate(normDestDir);
+    directoryCache.clear();
     return destPath;
   }
 

@@ -49,6 +49,7 @@ import { cn } from "@/lib/utils";
 export function EditorWorkspace() {
   const {
     activeDocument,
+    documents,
     isSplit,
     splitDirection,
     splitLayoutMode,
@@ -109,8 +110,8 @@ export function EditorWorkspace() {
 
   return (
     <div className="flex flex-1 flex-col h-full w-full overflow-hidden bg-background">
-      {/* Editor Tabs */}
-      <EditorTabs />
+      {/* Editor Tabs (Hidden when no file is open) */}
+      {documents.length > 0 && <EditorTabs />}
 
       {/* Main Document Content or Empty State */}
       {activeDocument ? (

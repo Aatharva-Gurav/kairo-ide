@@ -84,6 +84,18 @@ export interface KeyboardSettings {
   dispatchMode: "global";
 }
 
+export interface SuggestionsSettings {
+  enabled: boolean;
+  quickSuggestions: boolean;
+  suggestOnTriggerCharacters: boolean;
+  acceptSuggestionOnEnter: "on" | "off" | "smart";
+  tabCompletion: "on" | "off" | "onlySnippets";
+  snippetSuggestions: "top" | "inline" | "bottom" | "none";
+  showIcons: boolean;
+  preview: boolean;
+  fontSize: number;
+}
+
 export interface IDESettings {
   appearance: AppearanceSettings;
   editor: EditorSettings;
@@ -91,6 +103,7 @@ export interface IDESettings {
   explorer: ExplorerSettings;
   search: SearchSettings;
   keyboard: KeyboardSettings;
+  suggestions: SuggestionsSettings;
 }
 
 export type SettingsCategory = keyof IDESettings;

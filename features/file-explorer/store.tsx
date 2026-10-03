@@ -105,15 +105,15 @@ function updateNodeInTree(
   targetPath: string,
   updater: (node: FileSystemNode) => FileSystemNode
 ): FileSystemNode[] {
-  const normTarget = normalizePath(targetPath);
+  const normTarget = normalizePath(targetPath).toLowerCase();
   return nodes.map((node) => {
-    if (normalizePath(node.path) === normTarget) {
+    if (normalizePath(node.path).toLowerCase() === normTarget) {
       return updater(node);
     }
     if (node.children && node.children.length > 0) {
       return {
         ...node,
-        children: updateNodeInTree(node.children, normTarget, updater),
+        children: updateNodeInTree(node.children, targetPath, updater),
       };
     }
     return node;
@@ -1038,16 +1038,16 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
         const normDest = normalizePath(targetDirPath);
         const sourceParent = dirname(normSrc);
 
-        if (normDest === sourceParent || normDest === normSrc) {
+        if (
+          normDest.toLowerCase() === sourceParent.toLowerCase() ||
+          normDest.toLowerCase() === normSrc.toLowerCase()
+        ) {
           return true;
         }
 
         const newPath = await FileExplorerService.move(normSrc, normDest);
         setExpandedPaths((prev) => new Set(prev).add(normDest));
-        await refresh(normDest);
-        if (normalizePath(sourceParent) !== normDest) {
-          await refresh(sourceParent);
-        }
+        await refresh();
 
         ideEvents.emit("file:moved", {
           sourcePath: normSrc,

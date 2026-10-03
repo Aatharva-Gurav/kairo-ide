@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import { useWorkspace } from "../store";
+import { useEditor } from "@/features/editor/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -16,11 +17,15 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Folder01Icon,
+  File01Icon,
   Cancel01Icon,
   AlertCircleIcon,
   Clock01Icon,
   Search01Icon,
 } from "@hugeicons/core-free-icons";
+import { FileIcon } from "@/features/icon-theme/components/file-icon";
+import { isTauriEnvironment, invokeCommand } from "@/lib/tauri-ipc";
+import { cn } from "@/lib/utils";
 
 function formatRelativeTime(timestamp: number): string {
   const diff = Date.now() - timestamp;
@@ -46,6 +51,34 @@ export function EmptyWorkspaceView() {
     error,
     clearError,
   } = useWorkspace();
+  const { documents, activeDocumentId, setActiveDocumentId, closeDocument, openDocument } = useEditor();
+
+  const handleOpenFile = async () => {
+    try {
+      if (isTauriEnvironment()) {
+        const picked = await invokeCommand<string | null>("workspace_pick_file");
+        if (picked) {
+          await openDocument(picked);
+        }
+      } else {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.onchange = async () => {
+          const file = input.files?.[0];
+          if (file) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const nativePath = (file as any).path;
+            if (nativePath) {
+              await openDocument(nativePath);
+            }
+          }
+        };
+        input.click();
+      }
+    } catch (err) {
+      console.error("Failed to pick file:", err);
+    }
+  };
 
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -76,6 +109,54 @@ export function EmptyWorkspaceView() {
         </div>
       )}
 
+      {/* Open Editors (when editing standalone files without workspace) */}
+      {documents.length > 0 && (
+        <div className="flex flex-col gap-1 rounded-lg border border-sidebar-border/80 bg-sidebar-accent/20 p-2">
+          <div className="flex items-center justify-between px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground font-mono">
+            <span>Open Editors</span>
+            <span className="text-[10px] opacity-70">({documents.length})</span>
+          </div>
+          <div className="flex flex-col gap-0.5 mt-1">
+            {documents.map((doc) => {
+              const isActive = doc.id === activeDocumentId;
+              return (
+                <div
+                  key={doc.id}
+                  onClick={() => setActiveDocumentId(doc.id)}
+                  className={cn(
+                    "group flex items-center justify-between px-2 py-1 rounded text-xs cursor-pointer select-none transition-colors",
+                    isActive
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                      : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                  )}
+                >
+                  <div className="flex items-center gap-1.5 truncate">
+                    <FileIcon name={doc.title} isDirectory={false} className="size-3.5 shrink-0" />
+                    <span className="truncate">{doc.title}</span>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {doc.isDirty && (
+                      <span className="size-1.5 rounded-full bg-sidebar-primary" title="Unsaved changes" />
+                    )}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        closeDocument(doc.id);
+                      }}
+                      className="opacity-0 group-hover:opacity-100 hover:text-foreground rounded p-0.5 cursor-pointer"
+                      title="Close"
+                    >
+                      <HugeiconsIcon icon={Cancel01Icon} className="size-3" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Primary Empty Workspace Call-to-Action */}
       <Empty className="border border-dashed border-sidebar-border/80 bg-sidebar-accent/15 p-3.5 rounded-lg gap-2.5 transition-colors duration-150 hover:border-sidebar-primary/40 hover:bg-sidebar-accent/25 hover:shadow-2xs">
         <EmptyHeader>
@@ -84,16 +165,25 @@ export function EmptyWorkspaceView() {
           </EmptyMedia>
           <EmptyTitle className="text-xs font-semibold text-sidebar-foreground">No Folder Open</EmptyTitle>
           <EmptyDescription className="text-[11px] text-muted-foreground">
-            Open a folder to start working
+            Open a file or project folder to start editing
           </EmptyDescription>
         </EmptyHeader>
-        <EmptyContent className="w-full">
+        <EmptyContent className="w-full flex items-center gap-2">
           <Button
-            onClick={() => openFolder()}
-            className="w-full cursor-pointer shadow-2xs font-medium active:scale-98 transition-all duration-120"
+            onClick={handleOpenFile}
+            variant="outline"
+            className="flex-1 cursor-pointer shadow-2xs font-medium active:scale-98 transition-all duration-120 text-xs"
             size="sm"
           >
-            <HugeiconsIcon icon={Folder01Icon} className="size-3.5 mr-1.5" />
+            <HugeiconsIcon icon={File01Icon} className="size-3.5 mr-1" />
+            Open File
+          </Button>
+          <Button
+            onClick={() => openFolder()}
+            className="flex-1 cursor-pointer shadow-2xs font-medium active:scale-98 transition-all duration-120 text-xs"
+            size="sm"
+          >
+            <HugeiconsIcon icon={Folder01Icon} className="size-3.5 mr-1" />
             Open Folder
           </Button>
         </EmptyContent>

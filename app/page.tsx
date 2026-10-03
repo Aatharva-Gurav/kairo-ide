@@ -21,14 +21,43 @@ import { SearchProvider } from "@/features/search/store";
 import { EditorWorkspace } from "@/features/editor/components/editor-workspace";
 import { IconThemeProvider } from "@/features/icon-theme";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Folder01Icon } from "@hugeicons/core-free-icons";
+import { Folder01Icon, File01Icon } from "@hugeicons/core-free-icons";
 import { KairoBrandIcon } from "@/components/kairo-brand-icon";
+import { isTauriEnvironment, invokeCommand } from "@/lib/tauri-ipc";
+import { TauriDragDropListener } from "@/components/tauri-drag-drop-listener";
 
 import { AppTitleBar } from "@/components/app-titlebar";
 
 function PageContent() {
   const { activeWorkspace, openFolder } = useWorkspace();
-  const { documents } = useEditor();
+  const { documents, openDocument } = useEditor();
+
+  const handleOpenFile = async () => {
+    try {
+      if (isTauriEnvironment()) {
+        const picked = await invokeCommand<string | null>("workspace_pick_file");
+        if (picked) {
+          await openDocument(picked);
+        }
+      } else {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.onchange = async () => {
+          const file = input.files?.[0];
+          if (file) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const nativePath = (file as any).path;
+            if (nativePath) {
+              await openDocument(nativePath);
+            }
+          }
+        };
+        input.click();
+      }
+    } catch (err) {
+      console.error("Failed to open file:", err);
+    }
+  };
 
   return (
     <SidebarInset className="h-[calc(100vh-30px)] overflow-hidden flex flex-col p-0 m-0 border-0">
@@ -43,10 +72,14 @@ function PageContent() {
               </div>
               <EmptyTitle className="text-base font-semibold tracking-tight text-foreground">Welcome to Kairo IDE</EmptyTitle>
               <EmptyDescription className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                Open a local project or select a recent workspace from the sidebar to begin editing.
+                Open a file or local project from your computer to begin editing.
               </EmptyDescription>
             </EmptyHeader>
-            <EmptyContent className="mt-2">
+            <EmptyContent className="mt-2 flex items-center justify-center gap-2">
+              <Button onClick={handleOpenFile} variant="outline" className="cursor-pointer shadow-2xs font-medium interactive-hover" size="default">
+                <HugeiconsIcon icon={File01Icon} className="size-3.5 mr-1.5 transition-transform duration-150 group-hover:scale-110" />
+                Open File
+              </Button>
               <Button onClick={() => openFolder()} className="cursor-pointer shadow-2xs font-medium interactive-hover" size="default">
                 <HugeiconsIcon icon={Folder01Icon} className="size-3.5 mr-1.5 transition-transform duration-150 group-hover:scale-110" />
                 Open Folder
@@ -69,6 +102,7 @@ export default function Page() {
         <FileExplorerProvider>
           <EditorProvider>
             <SearchProvider>
+              <TauriDragDropListener />
               <SidebarProvider
                 style={
                   {

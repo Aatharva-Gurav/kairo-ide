@@ -56,16 +56,16 @@ export function EditorTab({ document, isActive, onSelect, onClose }: EditorTabPr
         onContextMenu={handleContextMenu}
         title={document.path}
         className={cn(
-          "group relative flex h-9 shrink-0 items-center gap-2 border-r border-border/70 px-3 text-xs cursor-pointer select-none transition-colors duration-120 ease-out animate-tab-enter",
+          "group relative flex h-[35px] shrink-0 items-center gap-2 border-r border-border/60 px-3 text-xs cursor-pointer select-none transition-colors duration-120 ease-out animate-tab-enter",
           isActive
-            ? "bg-background text-foreground font-semibold shadow-2xs"
-            : "bg-sidebar/40 text-muted-foreground hover:bg-sidebar/70 hover:text-foreground"
+            ? "bg-background text-foreground font-medium shadow-2xs"
+            : "bg-sidebar/20 dark:bg-[#18181b]/40 text-muted-foreground hover:bg-sidebar/50 dark:hover:bg-[#18181b]/80 hover:text-foreground"
         )}
       >
-        {/* Animated active indicator bar */}
+        {/* Animated active indicator bar - VS Code top accent */}
         <span
           className={cn(
-            "absolute top-0 left-0 right-0 h-0.5 bg-sidebar-primary transition-all duration-160 ease-[cubic-bezier(0.16,1,0.3,1)] origin-center",
+            "absolute top-0 left-0 right-0 h-[2px] bg-primary transition-all duration-160 ease-[cubic-bezier(0.16,1,0.3,1)] origin-center",
             isActive ? "opacity-100 scale-x-100" : "opacity-0 scale-x-0"
           )}
         />
@@ -78,7 +78,7 @@ export function EditorTab({ document, isActive, onSelect, onClose }: EditorTabPr
         <span className="truncate max-w-[140px] tracking-tight">{document.title}</span>
 
         {/* Dirty indicator or close button */}
-        <div className="flex items-center justify-center size-4 shrink-0 relative">
+        <div className="flex items-center justify-center size-4 shrink-0 relative ml-0.5">
           {document.isDirty ? (
             <span
               onClick={(e) => {
@@ -86,7 +86,7 @@ export function EditorTab({ document, isActive, onSelect, onClose }: EditorTabPr
                 onClose();
               }}
               title="Unsaved changes - click to close"
-              className="size-2 rounded-full bg-sidebar-primary group-hover:hidden transition-all duration-150 animate-kairo-pulse shadow-xs cursor-pointer"
+              className="size-2 rounded-full bg-primary/90 group-hover:hidden transition-all duration-150 animate-kairo-pulse shadow-xs cursor-pointer"
             />
           ) : null}
 
@@ -98,7 +98,7 @@ export function EditorTab({ document, isActive, onSelect, onClose }: EditorTabPr
               onClose();
             }}
             className={cn(
-              "rounded p-0.5 hover:bg-muted/80 text-muted-foreground hover:text-foreground cursor-pointer transition-colors duration-100 active:scale-90",
+              "rounded-sm p-0.5 hover:bg-muted/80 text-muted-foreground hover:text-foreground cursor-pointer transition-colors duration-100 active:scale-90",
               document.isDirty ? "hidden group-hover:flex" : "opacity-0 group-hover:opacity-100",
               isActive && !document.isDirty && "opacity-70 hover:opacity-100"
             )}

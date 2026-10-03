@@ -17,6 +17,7 @@ import {
   KeyboardIcon,
   Settings01Icon,
   ReloadIcon,
+  SparklesIcon,
 } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +31,7 @@ interface CategoryNavOption {
 const CATEGORIES: CategoryNavOption[] = [
   { id: "appearance", label: "Appearance", icon: PaintBoardIcon },
   { id: "editor", label: "Text Editor", icon: File01Icon },
+  { id: "suggestions", label: "Code Suggestions", icon: SparklesIcon },
   { id: "files", label: "Files & Autosave", icon: File01Icon },
   { id: "explorer", label: "File Explorer", icon: Folder01Icon },
   { id: "search", label: "Search", icon: FolderSearchIcon },

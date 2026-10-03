@@ -1,12 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { EditorDocument } from "../types";
 import { useEditor } from "../store";
 import { LanguageService } from "../services/language.service";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { CodeIcon } from "@hugeicons/core-free-icons";
-import { ideEvents } from "@/lib/events";
 
 interface EditorStatusBarProps {
   document: EditorDocument | null;
@@ -15,20 +14,6 @@ interface EditorStatusBarProps {
 
 export function EditorStatusBar({ document, cursorPosition }: EditorStatusBarProps) {
   const { settings, formatActiveDocument, editorZoomLevel, zoomIn, zoomOut, zoomReset } = useEditor();
-  const [saveIndicator, setSaveIndicator] = useState(false);
-
-  useEffect(() => {
-    const unsub = ideEvents.on("editor:document-saved", (payload) => {
-      if (document && payload.path === document.path) {
-        setSaveIndicator(true);
-        const timer = setTimeout(() => {
-          setSaveIndicator(false);
-        }, 1600);
-        return () => clearTimeout(timer);
-      }
-    });
-    return unsub;
-  }, [document]);
 
   if (!document) return null;
 
@@ -37,7 +22,7 @@ export function EditorStatusBar({ document, cursorPosition }: EditorStatusBarPro
 
   return (
     <div className="relative z-20 shrink-0 flex h-6 w-full items-center justify-between border-t border-border/70 bg-sidebar/95 px-3 text-[11px] text-muted-foreground select-none font-mono shadow-xs">
-      {/* Left side: line and column + Save indicator */}
+      {/* Left side: line and column */}
       <div className="flex items-center gap-2">
         {cursorPosition && (
           <span className="hover:text-foreground cursor-pointer transition-colors px-1 py-0.5 rounded hover:bg-sidebar-accent/60">
@@ -52,15 +37,6 @@ export function EditorStatusBar({ document, cursorPosition }: EditorStatusBarPro
         <span className="hover:text-foreground cursor-pointer transition-colors px-1 py-0.5 rounded hover:bg-sidebar-accent/60">
           UTF-8
         </span>
-        {saveIndicator && (
-          <>
-            <span className="text-border/60">•</span>
-            <span className="text-success font-medium font-sans flex items-center gap-1 animate-kairo-pop bg-success/10 px-1.5 py-0.2 rounded border border-success/20 shadow-2xs">
-              <span>Saved</span>
-              <span className="text-xs font-bold">✓</span>
-            </span>
-          </>
-        )}
       </div>
 
       {/* Right side: zoom controls, format document, language */}

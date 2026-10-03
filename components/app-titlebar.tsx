@@ -1100,16 +1100,12 @@ export function AppTitleBar() {
             </svg>
           </button>
 
-          {/* Split Options Dropdown Popup */}
+          {/* Split Options Dropdown Popup (Single Vertical Line, Icon-Only) */}
           {isSplitMenuOpen && (
             <div
-              className="absolute top-[28px] right-0 z-50 min-w-[250px] rounded-lg border border-border/80 bg-popover/98 backdrop-blur-md p-1.5 shadow-2xl text-xs text-popover-foreground animate-in fade-in-0 zoom-in-95 duration-120 ease-out origin-top-right"
+              className="absolute top-[28px] right-0 z-50 flex flex-col items-center gap-1 p-1 rounded-lg border border-border/80 bg-popover/98 backdrop-blur-md shadow-2xl text-popover-foreground animate-in fade-in-0 zoom-in-95 duration-120 ease-out origin-top-right w-9 select-none"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground font-mono">
-                Split Editor Layout
-              </div>
-
               {/* Split Right (2 Columns) */}
               <button
                 type="button"
@@ -1117,20 +1113,18 @@ export function AppTitleBar() {
                   openSplitRight();
                   setIsSplitMenuOpen(false);
                 }}
+                title="Split Right (Ctrl+\)"
+                aria-label="Split Right"
                 className={cn(
-                  "flex w-full items-center justify-between px-2 py-1.5 rounded-md text-left transition-colors duration-100 select-none cursor-pointer",
+                  "size-7 flex items-center justify-center rounded-md transition-colors duration-100 cursor-pointer active:scale-95",
                   isSplit && splitDirection === "horizontal" && splitLayoutMode === "split-right"
-                    ? "bg-accent/80 text-accent-foreground font-medium"
-                    : "hover:bg-accent hover:text-accent-foreground"
+                    ? "bg-accent text-accent-foreground font-semibold"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
                 )}
               >
-                <div className="flex items-center gap-2">
-                  <svg viewBox="0 0 16 16" fill="currentColor" className="size-3.5 opacity-70">
-                    <path d="M14 2H2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1zM2 13V3h5v10H2zm12 0H8V3h6v10z" />
-                  </svg>
-                  <span>Split Right (2 Columns)</span>
-                </div>
-                <span className="text-[10px] text-muted-foreground font-mono ml-3">Ctrl+\</span>
+                <svg viewBox="0 0 16 16" fill="currentColor" className="size-3.5">
+                  <path d="M14 2H2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1zM2 13V3h5v10H2zm12 0H8V3h6v10z" />
+                </svg>
               </button>
 
               {/* Split Down (2 Rows) */}
@@ -1140,20 +1134,18 @@ export function AppTitleBar() {
                   openSplitDown();
                   setIsSplitMenuOpen(false);
                 }}
+                title="Split Down (Ctrl+K Ctrl+\)"
+                aria-label="Split Down"
                 className={cn(
-                  "flex w-full items-center justify-between px-2 py-1.5 rounded-md text-left transition-colors duration-100 select-none cursor-pointer",
+                  "size-7 flex items-center justify-center rounded-md transition-colors duration-100 cursor-pointer active:scale-95",
                   isSplit && splitDirection === "vertical"
-                    ? "bg-accent/80 text-accent-foreground font-medium"
-                    : "hover:bg-accent hover:text-accent-foreground"
+                    ? "bg-accent text-accent-foreground font-semibold"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
                 )}
               >
-                <div className="flex items-center gap-2">
-                  <svg viewBox="0 0 16 16" fill="currentColor" className="size-3.5 opacity-70">
-                    <path d="M14 2H2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1zM2 7.5h12V3H2v4.5zm0 5.5h12V8.5H2V13z" />
-                  </svg>
-                  <span>Split Down (2 Rows)</span>
-                </div>
-                <span className="text-[10px] text-muted-foreground font-mono ml-3">Ctrl+K Ctrl+\</span>
+                <svg viewBox="0 0 16 16" fill="currentColor" className="size-3.5">
+                  <path d="M14 2H2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1zM2 7.5h12V3H2v4.5zm0 5.5h12V8.5H2V13z" />
+                </svg>
               </button>
 
               {/* Split 3 Columns */}
@@ -1163,22 +1155,21 @@ export function AppTitleBar() {
                   openThreeColumnSplit();
                   setIsSplitMenuOpen(false);
                 }}
+                title="Split 3 Columns"
+                aria-label="Split 3 Columns"
                 className={cn(
-                  "flex w-full items-center justify-between px-2 py-1.5 rounded-md text-left transition-colors duration-100 select-none cursor-pointer",
+                  "size-7 flex items-center justify-center rounded-md transition-colors duration-100 cursor-pointer active:scale-95",
                   isSplit && splitLayoutMode === "split-three"
-                    ? "bg-accent/80 text-accent-foreground font-medium"
-                    : "hover:bg-accent hover:text-accent-foreground"
+                    ? "bg-accent text-accent-foreground font-semibold"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
                 )}
               >
-                <div className="flex items-center gap-2">
-                  <svg viewBox="0 0 16 16" fill="currentColor" className="size-3.5 opacity-70">
-                    <path d="M14 2H2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1zM2 13V3h3.5v10H2zm4.5 0V3h3v10h-3zm4 0V3H14v10h-3.5z" />
-                  </svg>
-                  <span>Split 3 Columns</span>
-                </div>
+                <svg viewBox="0 0 16 16" fill="currentColor" className="size-3.5">
+                  <path d="M14 2H2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1zM2 13V3h3.5v10H2zm4.5 0V3h3v10h-3zm4 0V3H14v10h-3.5z" />
+                </svg>
               </button>
 
-              <div className="h-px bg-border/60 my-1 -mx-0.5" />
+              <div className="w-5 h-px bg-border/60 my-0.5" />
 
               {/* Toggle Orientation */}
               <button
@@ -1188,19 +1179,18 @@ export function AppTitleBar() {
                   toggleSplitOrientation();
                   setIsSplitMenuOpen(false);
                 }}
+                title={`Flip Layout (${splitDirection === "horizontal" ? "Columns → Rows" : "Rows → Columns"})`}
+                aria-label="Flip Layout"
                 className={cn(
-                  "flex w-full items-center justify-between px-2 py-1.5 rounded-md text-left transition-colors duration-100 select-none",
+                  "size-7 flex items-center justify-center rounded-md transition-colors duration-100 select-none",
                   !isSplit
-                    ? "opacity-40 cursor-not-allowed"
-                    : "hover:bg-accent hover:text-accent-foreground cursor-pointer"
+                    ? "opacity-30 cursor-not-allowed text-muted-foreground"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer active:scale-95"
                 )}
               >
-                <div className="flex items-center gap-2">
-                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-3.5 opacity-70">
-                    <path d="M2 10.5h9a2.5 2.5 0 0 0 2.5-2.5V3M14 5.5l-2.5-2.5L9 5.5" />
-                  </svg>
-                  <span>Flip Layout ({splitDirection === "horizontal" ? "Columns → Rows" : "Rows → Columns"})</span>
-                </div>
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-3.5">
+                  <path d="M2 10.5h9a2.5 2.5 0 0 0 2.5-2.5V3M14 5.5l-2.5-2.5L9 5.5" />
+                </svg>
               </button>
 
               {/* Swap Panes */}
@@ -1211,26 +1201,21 @@ export function AppTitleBar() {
                   swapSplitDocuments();
                   setIsSplitMenuOpen(false);
                 }}
+                title="Swap Editor Panes"
+                aria-label="Swap Editor Panes"
                 className={cn(
-                  "flex w-full items-center justify-between px-2 py-1.5 rounded-md text-left transition-colors duration-100 select-none",
+                  "size-7 flex items-center justify-center rounded-md transition-colors duration-100 select-none",
                   !isSplit
-                    ? "opacity-40 cursor-not-allowed"
-                    : "hover:bg-accent hover:text-accent-foreground cursor-pointer"
+                    ? "opacity-30 cursor-not-allowed text-muted-foreground"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer active:scale-95"
                 )}
               >
-                <div className="flex items-center gap-2">
-                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-3.5 opacity-70">
-                    <path d="M3 5h10M10 2l3 3-3 3M13 11H3M6 8L3 11l3 3" />
-                  </svg>
-                  <span>Swap Editor Panes</span>
-                </div>
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-3.5">
+                  <path d="M3 5h10M10 2l3 3-3 3M13 11H3M6 8L3 11l3 3" />
+                </svg>
               </button>
 
-              <div className="h-px bg-border/60 my-1 -mx-0.5" />
-
-              <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground font-mono">
-                Pane Proportions
-              </div>
+              <div className="w-5 h-px bg-border/60 my-0.5" />
 
               {/* Equalize Panes */}
               <button
@@ -1240,17 +1225,16 @@ export function AppTitleBar() {
                   setSplitRatioPreset("equal");
                   setIsSplitMenuOpen(false);
                 }}
+                title="Equalize Panes (50% / 50%)"
+                aria-label="Equalize Panes"
                 className={cn(
-                  "flex w-full items-center justify-between px-2 py-1.5 rounded-md text-left transition-colors duration-100 select-none",
+                  "size-7 flex items-center justify-center rounded-md transition-colors duration-100 select-none font-mono text-[11px]",
                   !isSplit
-                    ? "opacity-40 cursor-not-allowed"
-                    : "hover:bg-accent hover:text-accent-foreground cursor-pointer"
+                    ? "opacity-30 cursor-not-allowed text-muted-foreground"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer active:scale-95"
                 )}
               >
-                <div className="flex items-center gap-2">
-                  <span className="w-3.5 text-center font-mono text-[11px] opacity-70">½</span>
-                  <span>Equalize Panes (50% / 50%)</span>
-                </div>
+                ½
               </button>
 
               {/* Focus Left / Top */}
@@ -1261,17 +1245,16 @@ export function AppTitleBar() {
                   setSplitRatioPreset("left-heavy");
                   setIsSplitMenuOpen(false);
                 }}
+                title={`Focus ${splitDirection === "vertical" ? "Top" : "Left"} (70% / 30%)`}
+                aria-label="Focus Left/Top"
                 className={cn(
-                  "flex w-full items-center justify-between px-2 py-1.5 rounded-md text-left transition-colors duration-100 select-none",
+                  "size-7 flex items-center justify-center rounded-md transition-colors duration-100 select-none text-[11px]",
                   !isSplit
-                    ? "opacity-40 cursor-not-allowed"
-                    : "hover:bg-accent hover:text-accent-foreground cursor-pointer"
+                    ? "opacity-30 cursor-not-allowed text-muted-foreground"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer active:scale-95"
                 )}
               >
-                <div className="flex items-center gap-2">
-                  <span className="w-3.5 text-center font-mono text-[11px] opacity-70">◀</span>
-                  <span>Focus {splitDirection === "vertical" ? "Top" : "Left"} (70% / 30%)</span>
-                </div>
+                ◀
               </button>
 
               {/* Focus Right / Bottom */}
@@ -1282,20 +1265,19 @@ export function AppTitleBar() {
                   setSplitRatioPreset("right-heavy");
                   setIsSplitMenuOpen(false);
                 }}
+                title={`Focus ${splitDirection === "vertical" ? "Bottom" : "Right"} (30% / 70%)`}
+                aria-label="Focus Right/Bottom"
                 className={cn(
-                  "flex w-full items-center justify-between px-2 py-1.5 rounded-md text-left transition-colors duration-100 select-none",
+                  "size-7 flex items-center justify-center rounded-md transition-colors duration-100 select-none text-[11px]",
                   !isSplit
-                    ? "opacity-40 cursor-not-allowed"
-                    : "hover:bg-accent hover:text-accent-foreground cursor-pointer"
+                    ? "opacity-30 cursor-not-allowed text-muted-foreground"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer active:scale-95"
                 )}
               >
-                <div className="flex items-center gap-2">
-                  <span className="w-3.5 text-center font-mono text-[11px] opacity-70">▶</span>
-                  <span>Focus {splitDirection === "vertical" ? "Bottom" : "Right"} (30% / 70%)</span>
-                </div>
+                ▶
               </button>
 
-              <div className="h-px bg-border/60 my-1 -mx-0.5" />
+              <div className="w-5 h-px bg-border/60 my-0.5" />
 
               {/* Close Split View */}
               <button
@@ -1305,20 +1287,16 @@ export function AppTitleBar() {
                   closeSplitView();
                   setIsSplitMenuOpen(false);
                 }}
+                title="Close Split Editor (Ctrl+\)"
+                aria-label="Close Split Editor"
                 className={cn(
-                  "flex w-full items-center justify-between px-2 py-1.5 rounded-md text-left transition-colors duration-100 select-none",
+                  "size-7 flex items-center justify-center rounded-md transition-colors duration-100 select-none",
                   !isSplit
-                    ? "opacity-40 cursor-not-allowed"
-                    : "text-destructive hover:bg-destructive/15 cursor-pointer font-medium"
+                    ? "opacity-30 cursor-not-allowed text-muted-foreground"
+                    : "text-destructive hover:bg-destructive/15 cursor-pointer active:scale-95"
                 )}
               >
-                <div className="flex items-center gap-2">
-                  <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" />
-                  <span>Close Split Editor</span>
-                </div>
-                {isSplit && (
-                  <span className="text-[10px] text-muted-foreground font-mono ml-3">Ctrl+\</span>
-                )}
+                <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" />
               </button>
             </div>
           )}
