@@ -22,7 +22,7 @@ export function EditorBreadcrumb({ document }: EditorBreadcrumbProps) {
   const parts = rel ? rel.split("/").filter(Boolean) : [document.title];
 
   return (
-    <div className="flex h-6.5 w-full items-center gap-1.5 border-b border-border/70 bg-background/90 px-3 text-[11px] text-muted-foreground select-none overflow-x-auto no-scrollbar">
+    <div className="relative z-20 shrink-0 flex h-6.5 w-full items-center gap-1.5 border-b border-border/70 bg-background/90 px-3 text-[11px] text-muted-foreground select-none overflow-x-auto no-scrollbar">
       {activeWorkspace && (
         <div className="flex items-center gap-1 shrink-0 font-medium text-foreground/80 text-xs">
           <HugeiconsIcon icon={Folder01Icon} className="size-3.5 text-sidebar-primary" />

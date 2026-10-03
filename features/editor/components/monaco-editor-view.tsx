@@ -71,6 +71,12 @@ if (typeof window !== "undefined") {
         "editorIndentGuide.activeBackground": "#52525b",
         "editorBracketMatch.background": "#3f3f4650",
         "editorBracketMatch.border": "#8b5cf6",
+        "editorSuggestWidget.background": "#18181b",
+        "editorSuggestWidget.border": "#27272a",
+        "editorSuggestWidget.foreground": "#f4f4f5",
+        "editorSuggestWidget.selectedBackground": "#27272a",
+        "editorSuggestWidget.highlightForeground": "#a78bfa",
+        "editorSuggestWidget.focusHighlightForeground": "#c4b5fd",
       },
     });
 
@@ -85,6 +91,12 @@ if (typeof window !== "undefined") {
         "editor.lineHighlightBackground": "#f4f4f5",
         "editorLineNumber.foreground": "#a1a1aa",
         "editorLineNumber.activeForeground": "#18181b",
+        "editorSuggestWidget.background": "#ffffff",
+        "editorSuggestWidget.border": "#e4e4e7",
+        "editorSuggestWidget.foreground": "#18181b",
+        "editorSuggestWidget.selectedBackground": "#f4f4f5",
+        "editorSuggestWidget.highlightForeground": "#6366f1",
+        "editorSuggestWidget.focusHighlightForeground": "#4f46e5",
       },
     });
 
@@ -111,6 +123,12 @@ if (typeof window !== "undefined") {
         "editorLineNumber.activeForeground": "#c6c6c6",
         "editor.selectionBackground": "#264f78",
         "editor.inactiveSelectionBackground": "#3a3d41",
+        "editorSuggestWidget.background": "#252526",
+        "editorSuggestWidget.border": "#454545",
+        "editorSuggestWidget.foreground": "#cccccc",
+        "editorSuggestWidget.selectedBackground": "#04395e",
+        "editorSuggestWidget.highlightForeground": "#0097fb",
+        "editorSuggestWidget.focusHighlightForeground": "#18a3ff",
       },
     });
 
@@ -135,6 +153,12 @@ if (typeof window !== "undefined") {
         "editorLineNumber.foreground": "#717171",
         "editorLineNumber.activeForeground": "#000000",
         "editor.selectionBackground": "#add6ff",
+        "editorSuggestWidget.background": "#f3f3f3",
+        "editorSuggestWidget.border": "#c8c8c8",
+        "editorSuggestWidget.foreground": "#1e1e1e",
+        "editorSuggestWidget.selectedBackground": "#0060c025",
+        "editorSuggestWidget.highlightForeground": "#0066bf",
+        "editorSuggestWidget.focusHighlightForeground": "#0066bf",
       },
     });
 
@@ -472,7 +496,7 @@ export function MonacoEditorView({ document, onCursorChange }: MonacoEditorViewP
   };
 
   return (
-    <div ref={containerRef} className="relative flex-1 w-full h-full overflow-hidden bg-background">
+    <div ref={containerRef} className="relative flex-1 w-full h-full overflow-hidden bg-background isolate z-0">
       <Editor
         height="100%"
         width="100%"
@@ -495,8 +519,52 @@ export function MonacoEditorView({ document, onCursorChange }: MonacoEditorViewP
           formatOnPaste: false,
           formatOnType: false,
           scrollBeyondLastLine: false,
-          fixedOverflowWidgets: true,
+          fixedOverflowWidgets: false,
           padding: { top: 8, bottom: 8 },
+          suggestFontSize: 12,
+          suggestLineHeight: 24,
+          quickSuggestions: {
+            other: true,
+            comments: true,
+            strings: true,
+          },
+          quickSuggestionsDelay: 10,
+          suggestOnTriggerCharacters: true,
+          acceptSuggestionOnEnter: "on",
+          tabCompletion: "on",
+          wordBasedSuggestions: "allDocuments",
+          suggest: {
+            showIcons: true,
+            showStatusBar: true,
+            preview: true,
+            previewMode: "subwordSmart",
+            shareSuggestSelections: true,
+            filterGraceful: true,
+            localityBonus: true,
+            snippetsPreventQuickSuggestions: false,
+            showWords: true,
+            showSnippets: true,
+            showKeywords: true,
+            showFunctions: true,
+            showClasses: true,
+            showVariables: true,
+            showConstants: true,
+            showFields: true,
+            showProperties: true,
+            showEvents: true,
+            showOperators: true,
+            showUnits: true,
+            showValues: true,
+            showEnumMembers: true,
+            showColors: true,
+            showFiles: true,
+            showReferences: true,
+            showFolders: true,
+            showTypeParameters: true,
+            showModules: true,
+            showStructs: true,
+            showInterfaces: true,
+          },
         }}
         onMount={handleEditorDidMount}
       />

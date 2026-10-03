@@ -80,8 +80,8 @@ export default function Page() {
                   <div className="flex flex-col h-screen w-screen overflow-hidden">
                     <AppTitleBar />
                     <div className="flex flex-1 overflow-hidden relative">
-                      <AppSidebar />
                       <PageContent />
+                      <AppSidebar />
                     </div>
                   </div>
                 </CommandProvider>

@@ -47,31 +47,56 @@ import { SplitEditorPane } from "./split-editor-pane";
 import { cn } from "@/lib/utils";
 
 export function EditorWorkspace() {
-  const { activeDocument, isSplit, splitDocument, splitRatio, setSplitRatio } = useEditor();
+  const {
+    activeDocument,
+    isSplit,
+    splitDirection,
+    splitLayoutMode,
+    splitDocument,
+    thirdDocument,
+    splitRatio,
+    splitRatio2,
+    setSplitRatio,
+    setSplitRatio2,
+    setThirdDocumentId,
+    openSplitRight,
+  } = useEditor();
+
   const [cursorPos, setCursorPos] = useState<{ lineNumber: number; column: number }>({
     lineNumber: 1,
     column: 1,
   });
-  const [isDragging, setIsDragging] = useState(false);
+  const [draggingDivider, setDraggingDivider] = useState<null | 1 | 2>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
+  const isDragging = draggingDivider !== null;
 
   React.useEffect(() => {
-    if (!isDragging) return;
+    if (!draggingDivider) return;
 
     const handleMouseMove = (e: MouseEvent) => {
       if (!containerRef.current) return;
       const rect = containerRef.current.getBoundingClientRect();
-      const newRatio = (e.clientX - rect.left) / rect.width;
-      setSplitRatio(Math.min(Math.max(newRatio, 0.2), 0.8));
+
+      if (splitDirection === "vertical") {
+        const newRatio = (e.clientY - rect.top) / rect.height;
+        setSplitRatio(Math.min(Math.max(newRatio, 0.15), 0.85));
+      } else if (splitLayoutMode === "split-three") {
+        if (draggingDivider === 1) {
+          const newRatio = (e.clientX - rect.left) / rect.width;
+          setSplitRatio(Math.min(Math.max(newRatio, 0.15), splitRatio2 - 0.1));
+        } else if (draggingDivider === 2) {
+          const newRatio = (e.clientX - rect.left) / rect.width;
+          setSplitRatio2(Math.min(Math.max(newRatio, splitRatio + 0.1), 0.85));
+        }
+      } else {
+        const newRatio = (e.clientX - rect.left) / rect.width;
+        setSplitRatio(Math.min(Math.max(newRatio, 0.15), 0.85));
+      }
     };
 
     const handleMouseUp = () => {
-      setIsDragging(false);
+      setDraggingDivider(null);
     };
 
     window.addEventListener("mousemove", handleMouseMove);
@@ -80,7 +105,7 @@ export function EditorWorkspace() {
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isDragging, setSplitRatio]);
+  }, [draggingDivider, splitDirection, splitLayoutMode, splitRatio, splitRatio2, setSplitRatio, setSplitRatio2]);
 
   return (
     <div className="flex flex-1 flex-col h-full w-full overflow-hidden bg-background">
@@ -90,54 +115,175 @@ export function EditorWorkspace() {
       {/* Main Document Content or Empty State */}
       {activeDocument ? (
         isSplit && splitDocument ? (
-          <div
-            ref={containerRef}
-            className={cn(
-              "flex flex-1 h-full w-full overflow-hidden relative",
-              isDragging && "select-none cursor-col-resize"
-            )}
-          >
-            {/* Primary Left Pane */}
+          splitLayoutMode === "split-three" ? (
+            /* 3-Column Split View */
             <div
-              style={{ width: `${splitRatio * 100}%` }}
-              className="flex flex-col h-full overflow-hidden relative min-w-[150px]"
-            >
-              <EditorBreadcrumb document={activeDocument} />
-              {activeDocument.isBinary || activeDocument.isTooLarge ? (
-                <BinaryFileView document={activeDocument} />
-              ) : activeDocument.error ? (
-                <div className="flex flex-1 flex-col items-center justify-center p-6 text-center">
-                  <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 max-w-md text-destructive">
-                    <h3 className="font-semibold text-xs">Error opening file</h3>
-                    <p className="text-xs mt-1 text-muted-foreground">{activeDocument.error}</p>
-                  </div>
-                </div>
-              ) : (
-                <MonacoEditorView
-                  document={activeDocument}
-                  onCursorChange={setCursorPos}
-                />
-              )}
-              <EditorStatusBar document={activeDocument} cursorPosition={cursorPos} />
-            </div>
-
-            {/* Draggable Divider */}
-            <div
-              onMouseDown={handleMouseDown}
+              ref={containerRef}
               className={cn(
-                "w-1.5 h-full cursor-col-resize hover:bg-sidebar-primary/50 transition-colors z-20 shrink-0 bg-border/70 flex items-center justify-center group",
-                isDragging && "bg-sidebar-primary ring-1 ring-sidebar-primary"
+                "flex flex-1 flex-row h-full w-full overflow-hidden relative",
+                isDragging && "select-none cursor-col-resize"
               )}
-              title="Drag to resize split view"
             >
-              <div className="w-0.5 h-8 rounded-full bg-muted-foreground/30 group-hover:bg-sidebar-primary transition-colors" />
-            </div>
+              {/* Primary Pane 1 */}
+              <div
+                style={{ width: `${splitRatio * 100}%` }}
+                className="flex flex-col h-full overflow-hidden relative min-w-[120px]"
+              >
+                <EditorBreadcrumb document={activeDocument} />
+                {activeDocument.isBinary || activeDocument.isTooLarge ? (
+                  <BinaryFileView document={activeDocument} />
+                ) : activeDocument.error ? (
+                  <div className="flex flex-1 flex-col items-center justify-center p-6 text-center">
+                    <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 max-w-md text-destructive">
+                      <h3 className="font-semibold text-xs">Error opening file</h3>
+                      <p className="text-xs mt-1 text-muted-foreground">{activeDocument.error}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <MonacoEditorView
+                    document={activeDocument}
+                    onCursorChange={setCursorPos}
+                  />
+                )}
+                <EditorStatusBar document={activeDocument} cursorPosition={cursorPos} />
+              </div>
 
-            {/* Secondary Right Split Pane */}
-            <div className="flex-1 flex flex-col h-full overflow-hidden relative min-w-[150px]">
-              <SplitEditorPane document={splitDocument} />
+              {/* Draggable Divider 1 */}
+              <div
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  setDraggingDivider(1);
+                }}
+                className={cn(
+                  "w-1.5 h-full cursor-col-resize hover:bg-sidebar-primary/50 transition-colors z-20 shrink-0 bg-border/70 flex items-center justify-center group",
+                  draggingDivider === 1 && "bg-sidebar-primary ring-1 ring-sidebar-primary"
+                )}
+                title="Drag to resize pane 1"
+              >
+                <div className="w-0.5 h-8 rounded-full bg-muted-foreground/30 group-hover:bg-sidebar-primary transition-colors" />
+              </div>
+
+              {/* Secondary Pane 2 */}
+              <div
+                style={{ width: `${(splitRatio2 - splitRatio) * 100}%` }}
+                className="flex flex-col h-full overflow-hidden relative min-w-[120px]"
+              >
+                <SplitEditorPane document={splitDocument} />
+              </div>
+
+              {/* Draggable Divider 2 */}
+              <div
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  setDraggingDivider(2);
+                }}
+                className={cn(
+                  "w-1.5 h-full cursor-col-resize hover:bg-sidebar-primary/50 transition-colors z-20 shrink-0 bg-border/70 flex items-center justify-center group",
+                  draggingDivider === 2 && "bg-sidebar-primary ring-1 ring-sidebar-primary"
+                )}
+                title="Drag to resize pane 2 & 3"
+              >
+                <div className="w-0.5 h-8 rounded-full bg-muted-foreground/30 group-hover:bg-sidebar-primary transition-colors" />
+              </div>
+
+              {/* Third Pane 3 */}
+              <div className="flex-1 flex flex-col h-full overflow-hidden relative min-w-[120px]">
+                <SplitEditorPane
+                  document={thirdDocument || splitDocument}
+                  onClose={() => openSplitRight()}
+                  onSelectDocument={setThirdDocumentId}
+                />
+              </div>
             </div>
-          </div>
+          ) : (
+            /* 2-Pane Split (Horizontal or Vertical) */
+            <div
+              ref={containerRef}
+              className={cn(
+                "flex flex-1 h-full w-full overflow-hidden relative",
+                splitDirection === "vertical" ? "flex-col" : "flex-row",
+                isDragging &&
+                  (splitDirection === "vertical"
+                    ? "select-none cursor-row-resize"
+                    : "select-none cursor-col-resize")
+              )}
+            >
+              {/* Primary Pane (Left or Top) */}
+              <div
+                style={
+                  splitDirection === "vertical"
+                    ? { height: `${splitRatio * 100}%` }
+                    : { width: `${splitRatio * 100}%` }
+                }
+                className={cn(
+                  "flex flex-col overflow-hidden relative",
+                  splitDirection === "vertical"
+                    ? "w-full min-h-[100px]"
+                    : "h-full min-w-[150px]"
+                )}
+              >
+                <EditorBreadcrumb document={activeDocument} />
+                {activeDocument.isBinary || activeDocument.isTooLarge ? (
+                  <BinaryFileView document={activeDocument} />
+                ) : activeDocument.error ? (
+                  <div className="flex flex-1 flex-col items-center justify-center p-6 text-center">
+                    <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 max-w-md text-destructive">
+                      <h3 className="font-semibold text-xs">Error opening file</h3>
+                      <p className="text-xs mt-1 text-muted-foreground">{activeDocument.error}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <MonacoEditorView
+                    document={activeDocument}
+                    onCursorChange={setCursorPos}
+                  />
+                )}
+                <EditorStatusBar document={activeDocument} cursorPosition={cursorPos} />
+              </div>
+
+              {/* Draggable Divider */}
+              <div
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  setDraggingDivider(1);
+                }}
+                className={cn(
+                  "transition-colors z-20 shrink-0 bg-border/70 flex items-center justify-center group",
+                  splitDirection === "vertical"
+                    ? "h-1.5 w-full cursor-row-resize hover:bg-sidebar-primary/50"
+                    : "w-1.5 h-full cursor-col-resize hover:bg-sidebar-primary/50",
+                  isDragging && "bg-sidebar-primary ring-1 ring-sidebar-primary"
+                )}
+                title={
+                  splitDirection === "vertical"
+                    ? "Drag to resize split rows"
+                    : "Drag to resize split view"
+                }
+              >
+                <div
+                  className={cn(
+                    "rounded-full bg-muted-foreground/30 group-hover:bg-sidebar-primary transition-colors",
+                    splitDirection === "vertical" ? "h-0.5 w-8" : "w-0.5 h-8"
+                  )}
+                />
+              </div>
+
+              {/* Secondary Split Pane (Right or Bottom) */}
+              <div
+                className={cn(
+                  "flex-1 flex flex-col overflow-hidden relative",
+                  splitDirection === "vertical"
+                    ? "w-full min-h-[100px]"
+                    : "h-full min-w-[150px]"
+                )}
+              >
+                <SplitEditorPane
+                  document={splitDocument}
+                  isVertical={splitDirection === "vertical"}
+                />
+              </div>
+            </div>
+          )
         ) : (
           <div className="flex flex-1 flex-col h-full w-full overflow-hidden relative">
             <EditorBreadcrumb document={activeDocument} />

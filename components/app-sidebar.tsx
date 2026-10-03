@@ -53,13 +53,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         className={cn(
           "fixed z-40 flex items-center justify-center transition-all duration-150 ease-out cursor-pointer select-none size-7 rounded-md active:scale-95 border backdrop-blur-md focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sidebar-ring shadow-xs",
           open
-            ? "top-[40px] left-[calc(var(--sidebar-width)-42px)] border-sidebar-border/80 bg-sidebar/95 text-sidebar-foreground hover:bg-sidebar-accent hover:border-sidebar-primary/50"
-            : "top-[36px] left-2 border-border/80 bg-background/95 text-muted-foreground hover:text-foreground shadow-xs hover:bg-accent hover:border-sidebar-primary/50"
+            ? "top-[44px] right-[calc(var(--sidebar-width)-42px)] border-sidebar-border/80 bg-sidebar/95 text-sidebar-foreground hover:bg-sidebar-accent hover:border-sidebar-primary/50"
+            : "top-[34px] right-2 border-border/80 bg-background/95 text-muted-foreground hover:text-foreground shadow-xs hover:bg-accent hover:border-sidebar-primary/50"
         )}
       >
         <div className="flex items-center justify-center size-5 rounded bg-sidebar-accent/50 dark:bg-sidebar-accent/30 transition-transform duration-200">
           <HugeiconsIcon
-            icon={open ? SidebarLeftIcon : SidebarRightIcon}
+            icon={open ? SidebarRightIcon : SidebarLeftIcon}
             className={cn(
               "size-3.5 transition-all duration-200 ease-out",
               open ? "rotate-0 scale-100" : "rotate-180 scale-105"
@@ -68,10 +68,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </div>
       </button>
 
-      <Sidebar variant="floating" className="top-[30px] h-[calc(100svh-30px)]" {...props}>
+      <Sidebar side="right" variant="floating" className="top-[30px] h-[calc(100svh-30px)]" {...props}>
         {!activeWorkspace ? (
           <SidebarHeader>
-            <div className="flex items-center justify-between p-2 select-none pr-12">
+            <div className="flex items-center justify-between p-2 select-none pl-11">
               <div className="flex items-center gap-2">
                 <div className="flex aspect-square size-7 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground shadow-2xs transition-transform duration-200 hover:scale-105">
                   <HugeiconsIcon icon={LayoutBottomIcon} strokeWidth={2} className="size-3.5" />
@@ -84,7 +84,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </div>
           </SidebarHeader>
         ) : (
-          <SidebarHeader className="h-10 justify-center px-2.5 border-b border-sidebar-border/80 pr-12">
+          <SidebarHeader className="h-10 justify-center pr-2.5 pl-11 border-b border-sidebar-border/80">
             <div className="relative flex items-center p-0.5 rounded-lg bg-sidebar-accent/40 border border-sidebar-border/60 min-w-0 shadow-2xs">
               <button
                 type="button"

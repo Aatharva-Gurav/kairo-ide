@@ -18,7 +18,7 @@ export function EditorEmptyState() {
 
       <h2 className="text-base font-semibold tracking-tight text-foreground">No File Open</h2>
       <p className="text-xs text-muted-foreground mt-1 max-w-sm leading-relaxed">
-        Select a file from the explorer on the left or use keyboard shortcuts to quickly navigate your project.
+        Select a file from the explorer on the right or use keyboard shortcuts to quickly navigate your project.
       </p>
 
       {/* Keyboard Shortcuts Reference */}

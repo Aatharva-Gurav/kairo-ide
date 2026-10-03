@@ -25,9 +25,17 @@ const MonacoEditorView = dynamic(
 
 interface SplitEditorPaneProps {
   document: EditorDocument;
+  onClose?: () => void;
+  onSelectDocument?: (id: string) => void;
+  isVertical?: boolean;
 }
 
-export function SplitEditorPane({ document }: SplitEditorPaneProps) {
+export function SplitEditorPane({
+  document,
+  onClose,
+  onSelectDocument,
+  isVertical = false,
+}: SplitEditorPaneProps) {
   const { documents, closeSplitView, setSplitDocumentId } = useEditor();
   const [cursorPos, setCursorPos] = useState<{ lineNumber: number; column: number }>({
     lineNumber: 1,
@@ -35,12 +43,20 @@ export function SplitEditorPane({ document }: SplitEditorPaneProps) {
   });
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
+  const handleClose = onClose || closeSplitView;
+  const handleSelectDoc = onSelectDocument || setSplitDocumentId;
+
   const parts = document.path.split("/").filter(Boolean);
 
   return (
-    <div className="flex flex-1 flex-col h-full w-full overflow-hidden relative border-l border-border/70 bg-background">
+    <div
+      className={cn(
+        "flex flex-1 flex-col h-full w-full overflow-hidden relative bg-background",
+        isVertical ? "border-t border-border/70" : "border-l border-border/70"
+      )}
+    >
       {/* Split Pane Header */}
-      <div className="flex h-9 w-full items-center justify-between border-b border-border/70 bg-sidebar/50 dark:bg-sidebar/40 px-2 select-none">
+      <div className="relative z-20 shrink-0 flex h-9 w-full items-center justify-between border-b border-border/70 bg-sidebar/50 dark:bg-sidebar/40 px-2 select-none">
         {/* Document Selector & Breadcrumb */}
         <div className="relative flex items-center gap-2 overflow-hidden">
           <div
@@ -63,7 +79,7 @@ export function SplitEditorPane({ document }: SplitEditorPaneProps) {
                 <div
                   key={doc.id}
                   onClick={() => {
-                    setSplitDocumentId(doc.id);
+                    handleSelectDoc(doc.id);
                     setIsDropdownOpen(false);
                   }}
                   className={cn(
@@ -102,8 +118,8 @@ export function SplitEditorPane({ document }: SplitEditorPaneProps) {
         <div className="flex items-center gap-1">
           <button
             type="button"
-            onClick={closeSplitView}
-            title="Close Split View (Ctrl+\)"
+            onClick={handleClose}
+            title="Close Split View"
             className="flex items-center justify-center size-6 rounded hover:bg-muted/70 text-muted-foreground hover:text-foreground cursor-pointer transition-all active:scale-90"
           >
             <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" />

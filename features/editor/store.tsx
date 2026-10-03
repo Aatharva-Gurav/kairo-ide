@@ -14,6 +14,8 @@ import {
   EditorSettings,
   FilesSettings,
   DirtyCloseConfirmAction,
+  SplitDirection,
+  SplitLayoutMode,
 } from "./types";
 import { EditorService } from "./services/editor.service";
 import { ModelService } from "./services/model.service";
@@ -34,14 +36,27 @@ export interface EditorContextValue {
 
   // Split view
   isSplit: boolean;
+  splitDirection: SplitDirection;
+  splitLayoutMode: SplitLayoutMode;
   splitDocumentId: string | null;
   splitDocument: EditorDocument | null;
+  thirdDocumentId: string | null;
+  thirdDocument: EditorDocument | null;
   splitRatio: number;
+  splitRatio2: number;
   setSplitRatio: (ratio: number) => void;
-  openSplitView: (filePath?: string) => void;
+  setSplitRatio2: (ratio: number) => void;
+  openSplitView: (filePath?: string, direction?: SplitDirection) => void;
+  openSplitRight: (filePath?: string) => void;
+  openSplitDown: (filePath?: string) => void;
+  openThreeColumnSplit: (file1?: string, file2?: string) => void;
   closeSplitView: () => void;
   toggleSplitView: () => void;
+  toggleSplitOrientation: () => void;
+  swapSplitDocuments: () => void;
+  setSplitRatioPreset: (preset: "equal" | "left-heavy" | "right-heavy") => void;
   setSplitDocumentId: (filePath: string) => void;
+  setThirdDocumentId: (filePath: string) => void;
 
   // Editor-only zoom
   editorZoomLevel: number;
@@ -83,8 +98,12 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
 
   // Split view state
   const [isSplit, setIsSplit] = useState(false);
+  const [splitDirection, setSplitDirection] = useState<SplitDirection>("horizontal");
+  const [splitLayoutMode, setSplitLayoutMode] = useState<SplitLayoutMode>("single");
   const [splitDocumentId, setSplitDocumentIdState] = useState<string | null>(null);
+  const [thirdDocumentId, setThirdDocumentIdState] = useState<string | null>(null);
   const [splitRatio, setSplitRatio] = useState(0.5);
+  const [splitRatio2, setSplitRatio2] = useState(0.67);
 
   // Editor-only zoom level (0 = 100%, +1 = 110%, etc.)
   const [editorZoomLevel, setEditorZoomLevel] = useState(0);
@@ -101,6 +120,11 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     splitDocumentIdRef.current = splitDocumentId;
   }, [splitDocumentId]);
+
+  const thirdDocumentIdRef = useRef(thirdDocumentId);
+  useEffect(() => {
+    thirdDocumentIdRef.current = thirdDocumentId;
+  }, [thirdDocumentId]);
 
   // Subscribe to live settings updates
   useEffect(() => {
@@ -136,41 +160,145 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     return documents.find((doc) => doc.id === splitDocumentId) || null;
   }, [documents, splitDocumentId]);
 
+  const thirdDocument = useMemo(() => {
+    if (!thirdDocumentId) return null;
+    return documents.find((doc) => doc.id === thirdDocumentId) || null;
+  }, [documents, thirdDocumentId]);
+
   // Split view actions
-  const openSplitView = useCallback((filePath?: string) => {
+  const openSplitView = useCallback((filePath?: string, direction: SplitDirection = "horizontal") => {
     const target =
       filePath
         ? normalizePath(filePath)
         : activeDocumentIdRef.current || (documentsRef.current[0]?.id ?? null);
     if (target) {
       setSplitDocumentIdState(target);
+      setSplitDirection(direction);
+      setSplitLayoutMode(direction === "vertical" ? "split-down" : "split-right");
+      setSplitRatio(0.5);
+      setIsSplit(true);
+    }
+  }, []);
+
+  const openSplitRight = useCallback((filePath?: string) => {
+    openSplitView(filePath, "horizontal");
+  }, [openSplitView]);
+
+  const openSplitDown = useCallback((filePath?: string) => {
+    openSplitView(filePath, "vertical");
+  }, [openSplitView]);
+
+  const openThreeColumnSplit = useCallback((file1?: string, file2?: string) => {
+    const active = activeDocumentIdRef.current || (documentsRef.current[0]?.id ?? null);
+    const target1 = file1 ? normalizePath(file1) : (splitDocumentIdRef.current || active);
+    const target2 = file2
+      ? normalizePath(file2)
+      : documentsRef.current.find((d) => d.id !== active && d.id !== target1)?.id || target1;
+
+    if (active) {
+      setSplitDirection("horizontal");
+      setSplitLayoutMode("split-three");
+      setSplitRatio(0.33);
+      setSplitRatio2(0.67);
+      if (target1) setSplitDocumentIdState(target1);
+      if (target2) setThirdDocumentIdState(target2);
       setIsSplit(true);
     }
   }, []);
 
   const closeSplitView = useCallback(() => {
     setIsSplit(false);
+    setSplitLayoutMode("single");
     setSplitDocumentIdState(null);
+    setThirdDocumentIdState(null);
   }, []);
 
   const toggleSplitView = useCallback(() => {
     setIsSplit((prev) => {
       if (prev) {
+        setSplitLayoutMode("single");
         setSplitDocumentIdState(null);
+        setThirdDocumentIdState(null);
         return false;
       }
       const target =
         activeDocumentIdRef.current || (documentsRef.current[0]?.id ?? null);
       if (target) {
         setSplitDocumentIdState(target);
+        setSplitDirection("horizontal");
+        setSplitLayoutMode("split-right");
+        setSplitRatio(0.5);
         return true;
       }
       return false;
     });
   }, []);
 
+  const toggleSplitOrientation = useCallback(() => {
+    setIsSplit((prev) => {
+      if (!prev) {
+        const target =
+          activeDocumentIdRef.current || (documentsRef.current[0]?.id ?? null);
+        if (target) {
+          setSplitDocumentIdState(target);
+          setSplitDirection("horizontal");
+          setSplitLayoutMode("split-right");
+          return true;
+        }
+        return false;
+      }
+      return true;
+    });
+
+    setSplitDirection((prev) => {
+      const next = prev === "horizontal" ? "vertical" : "horizontal";
+      setSplitLayoutMode(next === "vertical" ? "split-down" : "split-right");
+      return next;
+    });
+  }, []);
+
+  const swapSplitDocuments = useCallback(() => {
+    const currentActive = activeDocumentIdRef.current;
+    const currentSplit = splitDocumentIdRef.current;
+    if (currentActive && currentSplit) {
+      setActiveDocumentIdState(currentSplit);
+      setSplitDocumentIdState(currentActive);
+      ideEvents.emit("editor:active-changed", { path: currentSplit });
+    }
+  }, []);
+
+  const setSplitRatioPreset = useCallback((preset: "equal" | "left-heavy" | "right-heavy") => {
+    setSplitLayoutMode((mode) => {
+      if (mode === "split-three") {
+        if (preset === "equal") {
+          setSplitRatio(0.333);
+          setSplitRatio2(0.666);
+        } else if (preset === "left-heavy") {
+          setSplitRatio(0.5);
+          setSplitRatio2(0.75);
+        } else if (preset === "right-heavy") {
+          setSplitRatio(0.25);
+          setSplitRatio2(0.5);
+        }
+      } else {
+        if (preset === "equal") {
+          setSplitRatio(0.5);
+        } else if (preset === "left-heavy") {
+          setSplitRatio(0.7);
+        } else if (preset === "right-heavy") {
+          setSplitRatio(0.3);
+        }
+      }
+      return mode;
+    });
+  }, []);
+
   const setSplitDocumentId = useCallback((filePath: string) => {
     setSplitDocumentIdState(normalizePath(filePath));
+  }, []);
+
+  const setThirdDocumentId = useCallback((filePath: string) => {
+    setThirdDocumentIdState(normalizePath(filePath));
   }, []);
 
   // Zoom controls
@@ -343,13 +471,24 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
 
       // If closed split document, reassign or close split
       if (splitDocumentIdRef.current === norm) {
-        const remainingForSplit = remaining.filter((d) => d.id !== norm);
+        const remainingForSplit = remaining.filter((d) => d.id !== norm && d.id !== thirdDocumentIdRef.current);
         if (remainingForSplit.length > 0) {
           setSplitDocumentIdState(remainingForSplit[0].id);
+        } else if (thirdDocumentIdRef.current) {
+          setSplitDocumentIdState(thirdDocumentIdRef.current);
+          setThirdDocumentIdState(null);
+          setSplitLayoutMode("split-right");
         } else {
           setIsSplit(false);
+          setSplitLayoutMode("single");
           setSplitDocumentIdState(null);
         }
+      }
+
+      // If closed third document, degrade to 2-pane split
+      if (thirdDocumentIdRef.current === norm) {
+        setThirdDocumentIdState(null);
+        setSplitLayoutMode((mode) => (mode === "split-three" ? "split-right" : mode));
       }
 
       ideEvents.emit("editor:document-closed", { path: norm });
@@ -398,9 +537,12 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
 
       setDocuments(documentsRef.current.filter((d) => d.id === norm));
       setActiveDocumentId(norm);
+      if (splitDocumentIdRef.current && splitDocumentIdRef.current !== norm) {
+        closeSplitView();
+      }
       return true;
     },
-    [setActiveDocumentId]
+    [setActiveDocumentId, closeSplitView]
   );
 
   const updateContent = useCallback((filePath: string, newContent: string) => {
@@ -582,18 +724,43 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("blur", handleBlur);
   }, []);
 
-  // Split view shortcut: Ctrl+\ (Cmd+\ on macOS)
+  // Split view shortcuts:
+  // - Ctrl+\ (Cmd+\ on macOS): Toggle split right / close split
+  // - Ctrl+K then Ctrl+\: Split down
   useEffect(() => {
+    let ctrlKActive = false;
+    let ctrlKTimeout: NodeJS.Timeout | null = null;
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "\\") {
+      const isCtrlOrMeta = e.ctrlKey || e.metaKey;
+
+      if (isCtrlOrMeta && (e.key === "k" || e.key === "K")) {
+        ctrlKActive = true;
+        if (ctrlKTimeout) clearTimeout(ctrlKTimeout);
+        ctrlKTimeout = setTimeout(() => {
+          ctrlKActive = false;
+        }, 1200);
+        return;
+      }
+
+      if (isCtrlOrMeta && e.key === "\\") {
         e.preventDefault();
-        toggleSplitView();
+        if (ctrlKActive) {
+          ctrlKActive = false;
+          if (ctrlKTimeout) clearTimeout(ctrlKTimeout);
+          openSplitDown();
+        } else {
+          toggleSplitView();
+        }
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [toggleSplitView]);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      if (ctrlKTimeout) clearTimeout(ctrlKTimeout);
+    };
+  }, [toggleSplitView, openSplitDown]);
 
   // External file watcher notifications
   useEffect(() => {
@@ -633,14 +800,27 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
 
       // Split view
       isSplit,
+      splitDirection,
+      splitLayoutMode,
       splitDocumentId,
       splitDocument,
+      thirdDocumentId,
+      thirdDocument,
       splitRatio,
+      splitRatio2,
       setSplitRatio,
+      setSplitRatio2,
       openSplitView,
+      openSplitRight,
+      openSplitDown,
+      openThreeColumnSplit,
       closeSplitView,
       toggleSplitView,
+      toggleSplitOrientation,
+      swapSplitDocuments,
+      setSplitRatioPreset,
       setSplitDocumentId,
+      setThirdDocumentId,
 
       // Editor-only zoom
       editorZoomLevel,
@@ -674,14 +854,26 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
       isQuickOpenVisible,
       isGoToLineVisible,
       isSplit,
+      splitDirection,
+      splitLayoutMode,
       splitDocumentId,
       splitDocument,
+      thirdDocumentId,
+      thirdDocument,
       splitRatio,
+      splitRatio2,
       setSplitRatio,
       openSplitView,
+      openSplitRight,
+      openSplitDown,
+      openThreeColumnSplit,
       closeSplitView,
       toggleSplitView,
+      toggleSplitOrientation,
+      swapSplitDocuments,
+      setSplitRatioPreset,
       setSplitDocumentId,
+      setThirdDocumentId,
       editorZoomLevel,
       zoomIn,
       zoomOut,

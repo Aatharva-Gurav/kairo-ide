@@ -35,11 +35,16 @@ export { DEFAULT_SETTINGS };
 export const DEFAULT_EDITOR_SETTINGS = DEFAULT_SETTINGS.editor;
 
 export type SplitDirection = "horizontal" | "vertical";
+export type SplitLayoutMode = "single" | "split-right" | "split-down" | "split-three";
 
 export interface EditorSplitState {
   isSplit: boolean;
+  splitDirection: SplitDirection;
+  splitLayoutMode: SplitLayoutMode;
   splitDocumentId: string | null;
+  thirdDocumentId: string | null;
   splitRatio: number;
+  splitRatio2: number;
 }
 
 export interface FormatOptions {

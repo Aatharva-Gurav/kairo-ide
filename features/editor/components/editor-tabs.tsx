@@ -17,8 +17,6 @@ export function EditorTabs() {
     closeDocument,
     saveAllDocuments,
     closeAllDocuments,
-    isSplit,
-    toggleSplitView,
   } = useEditor();
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -33,15 +31,12 @@ export function EditorTabs() {
   const hasDirtyDocuments = documents.some((d) => d.isDirty);
 
   return (
-    <div className="flex h-9 w-full items-center justify-between border-b border-border/70 bg-sidebar/50 dark:bg-sidebar/40 select-none overflow-hidden">
+    <div className="relative z-20 shrink-0 flex h-9 w-full items-center justify-between border-b border-border/70 bg-sidebar/50 dark:bg-sidebar/40 select-none overflow-hidden">
       {/* Scrollable Tab List */}
       <div
         ref={scrollContainerRef}
         onWheel={handleWheel}
-        className={cn(
-          "flex flex-1 h-full items-center overflow-x-auto no-scrollbar transition-[padding] duration-150 ease-out",
-          !open && "pl-11"
-        )}
+        className="flex flex-1 h-full items-center overflow-x-auto no-scrollbar"
       >
         {documents.map((doc) => (
           <EditorTab
@@ -55,21 +50,12 @@ export function EditorTabs() {
       </div>
 
       {/* Tab Toolbar Actions */}
-      <div className="flex items-center gap-0.5 px-2 shrink-0 border-l border-border/70 bg-sidebar/30 h-full">
-        <button
-          type="button"
-          onClick={toggleSplitView}
-          title={isSplit ? "Close Split Editor (Ctrl+\\)" : "Split Editor Right (Ctrl+\\)"}
-          className={cn(
-            "flex items-center justify-center size-6 rounded hover:bg-muted/60 cursor-pointer transition-colors duration-120 active:scale-95",
-            isSplit ? "text-sidebar-primary bg-sidebar-accent/70" : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          <svg viewBox="0 0 16 16" fill="currentColor" className="size-3.5">
-            <path d="M14 2H2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1zM2 13V3h5v10H2zm12 0H8V3h6v10z" />
-          </svg>
-        </button>
-
+      <div
+        className={cn(
+          "flex items-center gap-0.5 px-2 shrink-0 border-l border-border/70 bg-sidebar/30 h-full transition-[margin] duration-150 ease-out",
+          !open && "mr-11"
+        )}
+      >
         {hasDirtyDocuments && (
           <button
             type="button"

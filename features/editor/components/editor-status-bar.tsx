@@ -36,7 +36,7 @@ export function EditorStatusBar({ document, cursorPosition }: EditorStatusBarPro
   const zoomPct = Math.round(100 + editorZoomLevel * 10);
 
   return (
-    <div className="flex h-6 w-full items-center justify-between border-t border-border/70 bg-sidebar/95 px-3 text-[11px] text-muted-foreground select-none font-mono shadow-xs">
+    <div className="relative z-20 shrink-0 flex h-6 w-full items-center justify-between border-t border-border/70 bg-sidebar/95 px-3 text-[11px] text-muted-foreground select-none font-mono shadow-xs">
       {/* Left side: line and column + Save indicator */}
       <div className="flex items-center gap-2">
         {cursorPosition && (

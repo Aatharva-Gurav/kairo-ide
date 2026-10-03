@@ -39,12 +39,29 @@ export function AppTitleBar() {
   const {
     activeDocument,
     activeDocumentId,
+    documents,
     saveDocument,
     saveAllDocuments,
     closeDocument,
     closeAllDocuments,
+    formatActiveDocument,
+    setGoToLineVisible,
+    isSplit,
+    splitDirection,
+    splitLayoutMode,
+    openSplitRight,
+    openSplitDown,
+    openThreeColumnSplit,
+    closeSplitView,
     toggleSplitView,
+    toggleSplitOrientation,
+    swapSplitDocuments,
+    setSplitRatioPreset,
     openDocument,
+    zoomIn,
+    zoomOut,
+    zoomReset,
+    monacoEditorRef,
   } = useEditor();
   const { settings, updateSetting, openSettings } = useSettings();
   const { openCommandPalette, openQuickOpen } = useCommands();
@@ -55,6 +72,8 @@ export function AppTitleBar() {
   const { user, profile, isOffline, logout, exitOfflineMode } = useAuth();
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
+  const [isSplitMenuOpen, setIsSplitMenuOpen] = useState(false);
+  const splitMenuRef = useRef<HTMLDivElement>(null);
 
   const [isMaximized, setIsMaximized] = useState(false);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
@@ -108,6 +127,9 @@ export function AppTitleBar() {
       if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
         setIsProfileMenuOpen(false);
       }
+      if (splitMenuRef.current && !splitMenuRef.current.contains(e.target as Node)) {
+        setIsSplitMenuOpen(false);
+      }
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -115,10 +137,11 @@ export function AppTitleBar() {
         setActiveMenu(null);
         setActiveSubmenu(null);
         setIsProfileMenuOpen(false);
+        setIsSplitMenuOpen(false);
       }
     };
 
-    if (activeMenu || isProfileMenuOpen) {
+    if (activeMenu || isProfileMenuOpen || isSplitMenuOpen) {
       document.addEventListener("mousedown", handleClickOutside);
       document.addEventListener("keydown", handleKeyDown);
       return () => {
@@ -126,7 +149,7 @@ export function AppTitleBar() {
         document.removeEventListener("keydown", handleKeyDown);
       };
     }
-  }, [activeMenu, isProfileMenuOpen]);
+  }, [activeMenu, isProfileMenuOpen, isSplitMenuOpen]);
 
   // Window control handlers
   const handleMinimize = useCallback(async () => {
@@ -204,6 +227,14 @@ export function AppTitleBar() {
           await writeFileContent(targetPath, activeDocument.content);
           await openDocument(targetPath);
         }
+      } else {
+        const blob = new Blob([activeDocument.content], { type: "text/plain;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = activeDocument.title;
+        a.click();
+        URL.revokeObjectURL(url);
       }
     } catch (err) {
       console.error("[AppTitleBar] Failed to Save As:", err);
@@ -218,11 +249,66 @@ export function AppTitleBar() {
         if (picked) {
           await openDocument(picked);
         }
+      } else {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.onchange = async () => {
+          const file = input.files?.[0];
+          if (file) {
+            await openDocument(file.name);
+          }
+        };
+        input.click();
       }
     } catch (err) {
       console.error("[AppTitleBar] Failed to pick file:", err);
     }
   }, [isTauri, openDocument]);
+
+  // Monaco editor action triggers (ensures editor gets focus before executing)
+  const triggerEditorAction = useCallback(
+    (actionId: string) => {
+      const ed = monacoEditorRef.current;
+      if (ed) {
+        ed.focus();
+        ed.trigger("menu", actionId, null);
+      }
+    },
+    [monacoEditorRef]
+  );
+
+  const runEditorAction = useCallback(
+    (actionId: string) => {
+      const ed = monacoEditorRef.current;
+      if (ed) {
+        ed.focus();
+        ed.getAction(actionId)?.run();
+      }
+    },
+    [monacoEditorRef]
+  );
+
+  const handlePaste = useCallback(async () => {
+    const ed = monacoEditorRef.current;
+    if (ed) {
+      ed.focus();
+      try {
+        if (navigator.clipboard?.readText) {
+          const text = await navigator.clipboard.readText();
+          if (text) {
+            const selection = ed.getSelection();
+            ed.executeEdits("menu-paste", [
+              { range: selection, text, forceMoveMarkers: true },
+            ]);
+            return;
+          }
+        }
+      } catch {
+        // Fallback to trigger
+      }
+      ed.trigger("menu", "editor.action.clipboardPasteAction", null);
+    }
+  }, [monacoEditorRef]);
 
   // Check for updates
   const handleCheckUpdates = useCallback(() => {
@@ -304,6 +390,7 @@ export function AppTitleBar() {
         id: "file.saveAll",
         label: "Save All",
         shortcut: "Ctrl+Alt+S",
+        disabled: documents.length === 0,
         action: async () => {
           await saveAllDocuments();
         },
@@ -322,6 +409,7 @@ export function AppTitleBar() {
         id: "file.closeAllEditors",
         label: "Close All Editors",
         shortcut: "Ctrl+K Ctrl+W",
+        disabled: documents.length === 0,
         action: async () => {
           await closeAllDocuments();
         },
@@ -345,50 +433,61 @@ export function AppTitleBar() {
         id: "edit.undo",
         label: "Undo",
         shortcut: "Ctrl+Z",
-        action: () => {
-          document.execCommand("undo");
-        },
+        disabled: !activeDocument,
+        action: () => triggerEditorAction("undo"),
       },
       {
         id: "edit.redo",
         label: "Redo",
         shortcut: "Ctrl+Y",
-        action: () => {
-          document.execCommand("redo");
-        },
+        disabled: !activeDocument,
+        action: () => triggerEditorAction("redo"),
       },
       { id: "sep-edit1", label: "", separator: true },
       {
         id: "edit.cut",
         label: "Cut",
         shortcut: "Ctrl+X",
-        action: () => {
-          document.execCommand("cut");
-        },
+        disabled: !activeDocument,
+        action: () => triggerEditorAction("editor.action.clipboardCutAction"),
       },
       {
         id: "edit.copy",
         label: "Copy",
         shortcut: "Ctrl+C",
-        action: () => {
-          document.execCommand("copy");
-        },
+        disabled: !activeDocument,
+        action: () => triggerEditorAction("editor.action.clipboardCopyAction"),
       },
       {
         id: "edit.paste",
         label: "Paste",
         shortcut: "Ctrl+V",
-        action: () => {
-          document.execCommand("paste");
-        },
+        disabled: !activeDocument,
+        action: handlePaste,
       },
       { id: "sep-edit2", label: "", separator: true },
       {
-        id: "edit.selectAll",
-        label: "Select All",
-        shortcut: "Ctrl+A",
-        action: () => {
-          document.execCommand("selectAll");
+        id: "edit.find",
+        label: "Find",
+        shortcut: "Ctrl+F",
+        disabled: !activeDocument,
+        action: () => runEditorAction("actions.find"),
+      },
+      {
+        id: "edit.replace",
+        label: "Replace",
+        shortcut: "Ctrl+H",
+        disabled: !activeDocument,
+        action: () => runEditorAction("editor.action.startFindReplaceAction"),
+      },
+      { id: "sep-edit3", label: "", separator: true },
+      {
+        id: "edit.formatDocument",
+        label: "Format Document",
+        shortcut: "Shift+Alt+F",
+        disabled: !activeDocument,
+        action: async () => {
+          await formatActiveDocument();
         },
       },
     ],
@@ -397,46 +496,58 @@ export function AppTitleBar() {
         id: "selection.selectAll",
         label: "Select All",
         shortcut: "Ctrl+A",
-        action: () => {
-          document.execCommand("selectAll");
-        },
+        disabled: !activeDocument,
+        action: () => triggerEditorAction("editor.action.selectAll"),
       },
       {
         id: "selection.expand",
         label: "Expand Selection",
         shortcut: "Shift+Alt+Right",
-        action: () => {
-          ideEvents.emit("sidebar:switch-tab", "explorer");
-        },
+        disabled: !activeDocument,
+        action: () => triggerEditorAction("editor.action.smartSelect.expand"),
       },
       {
         id: "selection.shrink",
         label: "Shrink Selection",
         shortcut: "Shift+Alt+Left",
-        action: () => {
-          ideEvents.emit("sidebar:switch-tab", "explorer");
-        },
+        disabled: !activeDocument,
+        action: () => triggerEditorAction("editor.action.smartSelect.shrink"),
       },
       { id: "sep-sel", label: "", separator: true },
       {
         id: "selection.copyLineUp",
         label: "Copy Line Up",
         shortcut: "Shift+Alt+Up",
+        disabled: !activeDocument,
+        action: () => triggerEditorAction("editor.action.copyLinesUpAction"),
       },
       {
         id: "selection.copyLineDown",
         label: "Copy Line Down",
         shortcut: "Shift+Alt+Down",
+        disabled: !activeDocument,
+        action: () => triggerEditorAction("editor.action.copyLinesDownAction"),
       },
       {
         id: "selection.moveLineUp",
         label: "Move Line Up",
         shortcut: "Alt+Up",
+        disabled: !activeDocument,
+        action: () => triggerEditorAction("editor.action.moveLinesUpAction"),
       },
       {
         id: "selection.moveLineDown",
         label: "Move Line Down",
         shortcut: "Alt+Down",
+        disabled: !activeDocument,
+        action: () => triggerEditorAction("editor.action.moveLinesDownAction"),
+      },
+      {
+        id: "selection.duplicateSelection",
+        label: "Duplicate Selection",
+        shortcut: "Ctrl+Shift+D",
+        disabled: !activeDocument,
+        action: () => triggerEditorAction("editor.action.duplicateSelection"),
       },
     ],
     view: [
@@ -464,18 +575,11 @@ export function AppTitleBar() {
             action: toggleFullScreen,
           },
           {
-            id: "view.appearance.zenMode",
-            label: "Zen Mode (Toggle Sidebar)",
-            shortcut: "Ctrl+K Z",
-            action: toggleZenMode,
-          },
-          {
             id: "view.appearance.toggleSidebar",
             label: "Toggle Primary Sidebar",
             shortcut: "Ctrl+B",
             action: toggleSidebar,
           },
-          { id: "sep-app1", label: "", separator: true },
           {
             id: "view.appearance.toggleTheme",
             label: "Toggle Dark / Light Theme",
@@ -483,6 +587,25 @@ export function AppTitleBar() {
               const cur = settings.appearance.theme;
               updateSetting("appearance.theme", cur === "dark" ? "light" : "dark");
             },
+          },
+          { id: "sep-app1", label: "", separator: true },
+          {
+            id: "view.appearance.zoomIn",
+            label: "Zoom In Editor",
+            shortcut: "Ctrl+=",
+            action: () => zoomIn(),
+          },
+          {
+            id: "view.appearance.zoomOut",
+            label: "Zoom Out Editor",
+            shortcut: "Ctrl+-",
+            action: () => zoomOut(),
+          },
+          {
+            id: "view.appearance.zoomReset",
+            label: "Reset Editor Zoom",
+            shortcut: "Ctrl+0",
+            action: () => zoomReset(),
           },
         ],
       },
@@ -492,9 +615,59 @@ export function AppTitleBar() {
         submenu: [
           {
             id: "view.editorLayout.splitRight",
-            label: "Split Editor Right",
+            label: "Split Editor Right (2 Columns)",
             shortcut: "Ctrl+\\",
-            action: () => toggleSplitView(),
+            action: () => openSplitRight(),
+          },
+          {
+            id: "view.editorLayout.splitDown",
+            label: "Split Editor Down (2 Rows)",
+            shortcut: "Ctrl+K Ctrl+\\",
+            action: () => openSplitDown(),
+          },
+          {
+            id: "view.editorLayout.splitThree",
+            label: "Split Editor into 3 Columns",
+            action: () => openThreeColumnSplit(),
+          },
+          { id: "sep-el-1", label: "", separator: true },
+          {
+            id: "view.editorLayout.flipOrientation",
+            label: `Flip Layout (${splitDirection === "horizontal" ? "Columns → Rows" : "Rows → Columns"})`,
+            action: () => toggleSplitOrientation(),
+            disabled: !isSplit,
+          },
+          {
+            id: "view.editorLayout.swapPanes",
+            label: "Swap Editor Panes",
+            action: () => swapSplitDocuments(),
+            disabled: !isSplit,
+          },
+          { id: "sep-el-2", label: "", separator: true },
+          {
+            id: "view.editorLayout.resetRatio",
+            label: "Equalize Panes (50% / 50%)",
+            action: () => setSplitRatioPreset("equal"),
+            disabled: !isSplit,
+          },
+          {
+            id: "view.editorLayout.focusLeft",
+            label: `Focus ${splitDirection === "vertical" ? "Top" : "Left"} (70% / 30%)`,
+            action: () => setSplitRatioPreset("left-heavy"),
+            disabled: !isSplit,
+          },
+          {
+            id: "view.editorLayout.focusRight",
+            label: `Focus ${splitDirection === "vertical" ? "Bottom" : "Right"} (30% / 70%)`,
+            action: () => setSplitRatioPreset("right-heavy"),
+            disabled: !isSplit,
+          },
+          { id: "sep-el-3", label: "", separator: true },
+          {
+            id: "view.editorLayout.closeSplit",
+            label: "Close Split Editor",
+            action: () => closeSplitView(),
+            disabled: !isSplit,
           },
         ],
       },
@@ -517,6 +690,35 @@ export function AppTitleBar() {
         label: "Settings",
         shortcut: "Ctrl+,",
         action: () => openSettings(),
+      },
+    ],
+    go: [
+      {
+        id: "go.file",
+        label: "Go to File...",
+        shortcut: "Ctrl+P",
+        action: () => openQuickOpen(),
+      },
+      {
+        id: "go.line",
+        label: "Go to Line / Column...",
+        shortcut: "Ctrl+G",
+        action: () => setGoToLineVisible(true),
+      },
+      { id: "sep-go1", label: "", separator: true },
+      {
+        id: "go.definition",
+        label: "Go to Definition",
+        shortcut: "F12",
+        disabled: !activeDocument,
+        action: () => triggerEditorAction("editor.action.revealDefinition"),
+      },
+      {
+        id: "go.peekDefinition",
+        label: "Peek Definition",
+        shortcut: "Alt+F12",
+        disabled: !activeDocument,
+        action: () => triggerEditorAction("editor.action.peekDefinition"),
       },
     ],
     help: [
@@ -552,6 +754,7 @@ export function AppTitleBar() {
     { id: "edit", label: "Edit" },
     { id: "selection", label: "Selection" },
     { id: "view", label: "View" },
+    { id: "go", label: "Go" },
     { id: "help", label: "Help" },
   ] as const;
 
@@ -858,6 +1061,265 @@ export function AppTitleBar() {
                   Sign Out
                 </button>
               )}
+            </div>
+          )}
+        </div>
+
+        {/* Split View Layout Dropdown beside Window Controls */}
+        <div ref={splitMenuRef} className="relative h-full flex items-center mr-1">
+          <button
+            type="button"
+            onClick={() => setIsSplitMenuOpen((prev) => !prev)}
+            title="Split Editor Layout Options"
+            aria-label="Split Editor Layout Options"
+            aria-expanded={isSplitMenuOpen}
+            className={cn(
+              "h-[22px] px-1.5 rounded-sm text-[11px] font-medium transition-all duration-100 flex items-center gap-1 focus:outline-none focus-visible:ring-1 focus-visible:ring-sidebar-ring cursor-pointer select-none",
+              isSplitMenuOpen
+                ? "bg-sidebar-accent text-sidebar-foreground shadow-2xs font-semibold"
+                : isSplit
+                ? "text-sidebar-primary bg-sidebar-primary/10 hover:bg-sidebar-primary/20"
+                : "text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent/70"
+            )}
+          >
+            {splitLayoutMode === "split-three" ? (
+              <svg viewBox="0 0 16 16" fill="currentColor" className="size-3.5">
+                <path d="M14 2H2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1zM2 13V3h3.5v10H2zm4.5 0V3h3v10h-3zm4 0V3H14v10h-3.5z" />
+              </svg>
+            ) : isSplit && splitDirection === "vertical" ? (
+              <svg viewBox="0 0 16 16" fill="currentColor" className="size-3.5">
+                <path d="M14 2H2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1zM2 7.5h12V3H2v4.5zm0 5.5h12V8.5H2V13z" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 16 16" fill="currentColor" className="size-3.5">
+                <path d="M14 2H2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1zM2 13V3h5v10H2zm12 0H8V3h6v10z" />
+              </svg>
+            )}
+            <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-2 opacity-60">
+              <path d="M2.5 4.5L6 8l3.5-3.5" />
+            </svg>
+          </button>
+
+          {/* Split Options Dropdown Popup */}
+          {isSplitMenuOpen && (
+            <div
+              className="absolute top-[28px] right-0 z-50 min-w-[250px] rounded-lg border border-border/80 bg-popover/98 backdrop-blur-md p-1.5 shadow-2xl text-xs text-popover-foreground animate-in fade-in-0 zoom-in-95 duration-120 ease-out origin-top-right"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground font-mono">
+                Split Editor Layout
+              </div>
+
+              {/* Split Right (2 Columns) */}
+              <button
+                type="button"
+                onClick={() => {
+                  openSplitRight();
+                  setIsSplitMenuOpen(false);
+                }}
+                className={cn(
+                  "flex w-full items-center justify-between px-2 py-1.5 rounded-md text-left transition-colors duration-100 select-none cursor-pointer",
+                  isSplit && splitDirection === "horizontal" && splitLayoutMode === "split-right"
+                    ? "bg-accent/80 text-accent-foreground font-medium"
+                    : "hover:bg-accent hover:text-accent-foreground"
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <svg viewBox="0 0 16 16" fill="currentColor" className="size-3.5 opacity-70">
+                    <path d="M14 2H2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1zM2 13V3h5v10H2zm12 0H8V3h6v10z" />
+                  </svg>
+                  <span>Split Right (2 Columns)</span>
+                </div>
+                <span className="text-[10px] text-muted-foreground font-mono ml-3">Ctrl+\</span>
+              </button>
+
+              {/* Split Down (2 Rows) */}
+              <button
+                type="button"
+                onClick={() => {
+                  openSplitDown();
+                  setIsSplitMenuOpen(false);
+                }}
+                className={cn(
+                  "flex w-full items-center justify-between px-2 py-1.5 rounded-md text-left transition-colors duration-100 select-none cursor-pointer",
+                  isSplit && splitDirection === "vertical"
+                    ? "bg-accent/80 text-accent-foreground font-medium"
+                    : "hover:bg-accent hover:text-accent-foreground"
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <svg viewBox="0 0 16 16" fill="currentColor" className="size-3.5 opacity-70">
+                    <path d="M14 2H2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1zM2 7.5h12V3H2v4.5zm0 5.5h12V8.5H2V13z" />
+                  </svg>
+                  <span>Split Down (2 Rows)</span>
+                </div>
+                <span className="text-[10px] text-muted-foreground font-mono ml-3">Ctrl+K Ctrl+\</span>
+              </button>
+
+              {/* Split 3 Columns */}
+              <button
+                type="button"
+                onClick={() => {
+                  openThreeColumnSplit();
+                  setIsSplitMenuOpen(false);
+                }}
+                className={cn(
+                  "flex w-full items-center justify-between px-2 py-1.5 rounded-md text-left transition-colors duration-100 select-none cursor-pointer",
+                  isSplit && splitLayoutMode === "split-three"
+                    ? "bg-accent/80 text-accent-foreground font-medium"
+                    : "hover:bg-accent hover:text-accent-foreground"
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <svg viewBox="0 0 16 16" fill="currentColor" className="size-3.5 opacity-70">
+                    <path d="M14 2H2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1zM2 13V3h3.5v10H2zm4.5 0V3h3v10h-3zm4 0V3H14v10h-3.5z" />
+                  </svg>
+                  <span>Split 3 Columns</span>
+                </div>
+              </button>
+
+              <div className="h-px bg-border/60 my-1 -mx-0.5" />
+
+              {/* Toggle Orientation */}
+              <button
+                type="button"
+                disabled={!isSplit}
+                onClick={() => {
+                  toggleSplitOrientation();
+                  setIsSplitMenuOpen(false);
+                }}
+                className={cn(
+                  "flex w-full items-center justify-between px-2 py-1.5 rounded-md text-left transition-colors duration-100 select-none",
+                  !isSplit
+                    ? "opacity-40 cursor-not-allowed"
+                    : "hover:bg-accent hover:text-accent-foreground cursor-pointer"
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-3.5 opacity-70">
+                    <path d="M2 10.5h9a2.5 2.5 0 0 0 2.5-2.5V3M14 5.5l-2.5-2.5L9 5.5" />
+                  </svg>
+                  <span>Flip Layout ({splitDirection === "horizontal" ? "Columns → Rows" : "Rows → Columns"})</span>
+                </div>
+              </button>
+
+              {/* Swap Panes */}
+              <button
+                type="button"
+                disabled={!isSplit}
+                onClick={() => {
+                  swapSplitDocuments();
+                  setIsSplitMenuOpen(false);
+                }}
+                className={cn(
+                  "flex w-full items-center justify-between px-2 py-1.5 rounded-md text-left transition-colors duration-100 select-none",
+                  !isSplit
+                    ? "opacity-40 cursor-not-allowed"
+                    : "hover:bg-accent hover:text-accent-foreground cursor-pointer"
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-3.5 opacity-70">
+                    <path d="M3 5h10M10 2l3 3-3 3M13 11H3M6 8L3 11l3 3" />
+                  </svg>
+                  <span>Swap Editor Panes</span>
+                </div>
+              </button>
+
+              <div className="h-px bg-border/60 my-1 -mx-0.5" />
+
+              <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground font-mono">
+                Pane Proportions
+              </div>
+
+              {/* Equalize Panes */}
+              <button
+                type="button"
+                disabled={!isSplit}
+                onClick={() => {
+                  setSplitRatioPreset("equal");
+                  setIsSplitMenuOpen(false);
+                }}
+                className={cn(
+                  "flex w-full items-center justify-between px-2 py-1.5 rounded-md text-left transition-colors duration-100 select-none",
+                  !isSplit
+                    ? "opacity-40 cursor-not-allowed"
+                    : "hover:bg-accent hover:text-accent-foreground cursor-pointer"
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="w-3.5 text-center font-mono text-[11px] opacity-70">½</span>
+                  <span>Equalize Panes (50% / 50%)</span>
+                </div>
+              </button>
+
+              {/* Focus Left / Top */}
+              <button
+                type="button"
+                disabled={!isSplit}
+                onClick={() => {
+                  setSplitRatioPreset("left-heavy");
+                  setIsSplitMenuOpen(false);
+                }}
+                className={cn(
+                  "flex w-full items-center justify-between px-2 py-1.5 rounded-md text-left transition-colors duration-100 select-none",
+                  !isSplit
+                    ? "opacity-40 cursor-not-allowed"
+                    : "hover:bg-accent hover:text-accent-foreground cursor-pointer"
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="w-3.5 text-center font-mono text-[11px] opacity-70">◀</span>
+                  <span>Focus {splitDirection === "vertical" ? "Top" : "Left"} (70% / 30%)</span>
+                </div>
+              </button>
+
+              {/* Focus Right / Bottom */}
+              <button
+                type="button"
+                disabled={!isSplit}
+                onClick={() => {
+                  setSplitRatioPreset("right-heavy");
+                  setIsSplitMenuOpen(false);
+                }}
+                className={cn(
+                  "flex w-full items-center justify-between px-2 py-1.5 rounded-md text-left transition-colors duration-100 select-none",
+                  !isSplit
+                    ? "opacity-40 cursor-not-allowed"
+                    : "hover:bg-accent hover:text-accent-foreground cursor-pointer"
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="w-3.5 text-center font-mono text-[11px] opacity-70">▶</span>
+                  <span>Focus {splitDirection === "vertical" ? "Bottom" : "Right"} (30% / 70%)</span>
+                </div>
+              </button>
+
+              <div className="h-px bg-border/60 my-1 -mx-0.5" />
+
+              {/* Close Split View */}
+              <button
+                type="button"
+                disabled={!isSplit}
+                onClick={() => {
+                  closeSplitView();
+                  setIsSplitMenuOpen(false);
+                }}
+                className={cn(
+                  "flex w-full items-center justify-between px-2 py-1.5 rounded-md text-left transition-colors duration-100 select-none",
+                  !isSplit
+                    ? "opacity-40 cursor-not-allowed"
+                    : "text-destructive hover:bg-destructive/15 cursor-pointer font-medium"
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" />
+                  <span>Close Split Editor</span>
+                </div>
+                {isSplit && (
+                  <span className="text-[10px] text-muted-foreground font-mono ml-3">Ctrl+\</span>
+                )}
+              </button>
             </div>
           )}
         </div>

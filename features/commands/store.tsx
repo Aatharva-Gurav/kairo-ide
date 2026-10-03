@@ -374,12 +374,72 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
       CommandRegistry.register({
         id: "workbench.action.splitEditor",
         title: "View: Split Editor Right",
-        description: "Split editor pane side-by-side",
+        description: "Split editor pane side-by-side (2 columns)",
         category: "view",
-        keywords: ["split", "pane", "side", "view"],
+        keywords: ["split", "pane", "side", "view", "column"],
         enabled: () => Boolean(editorRef.current.activeDocument),
         execute: () => {
-          editorRef.current.toggleSplitView();
+          editorRef.current.openSplitRight();
+        },
+      }),
+
+      CommandRegistry.register({
+        id: "workbench.action.splitEditorDown",
+        title: "View: Split Editor Down",
+        description: "Split editor pane horizontally (2 rows)",
+        category: "view",
+        keywords: ["split", "pane", "down", "horizontal", "view", "row"],
+        enabled: () => Boolean(editorRef.current.activeDocument),
+        execute: () => {
+          editorRef.current.openSplitDown();
+        },
+      }),
+
+      CommandRegistry.register({
+        id: "workbench.action.splitEditorThree",
+        title: "View: Split Editor into 3 Columns",
+        description: "Split editor into three columns",
+        category: "view",
+        keywords: ["split", "three", "columns", "3", "view"],
+        enabled: () => Boolean(editorRef.current.activeDocument),
+        execute: () => {
+          editorRef.current.openThreeColumnSplit();
+        },
+      }),
+
+      CommandRegistry.register({
+        id: "workbench.action.toggleEditorLayout",
+        title: "View: Toggle Split Layout Orientation",
+        description: "Toggle between vertical (columns) and horizontal (rows) split",
+        category: "view",
+        keywords: ["split", "flip", "orientation", "vertical", "horizontal"],
+        enabled: () => Boolean(editorRef.current.isSplit),
+        execute: () => {
+          editorRef.current.toggleSplitOrientation();
+        },
+      }),
+
+      CommandRegistry.register({
+        id: "workbench.action.swapEditorPanes",
+        title: "View: Swap Editor Panes",
+        description: "Swap documents between active and split panes",
+        category: "view",
+        keywords: ["swap", "panes", "switch", "split"],
+        enabled: () => Boolean(editorRef.current.isSplit),
+        execute: () => {
+          editorRef.current.swapSplitDocuments();
+        },
+      }),
+
+      CommandRegistry.register({
+        id: "workbench.action.closeSplitEditor",
+        title: "View: Close Split Editor",
+        description: "Close split editor panes and restore single pane",
+        category: "view",
+        keywords: ["close", "split", "restore", "single"],
+        enabled: () => Boolean(editorRef.current.isSplit),
+        execute: () => {
+          editorRef.current.closeSplitView();
         },
       }),
 
@@ -687,7 +747,11 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
             break;
           }
           case "view.editorLayout.splitRight": {
-            editorRef.current.toggleSplitView();
+            editorRef.current.openSplitRight();
+            break;
+          }
+          case "view.editorLayout.splitDown": {
+            editorRef.current.openSplitDown();
             break;
           }
           case "view.explorer": {
