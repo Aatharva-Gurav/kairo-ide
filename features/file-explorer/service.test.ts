@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { FileExplorerService } from "./service";
+import { ExplorerHistoryService } from "./history.service";
 import { directoryCache } from "./cache";
 import { FileSystemNode, ExplorerSortConfig } from "./types";
 
@@ -244,4 +245,159 @@ describe("FileExplorerService", () => {
       expect(directoryCache.get(parentDir)).toBeNull();
     });
   });
+
+  describe("normalizeSelection", () => {
+    it("filters out descendant files when their ancestor folder is also selected", () => {
+      const items: FileSystemNode[] = [
+        { id: "1", name: "src", path: "C:/App/src", type: "directory" },
+        { id: "2", name: "Button.tsx", path: "C:/App/src/Button.tsx", type: "file" },
+        { id: "3", name: "Modal.tsx", path: "C:/App/src/components/Modal.tsx", type: "file" },
+        { id: "4", name: "package.json", path: "C:/App/package.json", type: "file" },
+      ];
+
+      const normalized = FileExplorerService.normalizeSelection(items);
+      expect(normalized.map((n) => n.path)).toEqual([
+        "C:/App/src",
+        "C:/App/package.json",
+      ]);
+    });
+
+    it("keeps independent sibling items intact", () => {
+      const items: FileSystemNode[] = [
+        { id: "1", name: "Button.tsx", path: "C:/App/src/Button.tsx", type: "file" },
+        { id: "2", name: "Modal.tsx", path: "C:/App/src/Modal.tsx", type: "file" },
+        { id: "3", name: "components", path: "C:/App/src/components", type: "directory" },
+      ];
+
+      const normalized = FileExplorerService.normalizeSelection(items);
+      expect(normalized.length).toBe(3);
+    });
+  });
+
+  describe("Batch Rename Preview", () => {
+    const candidates: FileSystemNode[] = [
+      { id: "1", name: "component-one.tsx", path: "C:/App/src/component-one.tsx", type: "file" },
+      { id: "2", name: "component-two.tsx", path: "C:/App/src/component-two.tsx", type: "file" },
+      { id: "3", name: "component-three.tsx", path: "C:/App/src/component-three.tsx", type: "file" },
+    ];
+
+    it("generates find and replace preview with preserved extension", () => {
+      const preview = FileExplorerService.generateBatchRenamePreview(candidates, {
+        mode: "find-replace",
+        find: "component",
+        replace: "widget",
+        caseSensitive: false,
+        prefix: "",
+        suffix: "",
+        numberingPattern: "{name}_{n}",
+        startNumber: 1,
+        padZeros: 1,
+        preserveExtension: true,
+      });
+
+      expect(preview.map((p) => p.newName)).toEqual([
+        "widget-one.tsx",
+        "widget-two.tsx",
+        "widget-three.tsx",
+      ]);
+      expect(preview.every((p) => !p.hasConflict)).toBe(true);
+    });
+
+    it("generates prefix and suffix preview", () => {
+      const preview = FileExplorerService.generateBatchRenamePreview(candidates, {
+        mode: "prefix-suffix",
+        find: "",
+        replace: "",
+        caseSensitive: false,
+        prefix: "v2_",
+        suffix: "_beta",
+        numberingPattern: "",
+        startNumber: 1,
+        padZeros: 1,
+        preserveExtension: true,
+      });
+
+      expect(preview[0].newName).toBe("v2_component-one_beta.tsx");
+      expect(preview[1].newName).toBe("v2_component-two_beta.tsx");
+    });
+
+    it("generates sequential numbering preview with zero padding", () => {
+      const preview = FileExplorerService.generateBatchRenamePreview(candidates, {
+        mode: "numbering",
+        find: "",
+        replace: "",
+        caseSensitive: false,
+        prefix: "",
+        suffix: "",
+        numberingPattern: "item_{n}",
+        startNumber: 1,
+        padZeros: 3,
+        preserveExtension: true,
+      });
+
+      expect(preview.map((p) => p.newName)).toEqual([
+        "item_001.tsx",
+        "item_002.tsx",
+        "item_003.tsx",
+      ]);
+    });
+
+    it("detects collisions when two items result in the exact same name", () => {
+      const colliding: FileSystemNode[] = [
+        { id: "1", name: "apple.txt", path: "C:/App/apple.txt", type: "file" },
+        { id: "2", name: "banana.txt", path: "C:/App/banana.txt", type: "file" },
+      ];
+
+      const preview = FileExplorerService.generateBatchRenamePreview(colliding, {
+        mode: "find-replace",
+        find: "banana",
+        replace: "apple",
+        caseSensitive: false,
+        prefix: "",
+        suffix: "",
+        numberingPattern: "",
+        startNumber: 1,
+        padZeros: 1,
+        preserveExtension: true,
+      });
+
+      const conflictItem = preview.find((p) => p.hasConflict);
+      expect(conflictItem).toBeDefined();
+    });
+  });
+
+  describe("ExplorerHistoryService", () => {
+    beforeEach(() => {
+      ExplorerHistoryService.clear();
+    });
+
+    it("tracks undo and redo state correctly", () => {
+      expect(ExplorerHistoryService.canUndo()).toBe(false);
+      expect(ExplorerHistoryService.canRedo()).toBe(false);
+
+      ExplorerHistoryService.record({
+        type: "rename",
+        description: 'Rename "foo.txt" to "bar.txt"',
+        item: {
+          oldPath: "C:/App/foo.txt",
+          newPath: "C:/App/bar.txt",
+          isDirectory: false,
+        },
+      });
+
+      expect(ExplorerHistoryService.canUndo()).toBe(true);
+      expect(ExplorerHistoryService.canRedo()).toBe(false);
+      expect(ExplorerHistoryService.getUndoDescription()).toBe('Rename "foo.txt" to "bar.txt"');
+
+      ExplorerHistoryService.clear();
+      expect(ExplorerHistoryService.canUndo()).toBe(false);
+      expect(ExplorerHistoryService.canRedo()).toBe(false);
+    });
+
+    it("returns null when attempting to undo on an empty stack", async () => {
+      const res = await ExplorerHistoryService.undo();
+      expect(res).toBeNull();
+    });
+  });
 });
+

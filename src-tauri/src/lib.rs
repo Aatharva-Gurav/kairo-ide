@@ -40,6 +40,7 @@ pub fn run() {
       fs_duplicate,
       fs_reveal,
       fs_exists,
+      fs_get_metadata,
       fs_read_file,
       fs_write_file,
       fs_search_workspace,

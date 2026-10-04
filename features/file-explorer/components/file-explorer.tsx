@@ -8,6 +8,9 @@ import { ExplorerTree } from "./explorer-tree";
 import { ExplorerToolbar } from "./explorer-toolbar";
 import { ContextMenu } from "./context-menu";
 import { ConfirmDeleteModal } from "./confirm-delete-modal";
+import { BatchRenameModal } from "./batch-rename-modal";
+import { MoveItemsModal } from "./move-items-modal";
+import { FilePropertiesModal } from "./file-properties-modal";
 import { ContextMenuState, FileSystemNode } from "../types";
 
 export function FileExplorer() {
@@ -61,6 +64,15 @@ export function FileExplorer() {
 
       {/* Delete Confirmation Modal */}
       <ConfirmDeleteModal />
+
+      {/* Advanced Batch Rename Modal */}
+      <BatchRenameModal />
+
+      {/* Move Items Folder Picker Modal */}
+      <MoveItemsModal />
+
+      {/* File / Folder Properties Modal */}
+      <FilePropertiesModal />
     </div>
   );
 }

@@ -90,6 +90,10 @@ export function normalizePath(pathStr: string): string {
   if (!pathStr) return "";
   // Convert Windows backslashes to standard forward slashes for internal consistency
   let normalized = pathStr.replace(/\\+/g, "/");
+  // Normalize Windows drive letter to uppercase (e.g. c:/ -> C:/)
+  if (/^[a-z]:\//.test(normalized)) {
+    normalized = normalized.charAt(0).toUpperCase() + normalized.slice(1);
+  }
   // Remove redundant trailing slashes unless it's root like "C:/" or "/"
   if (normalized.length > 1 && normalized.endsWith("/")) {
     if (!/^[a-zA-Z]:\/$/.test(normalized)) {
@@ -152,6 +156,36 @@ export function isDescendant(parentPath: string, childPath: string): boolean {
   return c.startsWith(p.endsWith("/") ? p : p + "/");
 }
 
+/**
+ * Filters out redundant descendant items from a selection list
+ * when an ancestor item is already present in the selection.
+ */
+export function normalizeSelection<T extends { path: string }>(items: T[]): T[] {
+  if (items.length <= 1) return items;
+  return items.filter((item) => {
+    const itemNorm = normalizePath(item.path);
+    return !items.some((other) => {
+      const otherNorm = normalizePath(other.path);
+      return otherNorm !== itemNorm && isDescendant(otherNorm, itemNorm);
+    });
+  });
+}
+
+/**
+ * Copies text string to clipboard safely across platforms
+ */
+export async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch (err) {
+    console.error("Failed to copy to clipboard:", err);
+  }
+  return false;
+}
+
 export function getFileExtension(pathOrName: string): string {
   const base = basename(pathOrName);
   const lastDot = base.lastIndexOf(".");
@@ -206,6 +240,26 @@ export async function revealInFileManager(pathStr: string): Promise<void> {
 export async function pathExists(pathStr: string): Promise<boolean> {
   const norm = normalizePath(pathStr);
   return await invokeCommand<boolean>("fs_exists", { path: norm });
+}
+
+export interface DetailedMetadata {
+  name: string;
+  path: string;
+  isDirectory: boolean;
+  size: number;
+  fileCount: number;
+  folderCount: number;
+  isReadonly: boolean;
+  createdAt?: number;
+  modifiedAt?: number;
+}
+
+/**
+ * Retrieves detailed file or folder metadata (size, file/folder counts, dates)
+ */
+export async function getDetailedMetadata(pathStr: string): Promise<DetailedMetadata> {
+  const norm = normalizePath(pathStr);
+  return await invokeCommand<DetailedMetadata>("fs_get_metadata", { path: norm });
 }
 
 export interface FileContentResult {
@@ -305,3 +359,16 @@ export async function listWorkspaceFiles(
   });
   return files.map(normalizePath);
 }
+
+/**
+ * Formats a byte number into human-readable string (e.g. 1.25 MB).
+ */
+export function formatBytes(bytes: number, decimals = 2): string {
+  if (bytes === 0) return "0 Bytes";
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+}
+

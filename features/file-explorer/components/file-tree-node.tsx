@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { FileSystemNode } from "../types";
-import { useFileExplorer } from "../store";
+import { useFileExplorer, findNodesByPaths } from "../store";
 import { FileIcon } from "./file-icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
@@ -23,7 +23,9 @@ export function FileTreeNode({
   onOpenContextMenu,
 }: FileTreeNodeProps) {
   const {
+    nodes,
     selectedPaths,
+    focusedNode,
     expandedPaths,
     clipboard,
     inlineAction,
@@ -33,6 +35,7 @@ export function FileTreeNode({
     commitInlineAction,
     cancelInlineAction,
     handleDrop,
+    moveSelectedTo,
     refresh,
   } = useFileExplorer();
 
@@ -46,6 +49,8 @@ export function FileTreeNode({
   const isExpanded =
     node.isExpanded || (isDirectory && expandedPaths.has(nodeNorm));
   const isSelected = selectedPaths.has(nodeNorm);
+  const isFocused =
+    focusedNode && normalizePath(focusedNode.path) === nodeNorm;
   const isCut =
     clipboard?.type === "cut" &&
     clipboard.sourceNodes.some((n) => normalizePath(n.path) === nodeNorm);
@@ -92,6 +97,26 @@ export function FileTreeNode({
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
+    // Prevent dropping onto self or into a descendant of any selected/dragged item
+    if (selectedPaths.has(nodeNorm)) {
+      e.dataTransfer.dropEffect = "none";
+      setIsDragOver(false);
+      return;
+    }
+
+    const draggedPaths = Array.from(selectedPaths);
+    const isDroppingIntoSelfOrChild = draggedPaths.some((p) => {
+      const norm = normalizePath(p);
+      return norm === nodeNorm || isDescendant(norm, nodeNorm);
+    });
+
+    if (isDroppingIntoSelfOrChild) {
+      e.dataTransfer.dropEffect = "none";
+      setIsDragOver(false);
+      return;
+    }
+
     e.dataTransfer.dropEffect = "move";
     setIsDragOver(true);
 
@@ -138,12 +163,11 @@ export function FileTreeNode({
     if (jsonPayload) {
       try {
         const paths: string[] = JSON.parse(jsonPayload);
-        for (const p of paths) {
-          if (!isDescendant(p, targetDir) && p !== targetDir && dirname(p) !== targetDir) {
-            await handleDrop(p, targetDir);
-          }
+        const nodesToMove = findNodesByPaths(nodes, new Set(paths));
+        if (nodesToMove.length > 0) {
+          await moveSelectedTo(targetDir, nodesToMove);
+          return;
         }
-        return;
       } catch {
         // Fallback to plain text
       }
@@ -163,7 +187,12 @@ export function FileTreeNode({
       return;
     }
 
-    await handleDrop(sourcePath, targetDir);
+    const singleNode = findNodesByPaths(nodes, new Set([sourcePath]));
+    if (singleNode.length > 0) {
+      await moveSelectedTo(targetDir, singleNode);
+    } else {
+      await handleDrop(sourcePath, targetDir);
+    }
   };
 
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -215,10 +244,13 @@ export function FileTreeNode({
         className={cn(
           "group relative flex h-6.5 w-full items-center gap-1.5 pr-2 text-xs transition-colors duration-100 ease-out cursor-pointer rounded-xs select-none",
           isSelected
-            ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-2xs before:absolute before:left-0 before:top-1 before:bottom-1 before:w-0.5 before:bg-sidebar-primary before:rounded-r-full"
+            ? cn(
+                "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-2xs before:absolute before:left-0 before:top-1 before:bottom-1 before:w-0.5 before:bg-sidebar-primary before:rounded-r-full",
+                isFocused && "ring-1 ring-primary/60"
+              )
             : "text-sidebar-foreground/90 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
           isCut && "opacity-45",
-          isDragOver && "bg-sidebar-primary/20 ring-1 ring-sidebar-primary/80 ring-inset"
+          isDragOver && (isDirectory ? "bg-sidebar-primary/20 ring-1 ring-sidebar-primary/80 ring-inset" : "bg-sidebar-primary/15 border-b-2 border-primary")
         )}
       >
         {/* Expand / Collapse toggle or indent spacing */}

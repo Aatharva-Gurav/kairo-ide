@@ -1,13 +1,14 @@
-"use client";
-
 import React from "react";
 import { useFileExplorer } from "../store";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Copy01Icon,
+  Copy02Icon,
   ScissorsIcon,
   Delete02Icon,
   Cancel01Icon,
+  Edit02Icon,
+  ArrowRight01Icon,
 } from "@hugeicons/core-free-icons";
 
 export function ExplorerBulkBar() {
@@ -15,6 +16,9 @@ export function ExplorerBulkBar() {
     selectedPaths,
     copySelected,
     cutSelected,
+    duplicateSelected,
+    startMove,
+    startBatchRename,
     promptDelete,
     clearSelection,
   } = useFileExplorer();
@@ -27,10 +31,10 @@ export function ExplorerBulkBar() {
         {selectedPaths.size} selected
       </span>
 
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-0.5">
         <button
           onClick={() => copySelected()}
-          className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] hover:bg-sidebar-accent hover:text-sidebar-foreground text-muted-foreground cursor-pointer transition-colors duration-120 active:scale-95"
+          className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] hover:bg-sidebar-accent hover:text-sidebar-foreground text-muted-foreground cursor-pointer transition-colors duration-120 active:scale-95"
           title="Copy Selected (Ctrl+C)"
         >
           <HugeiconsIcon icon={Copy01Icon} className="size-3" />
@@ -38,15 +42,39 @@ export function ExplorerBulkBar() {
         </button>
         <button
           onClick={() => cutSelected()}
-          className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] hover:bg-sidebar-accent hover:text-sidebar-foreground text-muted-foreground cursor-pointer transition-colors duration-120 active:scale-95"
+          className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] hover:bg-sidebar-accent hover:text-sidebar-foreground text-muted-foreground cursor-pointer transition-colors duration-120 active:scale-95"
           title="Cut Selected (Ctrl+X)"
         >
           <HugeiconsIcon icon={ScissorsIcon} className="size-3" />
           <span>Cut</span>
         </button>
         <button
+          onClick={() => duplicateSelected()}
+          className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] hover:bg-sidebar-accent hover:text-sidebar-foreground text-muted-foreground cursor-pointer transition-colors duration-120 active:scale-95"
+          title="Duplicate Selected (Ctrl+D)"
+        >
+          <HugeiconsIcon icon={Copy02Icon} className="size-3" />
+          <span>Duplicate</span>
+        </button>
+        <button
+          onClick={() => startMove()}
+          className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] hover:bg-sidebar-accent hover:text-sidebar-foreground text-muted-foreground cursor-pointer transition-colors duration-120 active:scale-95"
+          title="Move Selected To..."
+        >
+          <HugeiconsIcon icon={ArrowRight01Icon} className="size-3" />
+          <span>Move...</span>
+        </button>
+        <button
+          onClick={() => startBatchRename()}
+          className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] hover:bg-sidebar-accent hover:text-sidebar-foreground text-muted-foreground cursor-pointer transition-colors duration-120 active:scale-95"
+          title="Batch Rename Selected (F2)"
+        >
+          <HugeiconsIcon icon={Edit02Icon} className="size-3" />
+          <span>Rename...</span>
+        </button>
+        <button
           onClick={() => promptDelete()}
-          className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] text-destructive hover:bg-destructive/15 cursor-pointer transition-colors duration-120 active:scale-95 font-medium"
+          className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] text-destructive hover:bg-destructive/15 cursor-pointer transition-colors duration-120 active:scale-95 font-medium"
           title="Delete Selected (Del)"
         >
           <HugeiconsIcon icon={Delete02Icon} className="size-3" />

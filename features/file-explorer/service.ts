@@ -6,11 +6,21 @@ import {
   isDescendant,
   getFileExtension,
   dirname,
+  basename,
   revealInFileManager,
   writeFileContent,
+  normalizeSelection,
+  getDetailedMetadata,
 } from "@/lib/tauri-ipc";
-import { FileSystemNode, ExplorerSortConfig } from "./types";
+import {
+  FileSystemNode,
+  ExplorerSortConfig,
+  BatchRenameRule,
+  BatchRenamePreviewItem,
+  ItemProperties,
+} from "./types";
 import { directoryCache } from "./cache";
+import { ExplorerHistoryService } from "./history.service";
 
 interface TauriFileEntry {
   name: string;
@@ -272,13 +282,55 @@ export class FileExplorerService {
 
   /**
    * Bulk copy of multiple files or directories into a destination directory.
+   * If copying into the same parent folder, duplicates with non-conflicting names.
    */
-  static async bulkCopy(nodes: FileSystemNode[], destDirPath: string): Promise<string[]> {
+  static async bulkCopy(
+    nodes: FileSystemNode[],
+    destDirPath: string,
+    recordHistory = true
+  ): Promise<string[]> {
+    const normDestDir = normalizePath(destDirPath);
+    const normalizedNodes = normalizeSelection(nodes);
     const results: string[] = [];
-    for (const node of nodes) {
-      const dest = await this.copy(node.path, destDirPath);
-      results.push(dest);
+    const historyItems: Array<{ sourcePath: string; createdPath: string; isDirectory: boolean }> = [];
+
+    for (const node of normalizedNodes) {
+      const normSrc = normalizePath(node.path);
+      const srcParent = dirname(normSrc);
+
+      // If copying into the same directory, duplicate it instead of overwriting/erroring
+      if (normDestDir.toLowerCase() === srcParent.toLowerCase()) {
+        const dupPath = await this.duplicate(normSrc);
+        results.push(dupPath);
+        historyItems.push({
+          sourcePath: normSrc,
+          createdPath: dupPath,
+          isDirectory: node.type === "directory",
+        });
+      } else {
+        const dest = await this.copy(node.path, normDestDir);
+        results.push(dest);
+        historyItems.push({
+          sourcePath: normSrc,
+          createdPath: dest,
+          isDirectory: node.type === "directory",
+        });
+      }
     }
+
+    if (recordHistory && historyItems.length > 0) {
+      const count = historyItems.length;
+      const desc =
+        count === 1
+          ? `copy: ${basename(historyItems[0].sourcePath)}`
+          : `copy of ${count} items`;
+      ExplorerHistoryService.record({
+        type: "copy",
+        description: desc,
+        items: historyItems,
+      });
+    }
+
     return results;
   }
 
@@ -310,19 +362,62 @@ export class FileExplorerService {
   }
 
   /**
+   * Normalizes a selection to eliminate redundant descendant items when their ancestor is also selected.
+   */
+  static normalizeSelection(items: FileSystemNode[]): FileSystemNode[] {
+    return normalizeSelection(items);
+  }
+
+  /**
    * Bulk move of multiple files or directories into a destination directory.
    */
-  static async bulkMove(nodes: FileSystemNode[], destDirPath: string): Promise<string[]> {
+  static async bulkMove(
+    nodes: FileSystemNode[],
+    destDirPath: string,
+    recordHistory = true
+  ): Promise<string[]> {
+    const normDestDir = normalizePath(destDirPath);
+    const normalizedNodes = normalizeSelection(nodes);
     const results: string[] = [];
-    for (const node of nodes) {
-      const dest = await this.move(node.path, destDirPath);
+    const historyItems: Array<{ fromPath: string; toPath: string; isDirectory: boolean }> = [];
+
+    for (const node of normalizedNodes) {
+      const normSrc = normalizePath(node.path);
+      const srcParent = dirname(normSrc);
+
+      // Skip if moving into its own direct parent (no-op)
+      if (normDestDir.toLowerCase() === srcParent.toLowerCase()) {
+        results.push(normSrc);
+        continue;
+      }
+
+      const dest = await this.move(node.path, normDestDir);
       results.push(dest);
+      historyItems.push({
+        fromPath: normSrc,
+        toPath: dest,
+        isDirectory: node.type === "directory",
+      });
     }
+
+    if (recordHistory && historyItems.length > 0) {
+      const count = historyItems.length;
+      const desc =
+        count === 1
+          ? `move: ${basename(historyItems[0].fromPath)}`
+          : `move of ${count} items`;
+      ExplorerHistoryService.record({
+        type: "move",
+        description: desc,
+        items: historyItems,
+      });
+    }
+
     return results;
   }
 
   /**
-   * Duplicates a file in place.
+   * Duplicates a file or directory in place.
    */
   static async duplicate(sourcePath: string): Promise<string> {
     const normSrc = normalizePath(sourcePath);
@@ -332,6 +427,196 @@ export class FileExplorerService {
     const parent = dirname(normSrc);
     directoryCache.invalidate(parent);
     return normalizePath(newPath);
+  }
+
+  /**
+   * Bulk duplicate of multiple files or directories in place.
+   */
+  static async bulkDuplicate(
+    nodes: FileSystemNode[],
+    recordHistory = true
+  ): Promise<string[]> {
+    const normalizedNodes = normalizeSelection(nodes);
+    const results: string[] = [];
+    const historyItems: Array<{ sourcePath: string; createdPath: string; isDirectory: boolean }> = [];
+
+    for (const node of normalizedNodes) {
+      const normSrc = normalizePath(node.path);
+      const newPath = await this.duplicate(normSrc);
+      results.push(newPath);
+      historyItems.push({
+        sourcePath: normSrc,
+        createdPath: newPath,
+        isDirectory: node.type === "directory",
+      });
+    }
+
+    if (recordHistory && historyItems.length > 0) {
+      const count = historyItems.length;
+      const desc =
+        count === 1
+          ? `duplicate: ${basename(historyItems[0].sourcePath)}`
+          : `duplicate of ${count} items`;
+      ExplorerHistoryService.record({
+        type: "copy",
+        description: desc,
+        items: historyItems,
+      });
+    }
+
+    return results;
+  }
+
+  /**
+   * Previews batch rename for a list of nodes based on rules.
+   */
+  static generateBatchRenamePreview(
+    nodes: FileSystemNode[],
+    rule: BatchRenameRule
+  ): BatchRenamePreviewItem[] {
+    const previews: BatchRenamePreviewItem[] = [];
+    const usedNames = new Map<string, string>();
+
+    nodes.forEach((node, index) => {
+      const parent = dirname(node.path);
+      const isDir = node.type === "directory";
+      const originalName = node.name;
+      let newName = originalName;
+
+      const lastDot = originalName.lastIndexOf(".");
+      const hasExtension = lastDot > 0 && !isDir;
+      const stem = hasExtension ? originalName.slice(0, lastDot) : originalName;
+      const ext = hasExtension ? originalName.slice(lastDot) : "";
+
+      switch (rule.mode) {
+        case "find-replace": {
+          if (rule.find) {
+            if (rule.preserveExtension && hasExtension) {
+              const regex = new RegExp(
+                rule.find.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+                rule.caseSensitive ? "g" : "gi"
+              );
+              const replacedStem = stem.replace(regex, rule.replace);
+              newName = replacedStem + ext;
+            } else {
+              const regex = new RegExp(
+                rule.find.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+                rule.caseSensitive ? "g" : "gi"
+              );
+              newName = originalName.replace(regex, rule.replace);
+            }
+          }
+          break;
+        }
+
+        case "prefix-suffix": {
+          const pre = rule.prefix || "";
+          const suf = rule.suffix || "";
+          if (rule.preserveExtension && hasExtension) {
+            newName = `${pre}${stem}${suf}${ext}`;
+          } else {
+            newName = `${pre}${originalName}${suf}`;
+          }
+          break;
+        }
+
+        case "numbering": {
+          const pad = Math.max(1, rule.padZeros || 1);
+          const numStr = String((rule.startNumber || 1) + index).padStart(pad, "0");
+          let basePattern = rule.numberingPattern || "{name}_{n}";
+          if (!basePattern.includes("{n}")) {
+            basePattern = `${basePattern}_{n}`;
+          }
+          const formatted = basePattern
+            .replace(/{name}/g, stem)
+            .replace(/{n}/g, numStr);
+
+          newName = rule.preserveExtension && hasExtension ? `${formatted}${ext}` : formatted;
+          break;
+        }
+      }
+
+      // Check validity
+      const validation = validateFileName(newName);
+      let hasConflict = !validation.valid;
+      let conflictReason = validation.error;
+
+      // Check duplicate within the batch for the same folder
+      const parentKey = `${parent}:::${newName.toLowerCase()}`;
+      if (!hasConflict && usedNames.has(parentKey)) {
+        hasConflict = true;
+        conflictReason = "Duplicate name generated in the same folder.";
+      } else {
+        usedNames.set(parentKey, node.path);
+      }
+
+      previews.push({
+        node,
+        originalName,
+        newName,
+        hasConflict,
+        conflictReason,
+      });
+    });
+
+    return previews;
+  }
+
+  /**
+   * Executes batch rename safely.
+   */
+  static async executeBatchRename(
+    previews: BatchRenamePreviewItem[],
+    recordHistory = true
+  ): Promise<Array<{ oldPath: string; newPath: string }>> {
+    const toRename = previews.filter(
+      (p) => !p.hasConflict && p.newName !== p.originalName
+    );
+
+    if (toRename.length === 0) return [];
+
+    const executed: Array<{ oldPath: string; newPath: string; isDirectory: boolean }> = [];
+    const affectedParents = new Set<string>();
+
+    for (const item of toRename) {
+      const oldPath = item.node.path;
+      const newPath = await this.rename(oldPath, item.newName);
+      affectedParents.add(dirname(oldPath));
+      executed.push({
+        oldPath: normalizePath(oldPath),
+        newPath: normalizePath(newPath),
+        isDirectory: item.node.type === "directory",
+      });
+    }
+
+    if (recordHistory && executed.length > 0) {
+      ExplorerHistoryService.record({
+        type: "batch-rename",
+        description: `batch rename of ${executed.length} items`,
+        item: { items: executed },
+      });
+    }
+
+    return executed.map(({ oldPath, newPath }) => ({ oldPath, newPath }));
+  }
+
+  /**
+   * Retrieves detailed item properties for the Properties modal.
+   */
+  static async getItemProperties(target: string | FileSystemNode): Promise<ItemProperties> {
+    const norm = typeof target === "string" ? normalizePath(target) : normalizePath(target.path);
+    const meta = await getDetailedMetadata(norm);
+    return {
+      name: meta.name,
+      path: norm,
+      type: meta.isDirectory ? "directory" : "file",
+      size: meta.size,
+      fileCount: meta.fileCount,
+      folderCount: meta.folderCount,
+      isReadonly: meta.isReadonly,
+      createdAt: meta.createdAt,
+      modifiedAt: meta.modifiedAt,
+    };
   }
 
   /**

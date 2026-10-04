@@ -21,6 +21,14 @@ fn get_modified_time(metadata: &fs::Metadata) -> Option<u64> {
         .map(|d| d.as_millis() as u64)
 }
 
+fn get_created_time(metadata: &fs::Metadata) -> Option<u64> {
+    metadata
+        .created()
+        .ok()
+        .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
+        .map(|d| d.as_millis() as u64)
+}
+
 fn normalize_path_for_compare(p: &Path) -> PathBuf {
     let s = p.to_string_lossy().replace('/', "\\");
     let clean = if let Some(stripped) = s.strip_prefix(r"\\?\") {
@@ -248,8 +256,20 @@ pub fn fs_move(src_path: String, dest_path: String) -> Result<(), String> {
         return Err("Source does not exist.".to_string());
     }
 
+    let src_norm = normalize_path_for_compare(src);
+    let dest_norm = normalize_path_for_compare(dest);
+
+    if src_norm == dest_norm {
+        return Ok(());
+    }
+
     if src.is_dir() && is_descendant(src, dest) {
         return Err("Cannot move a directory into itself or one of its subdirectories.".to_string());
+    }
+
+    if dest.exists() {
+        let name = dest.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+        return Err(format!("An item named '{}' already exists at the destination.", name));
     }
 
     if let Some(parent) = dest.parent() {
@@ -362,6 +382,92 @@ pub fn fs_reveal(path: String) -> Result<(), String> {
 #[tauri::command]
 pub fn fs_exists(path: String) -> Result<bool, String> {
     Ok(Path::new(&path).exists())
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct DetailedMetadata {
+    pub name: String,
+    pub path: String,
+    pub is_directory: bool,
+    pub size: u64,
+    pub file_count: usize,
+    pub folder_count: usize,
+    pub is_readonly: bool,
+    pub created_at: Option<u64>,
+    pub modified_at: Option<u64>,
+}
+
+#[tauri::command]
+pub fn fs_get_metadata(path: String) -> Result<DetailedMetadata, String> {
+    let p = Path::new(&path);
+    if !p.exists() {
+        return Err(format!("Path does not exist: {}", path));
+    }
+
+    let metadata = fs::metadata(p).map_err(|e| format!("Unable to read metadata: {}", e))?;
+    let is_dir = metadata.is_dir();
+    let is_readonly = metadata.permissions().readonly();
+    let modified_at = get_modified_time(&metadata);
+    let created_at = get_created_time(&metadata);
+    let name = p.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| path.clone());
+
+    if !is_dir {
+        return Ok(DetailedMetadata {
+            name,
+            path,
+            is_directory: false,
+            size: metadata.len(),
+            file_count: 1,
+            folder_count: 0,
+            is_readonly,
+            created_at,
+            modified_at,
+        });
+    }
+
+    let mut total_size: u64 = 0;
+    let mut file_count: usize = 0;
+    let mut folder_count: usize = 0;
+
+    fn count_dir_contents(
+        dir: &Path,
+        total_size: &mut u64,
+        file_count: &mut usize,
+        folder_count: &mut usize,
+        depth_limit: usize,
+    ) {
+        if depth_limit == 0 {
+            return;
+        }
+        if let Ok(entries) = fs::read_dir(dir) {
+            for entry in entries.flatten() {
+                if let Ok(meta) = entry.metadata() {
+                    if meta.is_dir() {
+                        *folder_count += 1;
+                        count_dir_contents(&entry.path(), total_size, file_count, folder_count, depth_limit - 1);
+                    } else {
+                        *file_count += 1;
+                        *total_size += meta.len();
+                    }
+                }
+            }
+        }
+    }
+
+    count_dir_contents(p, &mut total_size, &mut file_count, &mut folder_count, 30);
+
+    Ok(DetailedMetadata {
+        name,
+        path,
+        is_directory: true,
+        size: total_size,
+        file_count,
+        folder_count,
+        is_readonly,
+        created_at,
+        modified_at,
+    })
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -982,4 +1088,38 @@ mod tests {
 
         let _ = fs::remove_dir_all(&temp_dir);
     }
+
+    #[test]
+    fn test_get_metadata_and_move_conflict() {
+        let temp_dir = std::env::temp_dir().join("kairo_fs_test_meta");
+        let _ = fs::create_dir_all(&temp_dir);
+
+        let file1 = temp_dir.join("hello.txt");
+        fs::write(&file1, "Hello World!").unwrap();
+
+        let meta = fs_get_metadata(file1.to_string_lossy().to_string()).unwrap();
+        assert_eq!(meta.name, "hello.txt");
+        assert!(!meta.is_directory);
+        assert_eq!(meta.size, 12);
+        assert_eq!(meta.file_count, 1);
+
+        let dir_meta = fs_get_metadata(temp_dir.to_string_lossy().to_string()).unwrap();
+        assert!(dir_meta.is_directory);
+        assert_eq!(dir_meta.file_count, 1);
+        assert_eq!(dir_meta.size, 12);
+
+        // Test destination conflict
+        let file2 = temp_dir.join("existing.txt");
+        fs::write(&file2, "I am already here").unwrap();
+
+        let move_err = fs_move(
+            file1.to_string_lossy().to_string(),
+            file2.to_string_lossy().to_string(),
+        );
+        assert!(move_err.is_err());
+        assert!(move_err.unwrap_err().contains("already exists"));
+
+        let _ = fs::remove_dir_all(&temp_dir);
+    }
 }
+

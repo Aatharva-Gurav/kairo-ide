@@ -677,6 +677,57 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
 
   // Event bus bindings for file open, rename, delete, search navigation
   useEffect(() => {
+    const handlePathChange = (oldPath: string, newPath: string) => {
+      const normOld = normalizePath(oldPath);
+      const normNew = normalizePath(newPath);
+
+      // Update Monaco model and viewstate tracking
+      ModelService.renamePath(normOld, normNew);
+
+      setDocuments((prev) =>
+        prev.map((doc) => {
+          if (doc.id === normOld) {
+            return {
+              ...doc,
+              id: normNew,
+              path: normNew,
+              title: basename(normNew),
+              language: doc.language,
+            };
+          }
+          if (doc.id.startsWith(normOld + "/")) {
+            const sub = doc.id.slice(normOld.length);
+            const updated = normNew + sub;
+            return {
+              ...doc,
+              id: updated,
+              path: updated,
+              title: basename(updated),
+            };
+          }
+          return doc;
+        })
+      );
+
+      if (activeDocumentIdRef.current === normOld) {
+        setActiveDocumentIdState(normNew);
+      } else if (activeDocumentIdRef.current?.startsWith(normOld + "/")) {
+        setActiveDocumentIdState(normNew + activeDocumentIdRef.current.slice(normOld.length));
+      }
+
+      if (splitDocumentIdRef.current === normOld) {
+        setSplitDocumentIdState(normNew);
+      } else if (splitDocumentIdRef.current?.startsWith(normOld + "/")) {
+        setSplitDocumentIdState(normNew + splitDocumentIdRef.current.slice(normOld.length));
+      }
+
+      if (thirdDocumentIdRef.current === normOld) {
+        setThirdDocumentIdState(normNew);
+      } else if (thirdDocumentIdRef.current?.startsWith(normOld + "/")) {
+        setThirdDocumentIdState(normNew + thirdDocumentIdRef.current.slice(normOld.length));
+      }
+    };
+
     const unsubs = [
       ideEvents.on("file:open-requested", (payload) => {
         if (!payload.isDirectory) {
@@ -685,42 +736,22 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
       }),
 
       ideEvents.on("file:renamed", ({ oldPath, newPath }) => {
-        const normOld = normalizePath(oldPath);
-        const normNew = normalizePath(newPath);
-        setDocuments((prev) =>
-          prev.map((doc) => {
-            if (doc.id === normOld) {
-              return {
-                ...doc,
-                id: normNew,
-                path: normNew,
-                title: basename(normNew),
-                language: doc.language,
-              };
-            }
-            if (doc.id.startsWith(normOld + "/")) {
-              const sub = doc.id.slice(normOld.length);
-              const updated = normNew + sub;
-              return {
-                ...doc,
-                id: updated,
-                path: updated,
-                title: basename(updated),
-              };
-            }
-            return doc;
-          })
-        );
-        if (activeDocumentIdRef.current === normOld) {
-          setActiveDocumentIdState(normNew);
-        } else if (activeDocumentIdRef.current?.startsWith(normOld + "/")) {
-          setActiveDocumentIdState(normNew + activeDocumentIdRef.current.slice(normOld.length));
-        }
+        handlePathChange(oldPath, newPath);
+      }),
+
+      ideEvents.on("file:moved", ({ sourcePath, destPath }) => {
+        handlePathChange(sourcePath, destPath);
       }),
 
       ideEvents.on("file:deleted", ({ path }) => {
         const norm = normalizePath(path);
-        closeDocument(norm, true);
+        ModelService.disposePath(norm);
+        const docsToClose = documentsRef.current.filter(
+          (doc) => doc.id === norm || doc.id.startsWith(norm + "/")
+        );
+        for (const d of docsToClose) {
+          closeDocument(d.id, true);
+        }
       }),
 
       ideEvents.on("search:navigate-to-match", async ({ path, line, column, matchLength }) => {

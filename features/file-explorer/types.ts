@@ -51,3 +51,39 @@ export interface ContextMenuState {
   selectedNodes?: FileSystemNode[];
   isRootOrEmpty: boolean;
 }
+
+export type BatchRenameMode = "find-replace" | "prefix-suffix" | "numbering";
+
+export interface BatchRenameRule {
+  mode: BatchRenameMode;
+  find: string;
+  replace: string;
+  caseSensitive: boolean;
+  prefix: string;
+  suffix: string;
+  numberingPattern: string;
+  startNumber: number;
+  padZeros: number;
+  preserveExtension: boolean;
+}
+
+export interface BatchRenamePreviewItem {
+  node: FileSystemNode;
+  originalName: string;
+  newName: string;
+  hasConflict: boolean;
+  conflictReason?: string;
+}
+
+export interface ItemProperties {
+  name: string;
+  path: string;
+  type: "file" | "directory";
+  size: number;
+  fileCount: number;
+  folderCount: number;
+  isReadonly: boolean;
+  createdAt?: number;
+  modifiedAt?: number;
+}
+

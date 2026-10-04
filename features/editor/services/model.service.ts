@@ -114,6 +114,89 @@ export class ModelService {
   }
 
   /**
+   * Rebinds or transfers active model and view state when a file or directory is renamed or moved.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  static renamePath(oldPath: string, newPath: string, monaco?: any): void {
+    const normOld = normalizePath(oldPath);
+    const normNew = normalizePath(newPath);
+
+    // Exact file match
+    if (activeModels.has(normOld)) {
+      const oldModel = activeModels.get(normOld);
+      activeModels.delete(normOld);
+      if (oldModel && monaco?.editor && monaco?.Uri) {
+        try {
+          const content = oldModel.getValue();
+          const language = oldModel.getLanguageId();
+          oldModel.dispose();
+          const newUri = monaco.Uri.file(normNew);
+          const newModel = monaco.editor.createModel(content, language, newUri);
+          activeModels.set(normNew, newModel);
+        } catch {
+          // Fallback
+        }
+      }
+    }
+    if (viewStates.has(normOld)) {
+      const vs = viewStates.get(normOld);
+      viewStates.delete(normOld);
+      viewStates.set(normNew, vs);
+    }
+
+    // Subpath matches (e.g. folder moved or renamed)
+    activeModels.forEach((model, p) => {
+      if (p.startsWith(normOld + "/")) {
+        const sub = p.slice(normOld.length);
+        const updated = normNew + sub;
+        activeModels.delete(p);
+        if (model && monaco?.editor && monaco?.Uri) {
+          try {
+            const content = model.getValue();
+            const language = model.getLanguageId();
+            model.dispose();
+            const newUri = monaco.Uri.file(updated);
+            const newModel = monaco.editor.createModel(content, language, newUri);
+            activeModels.set(updated, newModel);
+          } catch {
+            // Fallback
+          }
+        }
+      }
+    });
+
+    viewStates.forEach((vs, p) => {
+      if (p.startsWith(normOld + "/")) {
+        const sub = p.slice(normOld.length);
+        const updated = normNew + sub;
+        viewStates.delete(p);
+        viewStates.set(updated, vs);
+      }
+    });
+  }
+
+  /**
+   * Disposes all models within a deleted path (file or folder).
+   */
+  static disposePath(path: string): void {
+    const norm = normalizePath(path);
+    ModelService.disposeModel(norm);
+
+    // Also dispose any models inside if it was a directory
+    activeModels.forEach((model, p) => {
+      if (p.startsWith(norm + "/")) {
+        try {
+          model.dispose();
+        } catch {
+          // Safe fallback
+        }
+        activeModels.delete(p);
+        viewStates.delete(p);
+      }
+    });
+  }
+
+  /**
    * Cleans up all models and view states (e.g. on workspace switch / close).
    */
   static disposeAll(): void {

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { useFileExplorer } from "../store";
+import { useFileExplorer, findNodesByPaths } from "../store";
 import { useWorkspace } from "../../workspace/store";
 import { FileTreeNode, InlineCreationInput } from "./file-tree-node";
 import { FileSystemNode } from "../types";
@@ -17,6 +17,7 @@ interface ExplorerTreeProps {
 export function ExplorerTree({ onOpenContextMenu }: ExplorerTreeProps) {
   const { activeWorkspace } = useWorkspace();
   const {
+    nodes,
     displayNodes,
     isLoading,
     error,
@@ -25,6 +26,7 @@ export function ExplorerTree({ onOpenContextMenu }: ExplorerTreeProps) {
     selectNode,
     handleKeyDown,
     handleDrop,
+    moveSelectedTo,
     filterQuery,
     refresh,
   } = useFileExplorer();
@@ -66,12 +68,11 @@ export function ExplorerTree({ onOpenContextMenu }: ExplorerTreeProps) {
     if (jsonPayload) {
       try {
         const paths: string[] = JSON.parse(jsonPayload);
-        for (const p of paths) {
-          if (dirname(p) !== activeWorkspace.rootPath && !isDescendant(p, activeWorkspace.rootPath) && p !== activeWorkspace.rootPath) {
-            await handleDrop(p, activeWorkspace.rootPath);
-          }
+        const nodesToMove = findNodesByPaths(nodes, new Set(paths));
+        if (nodesToMove.length > 0) {
+          await moveSelectedTo(activeWorkspace.rootPath, nodesToMove);
+          return;
         }
-        return;
       } catch {
         // Fallback to single text
       }
@@ -90,7 +91,12 @@ export function ExplorerTree({ onOpenContextMenu }: ExplorerTreeProps) {
       return;
     }
 
-    await handleDrop(sourcePath, activeWorkspace.rootPath);
+    const singleNode = findNodesByPaths(nodes, new Set([sourcePath]));
+    if (singleNode.length > 0) {
+      await moveSelectedTo(activeWorkspace.rootPath, singleNode);
+    } else {
+      await handleDrop(sourcePath, activeWorkspace.rootPath);
+    }
   };
 
   const isCreatingRootChild =
@@ -103,6 +109,9 @@ export function ExplorerTree({ onOpenContextMenu }: ExplorerTreeProps) {
 
   return (
     <div
+      role="tree"
+      aria-label="Files Explorer"
+      aria-multiselectable="true"
       tabIndex={0}
       onKeyDown={handleKeyDown}
       onClick={() => selectNode(null)}
@@ -115,7 +124,7 @@ export function ExplorerTree({ onOpenContextMenu }: ExplorerTreeProps) {
       onDrop={handleRootDrop}
       data-file-explorer="true"
       data-folder-path={activeWorkspace.rootPath}
-      className={`relative flex flex-col flex-1 min-h-0 w-full outline-none select-none overflow-y-auto no-scrollbar pt-1.5 pb-16 px-1 transition-colors ${
+      className={`relative flex flex-col flex-1 min-h-0 w-full outline-none select-none overflow-y-auto no-scrollbar pt-1.5 pb-16 px-1 transition-colors focus-visible:ring-1 focus-visible:ring-sidebar-ring/40 ${
         isRootDragOver ? "bg-sidebar-primary/5 ring-1 ring-inset ring-sidebar-primary/30" : ""
       }`}
     >

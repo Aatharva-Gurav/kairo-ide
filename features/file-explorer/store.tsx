@@ -21,7 +21,16 @@ import { useWorkspace } from "../workspace/store";
 import { WorkspaceService } from "../workspace/service";
 import { SettingsService } from "@/features/settings/services/settings.service";
 import { ideEvents } from "@/lib/events";
-import { dirname, normalizePath, relativePath, getFileExtension } from "@/lib/tauri-ipc";
+import {
+  dirname,
+  normalizePath,
+  relativePath,
+  getFileExtension,
+  basename,
+  copyToClipboard,
+} from "@/lib/tauri-ipc";
+import { fsWatcher } from "@/lib/watcher";
+import { ExplorerHistoryService } from "./history.service";
 
 export interface FileExplorerContextValue {
   // Tree & Display Nodes
@@ -43,11 +52,13 @@ export interface FileExplorerContextValue {
   selectedNode: FileSystemNode | null;
   selectedNodes: FileSystemNode[];
   selectedPaths: Set<string>;
+  focusedNode: FileSystemNode | null;
   selectNode: (
     node: FileSystemNode | null,
     isCtrlOrMeta?: boolean,
     isShift?: boolean
   ) => void;
+  selectAll: () => void;
   clearSelection: () => void;
 
   // Expansion
@@ -75,7 +86,7 @@ export interface FileExplorerContextValue {
   cancelDelete: () => void;
   confirmDelete: () => Promise<boolean>;
 
-  // Clipboard
+  // Clipboard & Multi-Operations
   clipboard: ClipboardOperation | null;
   copyNode: (node: FileSystemNode) => void;
   cutNode: (node: FileSystemNode) => void;
@@ -83,11 +94,34 @@ export interface FileExplorerContextValue {
   cutSelected: (nodes?: FileSystemNode[]) => void;
   pasteNode: (targetNode?: FileSystemNode | null) => Promise<boolean>;
   duplicateNode: (node: FileSystemNode) => Promise<boolean>;
+  duplicateSelected: (nodes?: FileSystemNode[]) => Promise<boolean>;
+  moveSelectedTo: (targetDirPath: string, nodes?: FileSystemNode[]) => Promise<boolean>;
 
   // Path Utilities
   copyAbsolutePath: (node: FileSystemNode) => Promise<void>;
   copyRelativePath: (node: FileSystemNode) => Promise<void>;
+  copySelectedPaths: (
+    format?: "absolute" | "relative" | "name",
+    customTargets?: FileSystemNode[]
+  ) => Promise<void>;
   revealInFileManager: (node: FileSystemNode) => Promise<void>;
+
+  // Undo / Redo
+  canUndo: boolean;
+  canRedo: boolean;
+  undo: () => Promise<string | null>;
+  redo: () => Promise<string | null>;
+
+  // Modals & Candidates
+  batchRenameCandidates: FileSystemNode[] | null;
+  startBatchRename: (candidates?: FileSystemNode[]) => void;
+  closeBatchRename: () => void;
+  moveCandidates: FileSystemNode[] | null;
+  startMove: (candidates?: FileSystemNode[]) => void;
+  closeMove: () => void;
+  propertiesCandidate: FileSystemNode | null;
+  openProperties: (node: FileSystemNode) => void;
+  closeProperties: () => void;
 
   // Drag & Drop & Error
   handleDrop: (sourcePath: string, targetDirPath: string) => Promise<boolean>;
@@ -161,7 +195,7 @@ function getVisibleNodes(
 /**
  * Finds all nodes matching given paths in the tree
  */
-function findNodesByPaths(
+export function findNodesByPaths(
   nodes: FileSystemNode[],
   paths: Set<string>
 ): FileSystemNode[] {
@@ -208,12 +242,17 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
 
   const [nodes, setNodes] = useState<FileSystemNode[]>([]);
   const [selectedNode, setSelectedNode] = useState<FileSystemNode | null>(null);
+  const [focusedNode, setFocusedNode] = useState<FileSystemNode | null>(null);
   const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
   const [lastAnchorNode, setLastAnchorNode] = useState<FileSystemNode | null>(null);
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
   const [clipboard, setClipboard] = useState<ClipboardOperation | null>(null);
   const [inlineAction, setInlineAction] = useState<InlineAction | null>(null);
   const [bulkDeleteCandidate, setBulkDeleteCandidate] = useState<FileSystemNode[] | null>(null);
+  const [batchRenameCandidates, setBatchRenameCandidates] = useState<FileSystemNode[] | null>(null);
+  const [moveCandidates, setMoveCandidates] = useState<FileSystemNode[] | null>(null);
+  const [propertiesCandidate, setPropertiesCandidate] = useState<FileSystemNode | null>(null);
+  const [historyVersion, setHistoryVersion] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showHidden, setShowHiddenState] = useState<boolean>(() => {
@@ -228,6 +267,7 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
   const expandedPathsRef = useRef(expandedPaths);
   const activeWorkspaceRef = useRef(activeWorkspace);
   const selectedNodeRef = useRef(selectedNode);
+  const focusedNodeRef = useRef(focusedNode);
   const selectedPathsRef = useRef(selectedPaths);
   const nodesRef = useRef(nodes);
   const sortConfigRef = useRef(sortConfig);
@@ -239,6 +279,7 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
     expandedPathsRef.current = expandedPaths;
     activeWorkspaceRef.current = activeWorkspace;
     selectedNodeRef.current = selectedNode;
+    focusedNodeRef.current = focusedNode;
     selectedPathsRef.current = selectedPaths;
     nodesRef.current = nodes;
     sortConfigRef.current = sortConfig;
@@ -397,6 +438,31 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
     });
   }, [activeWorkspacePath, expandedPaths, sortConfig.mode, showHidden]);
 
+  // External filesystem watcher subscription with debouncing per directory
+  useEffect(() => {
+    const debounceTimers = new Map<string, NodeJS.Timeout>();
+
+    const unwatch = fsWatcher.onEvent((event) => {
+      const normPath = normalizePath(event.path);
+      const parent = dirname(normPath);
+      const existing = debounceTimers.get(parent);
+      if (existing) {
+        clearTimeout(existing);
+      }
+      const timer = setTimeout(() => {
+        debounceTimers.delete(parent);
+        refresh(parent);
+      }, 250);
+      debounceTimers.set(parent, timer);
+    });
+
+    return () => {
+      unwatch();
+      debounceTimers.forEach((t) => clearTimeout(t));
+      debounceTimers.clear();
+    };
+  }, [refresh]);
+
   // Computed display nodes (filtered & sorted)
   const { displayNodes, matchingCount } = useMemo(() => {
     if (!filterQuery.trim()) {
@@ -494,12 +560,14 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
     ) => {
       if (!node) {
         setSelectedNode(null);
+        setFocusedNode(null);
         setSelectedPaths(new Set());
         setLastAnchorNode(null);
         return;
       }
 
       const nodePath = normalizePath(node.path);
+      setFocusedNode(node);
 
       if (isShift && lastAnchorNode) {
         const visible = getVisibleNodes(displayNodesRef.current, expandedPathsRef.current);
@@ -514,7 +582,8 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
           const start = Math.min(anchorIdx, targetIdx);
           const end = Math.max(anchorIdx, targetIdx);
           const range = visible.slice(start, end + 1);
-          const nextPaths = new Set(selectedPathsRef.current);
+          // If Ctrl+Shift held, union; otherwise replace selection with range
+          const nextPaths = isCtrlOrMeta ? new Set(selectedPathsRef.current) : new Set<string>();
           range.forEach((n) => nextPaths.add(normalizePath(n.path)));
 
           setSelectedPaths(nextPaths);
@@ -537,11 +606,13 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
               ? findNodesByPaths(nodesRef.current, new Set([first]))[0] || null
               : null;
             setSelectedNode(found);
+            setFocusedNode(found);
           }
         } else {
           nextPaths.add(nodePath);
           setSelectedPaths(nextPaths);
           setSelectedNode(node);
+          setFocusedNode(node);
           setLastAnchorNode(node);
         }
 
@@ -554,6 +625,7 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
       // Normal single selection
       setSelectedPaths(new Set([nodePath]));
       setSelectedNode(node);
+      setFocusedNode(node);
       setLastAnchorNode(node);
 
       ideEvents.emit("file:selected", {
@@ -567,8 +639,24 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
     [lastAnchorNode]
   );
 
+  const selectAll = useCallback(() => {
+    const visible = getVisibleNodes(displayNodesRef.current, expandedPathsRef.current);
+    if (visible.length === 0) return;
+    const allPaths = new Set(visible.map((n) => normalizePath(n.path)));
+    setSelectedPaths(allPaths);
+    if (visible[0]) {
+      setSelectedNode(visible[0]);
+      setFocusedNode(visible[0]);
+      setLastAnchorNode(visible[0]);
+    }
+    ideEvents.emit("explorer:multi-selected", {
+      paths: Array.from(allPaths),
+    });
+  }, []);
+
   const clearSelection = useCallback(() => {
     setSelectedNode(null);
+    setFocusedNode(null);
     setSelectedPaths(new Set());
     setLastAnchorNode(null);
   }, []);
@@ -968,9 +1056,15 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
               destPath: `${targetNorm}/${src.name}`,
               isDirectory: src.type === "directory",
             });
+            ideEvents.emit("file:renamed", {
+              oldPath: src.path,
+              newPath: `${targetNorm}/${src.name}`,
+              isDirectory: src.type === "directory",
+            });
           }
           setClipboard(null);
         }
+        setHistoryVersion((v) => v + 1);
         return true;
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : "Failed to paste item(s).";
@@ -989,6 +1083,7 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
         const parent = dirname(node.path);
         await refresh(parent);
         ideEvents.emit("file:copied", { sourcePath: node.path, destPath: newPath });
+        setHistoryVersion((v) => v + 1);
         return true;
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : "Failed to duplicate item.";
@@ -999,28 +1094,138 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
     [refresh]
   );
 
-  const copyAbsolutePath = useCallback(async (node: FileSystemNode) => {
-    try {
-      if (typeof navigator !== "undefined" && navigator.clipboard) {
-        await navigator.clipboard.writeText(node.path);
+  const duplicateSelected = useCallback(
+    async (targetNodes?: FileSystemNode[]): Promise<boolean> => {
+      const targets =
+        targetNodes ||
+        (selectedPathsRef.current.size > 0
+          ? findNodesByPaths(nodesRef.current, selectedPathsRef.current)
+          : selectedNodeRef.current
+          ? [selectedNodeRef.current]
+          : []);
+
+      if (targets.length === 0) return false;
+      setError(null);
+
+      try {
+        const parents = new Set<string>();
+        for (const t of targets) {
+          parents.add(dirname(t.path));
+        }
+
+        const newPaths = await FileExplorerService.bulkDuplicate(targets);
+        for (const p of parents) {
+          await refresh(p);
+        }
+
+        setSelectedPaths(new Set(newPaths.map(normalizePath)));
+        setHistoryVersion((v) => v + 1);
+        return true;
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Failed to duplicate item(s).";
+        setError(msg);
+        return false;
       }
-    } catch (e) {
-      console.error("Failed to copy absolute path:", e);
-    }
+    },
+    [refresh]
+  );
+
+  const moveSelectedTo = useCallback(
+    async (targetDirPath: string, targetNodes?: FileSystemNode[]): Promise<boolean> => {
+      const targets =
+        targetNodes ||
+        (selectedPathsRef.current.size > 0
+          ? findNodesByPaths(nodesRef.current, selectedPathsRef.current)
+          : selectedNodeRef.current
+          ? [selectedNodeRef.current]
+          : []);
+
+      if (targets.length === 0) return false;
+      setError(null);
+      const normDest = normalizePath(targetDirPath);
+
+      try {
+        const sourceParents = new Set<string>();
+        for (const t of targets) {
+          sourceParents.add(dirname(t.path));
+        }
+
+        await FileExplorerService.bulkMove(targets, normDest);
+        setExpandedPaths((prev) => new Set(prev).add(normDest));
+        await refresh(normDest);
+        for (const p of sourceParents) {
+          if (normalizePath(p) !== normDest) {
+            await refresh(p);
+          }
+        }
+
+        for (const t of targets) {
+          const destPath = `${normDest}/${t.name}`;
+          ideEvents.emit("file:moved", {
+            sourcePath: t.path,
+            destPath,
+            isDirectory: t.type === "directory",
+          });
+          ideEvents.emit("file:renamed", {
+            oldPath: t.path,
+            newPath: destPath,
+            isDirectory: t.type === "directory",
+          });
+        }
+
+        setMoveCandidates(null);
+        setSelectedPaths(new Set(targets.map((t) => `${normDest}/${t.name}`)));
+        setHistoryVersion((v) => v + 1);
+        return true;
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Failed to move items.";
+        setError(msg);
+        return false;
+      }
+    },
+    [refresh]
+  );
+
+  const copyAbsolutePath = useCallback(async (node: FileSystemNode) => {
+    await copyToClipboard(node.path);
   }, []);
 
   const copyRelativePath = useCallback(async (node: FileSystemNode) => {
     const ws = activeWorkspaceRef.current;
     if (!ws) return;
-    try {
-      const rel = relativePath(ws.rootPath, node.path);
-      if (typeof navigator !== "undefined" && navigator.clipboard) {
-        await navigator.clipboard.writeText(rel);
-      }
-    } catch (e) {
-      console.error("Failed to copy relative path:", e);
-    }
+    const rel = relativePath(ws.rootPath, node.path);
+    await copyToClipboard(rel);
   }, []);
+
+  const copySelectedPaths = useCallback(
+    async (
+      format: "absolute" | "relative" | "name" = "absolute",
+      customTargets?: FileSystemNode[]
+    ) => {
+      const ws = activeWorkspaceRef.current;
+      const targets =
+        customTargets ||
+        (selectedPathsRef.current.size > 0
+          ? findNodesByPaths(nodesRef.current, selectedPathsRef.current)
+          : selectedNodeRef.current
+          ? [selectedNodeRef.current]
+          : []);
+
+      if (targets.length === 0) return;
+
+      let text = "";
+      if (format === "name") {
+        text = targets.map((n) => n.name).join("\n");
+      } else if (format === "relative" && ws) {
+        text = targets.map((n) => relativePath(ws.rootPath, n.path)).join("\n");
+      } else {
+        text = targets.map((n) => n.path).join("\n");
+      }
+
+      await copyToClipboard(text);
+    },
+    []
+  );
 
   const revealInFileManager = useCallback(async (node: FileSystemNode) => {
     try {
@@ -1028,6 +1233,72 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
     } catch (e) {
       console.error("Failed to reveal file in file manager:", e);
     }
+  }, []);
+
+  const undo = useCallback(async (): Promise<string | null> => {
+    try {
+      const res = await ExplorerHistoryService.undo();
+      if (res) {
+        await refresh();
+        setHistoryVersion((v) => v + 1);
+      }
+      return res;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Undo failed.";
+      setError(msg);
+      return null;
+    }
+  }, [refresh]);
+
+  const redo = useCallback(async (): Promise<string | null> => {
+    try {
+      const res = await ExplorerHistoryService.redo();
+      if (res) {
+        await refresh();
+        setHistoryVersion((v) => v + 1);
+      }
+      return res;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Redo failed.";
+      setError(msg);
+      return null;
+    }
+  }, [refresh]);
+
+  const startBatchRename = useCallback((candidates?: FileSystemNode[]) => {
+    if (candidates && candidates.length > 0) {
+      setBatchRenameCandidates(candidates);
+    } else if (selectedPathsRef.current.size > 1) {
+      const selected = findNodesByPaths(nodesRef.current, selectedPathsRef.current);
+      setBatchRenameCandidates(selected);
+    }
+  }, []);
+
+  const closeBatchRename = useCallback(() => {
+    setBatchRenameCandidates(null);
+  }, []);
+
+  const startMove = useCallback((candidates?: FileSystemNode[]) => {
+    if (candidates && candidates.length > 0) {
+      setMoveCandidates(candidates);
+    } else if (selectedPathsRef.current.size > 0) {
+      const selected = findNodesByPaths(nodesRef.current, selectedPathsRef.current);
+      setMoveCandidates(selected);
+    } else if (selectedNodeRef.current) {
+      setMoveCandidates([selectedNodeRef.current]);
+    }
+  }, []);
+
+  const closeMove = useCallback(() => {
+    setMoveCandidates(null);
+  }, []);
+
+  const openProperties = useCallback((node: FileSystemNode) => {
+    setPropertiesCandidate(node);
+  }, []);
+
+  const closeProperties = useCallback(() => {
+    setPropertiesCandidate(null);
   }, []);
 
   const handleDrop = useCallback(
@@ -1045,23 +1316,30 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
           return true;
         }
 
+        const node = findNodesByPaths(nodesRef.current, new Set([normSrc]))[0];
+        const isDir = node?.type === "directory";
+
         const newPath = await FileExplorerService.move(normSrc, normDest);
         setExpandedPaths((prev) => new Set(prev).add(normDest));
-        await refresh();
+        await refresh(normDest);
+        if (normDest.toLowerCase() !== sourceParent.toLowerCase()) {
+          await refresh(sourceParent);
+        }
 
         ideEvents.emit("file:moved", {
           sourcePath: normSrc,
           destPath: newPath,
-          isDirectory: false,
+          isDirectory: isDir,
         });
 
         ideEvents.emit("file:renamed", {
           oldPath: normSrc,
           newPath,
-          isDirectory: false,
+          isDirectory: isDir,
         });
 
         setSelectedPaths(new Set([normalizePath(newPath)]));
+        setHistoryVersion((v) => v + 1);
 
         return true;
       } catch (err: unknown) {
@@ -1092,18 +1370,34 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
           )
         : -1;
 
+      // Undo (Ctrl/Cmd + Z)
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        undo();
+        return;
+      }
+
+      // Redo (Ctrl/Cmd + Shift + Z or Ctrl/Cmd + Y)
+      if (
+        ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "z") ||
+        ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y")
+      ) {
+        e.preventDefault();
+        redo();
+        return;
+      }
+
+      // Duplicate (Ctrl/Cmd + D)
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "d") {
+        e.preventDefault();
+        duplicateSelected();
+        return;
+      }
+
       // Select all visible (Ctrl/Cmd + A)
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "a") {
         e.preventDefault();
-        const allPaths = new Set(visible.map((n) => normalizePath(n.path)));
-        setSelectedPaths(allPaths);
-        if (visible[0]) {
-          setSelectedNode(visible[0]);
-          setLastAnchorNode(visible[0]);
-        }
-        ideEvents.emit("explorer:multi-selected", {
-          paths: Array.from(allPaths),
-        });
+        selectAll();
         return;
       }
 
@@ -1172,9 +1466,12 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
           openFile(selectedNodeRef.current);
         }
       } else if (e.key === "F2") {
-        if (selectedNodeRef.current) {
+        if (selectedNodeRef.current && selectedPathsRef.current.size <= 1) {
           e.preventDefault();
           startRename(selectedNodeRef.current);
+        } else if (selectedPathsRef.current.size > 1) {
+          e.preventDefault();
+          startBatchRename();
         }
       } else if (e.key === "Delete") {
         if (selectedPathsRef.current.size > 0 || selectedNodeRef.current) {
@@ -1189,13 +1486,18 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
       inlineAction,
       displayNodes,
       selectNode,
+      selectAll,
       toggleExpand,
       openFile,
       startRename,
+      startBatchRename,
       promptDelete,
       copySelected,
       cutSelected,
       pasteNode,
+      duplicateSelected,
+      undo,
+      redo,
       clearSelection,
     ]
   );
@@ -1216,7 +1518,9 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
       selectedNode,
       selectedNodes,
       selectedPaths,
+      focusedNode,
       selectNode,
+      selectAll,
       clearSelection,
       expandedPaths,
       toggleExpand,
@@ -1242,9 +1546,25 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
       cutSelected,
       pasteNode,
       duplicateNode,
+      duplicateSelected,
+      moveSelectedTo,
       copyAbsolutePath,
       copyRelativePath,
+      copySelectedPaths,
       revealInFileManager,
+      canUndo: ExplorerHistoryService.canUndo(),
+      canRedo: ExplorerHistoryService.canRedo(),
+      undo,
+      redo,
+      batchRenameCandidates,
+      startBatchRename,
+      closeBatchRename,
+      moveCandidates,
+      startMove,
+      closeMove,
+      propertiesCandidate,
+      openProperties,
+      closeProperties,
       handleDrop,
       clearError,
       handleKeyDown,
@@ -1264,7 +1584,9 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
       selectedNode,
       selectedNodes,
       selectedPaths,
+      focusedNode,
       selectNode,
+      selectAll,
       clearSelection,
       expandedPaths,
       toggleExpand,
@@ -1289,9 +1611,24 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
       cutSelected,
       pasteNode,
       duplicateNode,
+      duplicateSelected,
+      moveSelectedTo,
       copyAbsolutePath,
       copyRelativePath,
+      copySelectedPaths,
       revealInFileManager,
+      historyVersion,
+      undo,
+      redo,
+      batchRenameCandidates,
+      startBatchRename,
+      closeBatchRename,
+      moveCandidates,
+      startMove,
+      closeMove,
+      propertiesCandidate,
+      openProperties,
+      closeProperties,
       handleDrop,
       clearError,
       handleKeyDown,

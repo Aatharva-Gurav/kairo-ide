@@ -8,6 +8,7 @@ import {
   getFileExtension,
   validateFileName,
   formatFsError,
+  formatBytes,
 } from "./tauri-ipc";
 
 describe("Tauri IPC & Path Utilities", () => {
