@@ -12,10 +12,24 @@ export class EditorService {
   /**
    * Opens and loads a file from the filesystem.
    */
-  static async loadDocument(filePath: string): Promise<EditorDocument> {
+  static async loadDocument(filePath: string, initialContent?: string): Promise<EditorDocument> {
     const normPath = normalizePath(filePath);
     const title = basename(normPath);
     const language = LanguageService.detectLanguage(normPath);
+
+    if (initialContent !== undefined) {
+      return {
+        id: normPath,
+        path: normPath,
+        title,
+        language,
+        content: initialContent,
+        savedContent: initialContent,
+        isDirty: false,
+        isBinary: false,
+        readonly: false,
+      };
+    }
 
     try {
       const fileData: FileContentResult = await readFileContent(normPath);

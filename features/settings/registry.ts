@@ -150,30 +150,6 @@ export const SETTINGS_REGISTRY: SettingDefinition<any>[] = [
     ],
     validate: (val) => typeof val === "string" && val.length > 0,
   },
-  {
-    key: "appearance.sidebarVisible",
-    category: "appearance",
-    label: "Sidebar Visible",
-    description: "Controls whether the primary sidebar is visible.",
-    type: "boolean",
-    defaultValue: true,
-    scope: "user",
-    validate: (val) => typeof val === "boolean",
-  },
-  {
-    key: "appearance.sidebarPosition",
-    category: "appearance",
-    label: "Sidebar Position",
-    description: "Controls the dock position of the primary sidebar.",
-    type: "select",
-    defaultValue: "left",
-    scope: "user",
-    options: [
-      { label: "Left", value: "left" },
-      { label: "Right", value: "right" },
-    ],
-    validate: (val) => ["left", "right"].includes(val as string),
-  },
 
   // ─── EDITOR ───────────────────────────────────────────────────────────
   {

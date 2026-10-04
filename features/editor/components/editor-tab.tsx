@@ -56,26 +56,18 @@ export function EditorTab({ document, isActive, onSelect, onClose }: EditorTabPr
         onContextMenu={handleContextMenu}
         title={document.path}
         className={cn(
-          "group relative flex h-[35px] shrink-0 items-center gap-2 border-r border-border/60 px-3 text-xs cursor-pointer select-none transition-colors duration-120 ease-out animate-tab-enter",
+          "group relative flex h-full shrink-0 items-center gap-2 border-r border-border/60 px-3 text-[12px] cursor-pointer select-none transition-colors duration-100 font-sans",
           isActive
-            ? "bg-background text-foreground font-medium shadow-2xs"
-            : "bg-sidebar/20 dark:bg-[#18181b]/40 text-muted-foreground hover:bg-sidebar/50 dark:hover:bg-[#18181b]/80 hover:text-foreground"
+            ? "bg-background text-foreground font-medium border-t-2 border-t-primary border-r-border/80 border-b-transparent z-10"
+            : "bg-sidebar/40 dark:bg-[#181818]/60 text-muted-foreground/80 hover:bg-sidebar/70 dark:hover:bg-[#1f1f1f] hover:text-foreground border-t-2 border-t-transparent"
         )}
       >
-        {/* Animated active indicator bar - VS Code top accent */}
-        <span
-          className={cn(
-            "absolute top-0 left-0 right-0 h-[2px] bg-primary transition-all duration-160 ease-[cubic-bezier(0.16,1,0.3,1)] origin-center",
-            isActive ? "opacity-100 scale-x-100" : "opacity-0 scale-x-0"
-          )}
-        />
-
         <FileIcon
           name={document.title}
           isDirectory={false}
-          className="size-3.5 shrink-0 transition-transform duration-140 group-hover:scale-105"
+          className="size-3.5 shrink-0 transition-transform duration-100 group-hover:scale-105"
         />
-        <span className="truncate max-w-[140px] tracking-tight">{document.title}</span>
+        <span className="truncate max-w-[150px] tracking-tight">{document.title}</span>
 
         {/* Dirty indicator or close button */}
         <div className="flex items-center justify-center size-4 shrink-0 relative ml-0.5">

@@ -63,12 +63,37 @@ export function EditorWorkspace() {
     openSplitRight,
   } = useEditor();
 
-  const [cursorPos, setCursorPos] = useState<{ lineNumber: number; column: number }>({
-    lineNumber: 1,
-    column: 1,
-  });
+  const [cursorMap, setCursorMap] = useState<
+    Record<
+      string,
+      { lineNumber: number; column: number; selectionCount?: number; totalLines?: number }
+    >
+  >({});
   const [draggingDivider, setDraggingDivider] = useState<null | 1 | 2>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleCursorChange = React.useCallback(
+    (
+      docPath: string,
+      pos: { lineNumber: number; column: number; selectionCount?: number; totalLines?: number }
+    ) => {
+      setCursorMap((prev) => ({
+        ...prev,
+        [docPath]: pos,
+      }));
+    },
+    []
+  );
+
+  const activeCursorPos = activeDocument
+    ? cursorMap[activeDocument.path] || {
+        lineNumber: 1,
+        column: 1,
+        totalLines: activeDocument.content
+          ? activeDocument.content.split(/\r\n|\r|\n/).length
+          : 1,
+      }
+    : undefined;
 
   const isDragging = draggingDivider !== null;
 
@@ -143,10 +168,10 @@ export function EditorWorkspace() {
                 ) : (
                   <MonacoEditorView
                     document={activeDocument}
-                    onCursorChange={setCursorPos}
+                    onCursorChange={handleCursorChange}
                   />
                 )}
-                <EditorStatusBar document={activeDocument} cursorPosition={cursorPos} />
+                <EditorStatusBar document={activeDocument} cursorPosition={activeCursorPos} />
               </div>
 
               {/* Draggable Divider 1 */}
@@ -236,10 +261,10 @@ export function EditorWorkspace() {
                 ) : (
                   <MonacoEditorView
                     document={activeDocument}
-                    onCursorChange={setCursorPos}
+                    onCursorChange={handleCursorChange}
                   />
                 )}
-                <EditorStatusBar document={activeDocument} cursorPosition={cursorPos} />
+                <EditorStatusBar document={activeDocument} cursorPosition={activeCursorPos} />
               </div>
 
               {/* Draggable Divider */}
@@ -301,11 +326,11 @@ export function EditorWorkspace() {
             ) : (
               <MonacoEditorView
                 document={activeDocument}
-                onCursorChange={setCursorPos}
+                onCursorChange={handleCursorChange}
               />
             )}
 
-            <EditorStatusBar document={activeDocument} cursorPosition={cursorPos} />
+            <EditorStatusBar document={activeDocument} cursorPosition={activeCursorPos} />
           </div>
         )
       ) : (

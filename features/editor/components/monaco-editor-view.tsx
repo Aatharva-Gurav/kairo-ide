@@ -309,7 +309,12 @@ if (typeof window !== "undefined") {
 
 interface MonacoEditorViewProps {
   document: EditorDocument;
-  onCursorChange?: (pos: { lineNumber: number; column: number }) => void;
+  onCursorChange?: (docPath: string, pos: {
+    lineNumber: number;
+    column: number;
+    selectionCount?: number;
+    totalLines?: number;
+  }) => void;
 }
 
 export function MonacoEditorView({ document, onCursorChange }: MonacoEditorViewProps) {
@@ -322,6 +327,50 @@ export function MonacoEditorView({ document, onCursorChange }: MonacoEditorViewP
   const localEditorRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const contentListenerRef = useRef<any>(null);
+
+  const onCursorChangeRef = useRef(onCursorChange);
+  useEffect(() => {
+    onCursorChangeRef.current = onCursorChange;
+  });
+
+  const documentRef = useRef(document);
+  useEffect(() => {
+    documentRef.current = document;
+  });
+
+  // Helper to accurately broadcast cursor line/column and selection details
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const emitCursorPosition = (ed: any) => {
+    if (!ed || !onCursorChangeRef.current) return;
+    try {
+      const pos = ed.getPosition();
+      const model = ed.getModel();
+      const doc = documentRef.current;
+      const totalLines = model
+        ? model.getLineCount()
+        : doc.content
+          ? doc.content.split(/\r\n|\r|\n/).length
+          : 1;
+
+      let selectionCount: number | undefined;
+      const sel = ed.getSelection();
+      if (sel && !sel.isEmpty()) {
+        const text = model?.getValueInRange(sel) || "";
+        selectionCount = text.length;
+      }
+
+      if (pos) {
+        onCursorChangeRef.current(doc.path, {
+          lineNumber: pos.lineNumber,
+          column: pos.column,
+          selectionCount,
+          totalLines,
+        });
+      }
+    } catch {
+      // safely handle any Monaco lifecycle edge cases
+    }
+  };
 
   // Sync theme with data-theme attribute and dark class on <html>
   useEffect(() => {
@@ -414,10 +463,13 @@ export function MonacoEditorView({ document, onCursorChange }: MonacoEditorViewP
       document.language
     );
 
-    if (model && editor.getModel() !== model) {
-      ModelService.saveViewState(editor, document.path);
-      editor.setModel(model);
-      ModelService.restoreViewState(editor, document.path);
+    if (model) {
+      if (editor.getModel() !== model) {
+        ModelService.saveViewState(editor, document.path);
+        editor.setModel(model);
+        ModelService.restoreViewState(editor, document.path);
+      }
+      emitCursorPosition(editor);
     }
 
     // Subscribe to content changes
@@ -463,18 +515,29 @@ export function MonacoEditorView({ document, onCursorChange }: MonacoEditorViewP
     }
 
     // Cursor position listener for bottom status bar
-    editor.onDidChangeCursorPosition((e: { position: { lineNumber: number; column: number } }) => {
-      if (onCursorChange) {
-        onCursorChange(e.position);
-      }
+    editor.onDidChangeCursorPosition(() => {
+      emitCursorPosition(editor);
     });
 
-    // Content change listener
-    if (model) {
-      contentListenerRef.current = model.onDidChangeContent(() => {
-        updateContent(document.path, model.getValue());
-      });
-    }
+    // Selection listener for bottom status bar selection count
+    editor.onDidChangeCursorSelection(() => {
+      emitCursorPosition(editor);
+    });
+
+    editor.onDidFocusEditorText(() => {
+      emitCursorPosition(editor);
+    });
+
+    editor.onMouseUp(() => {
+      emitCursorPosition(editor);
+    });
+
+    editor.onKeyUp(() => {
+      emitCursorPosition(editor);
+    });
+
+    // Emit initial position immediately upon mount
+    emitCursorPosition(editor);
 
     // Context menu additions for Go To Definition and Peek
     editor.addAction({

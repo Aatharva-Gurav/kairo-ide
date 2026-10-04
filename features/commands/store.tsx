@@ -109,6 +109,17 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
     // ─── WORKBENCH COMMANDS ────────────────────────────────────────────────
     unsubs.push(
       CommandRegistry.register({
+        id: "workbench.openFile",
+        title: "File: Open File...",
+        description: "Open a file from the local filesystem",
+        category: "workbench",
+        keywords: ["open", "file"],
+        execute: async () => {
+          await editorRef.current.openFileDialog();
+        },
+      }),
+
+      CommandRegistry.register({
         id: "workbench.openFolder",
         title: "Open Folder...",
         description: "Open a folder workspace from the local filesystem",
@@ -532,6 +543,8 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
       // Accelerators that should work even inside inputs:
       // Ctrl+S, Ctrl+Shift+S, Ctrl+P, Ctrl+Shift+P, Ctrl+B, Ctrl+,
       const isGlobalAccelerator = [
+        "workbench.openFile",
+        "workbench.openFolder",
         "workbench.commandPalette",
         "workbench.quickOpen",
         "workbench.openSettings",
@@ -585,10 +598,7 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
           }
           case "file.open": {
             try {
-              const picked = await invokeCommand<string | null>("workspace_pick_file");
-              if (picked) {
-                await editorRef.current.openDocument(picked);
-              }
+              await editorRef.current.openFileDialog();
             } catch (err) {
               console.error("[NativeMenu] Failed to open file:", err);
             }

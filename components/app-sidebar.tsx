@@ -69,21 +69,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </button>
 
       <Sidebar side="right" variant="floating" className="top-[30px] h-[calc(100svh-30px)]" {...props}>
-        {!activeWorkspace ? (
-          <SidebarHeader>
-            <div className="flex items-center justify-between p-2 select-none pl-11">
-              <div className="flex items-center gap-2">
-                <div className="flex aspect-square size-7 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground shadow-2xs transition-transform duration-200 hover:scale-105">
-                  <HugeiconsIcon icon={LayoutBottomIcon} strokeWidth={2} className="size-3.5" />
-                </div>
-                <div className="flex flex-col gap-0.5 leading-none">
-                  <span className="font-semibold text-xs tracking-tight text-sidebar-foreground">Kairo IDE</span>
-                  <span className="text-[10px] text-muted-foreground font-mono">Workspace</span>
-                </div>
-              </div>
-            </div>
-          </SidebarHeader>
-        ) : (
+        {activeWorkspace && (
           <SidebarHeader className="h-10 justify-center pr-2.5 pl-11 border-b border-sidebar-border/80">
             <div className="relative flex items-center p-0.5 rounded-lg bg-sidebar-accent/40 border border-sidebar-border/60 min-w-0 shadow-2xs">
               <button
@@ -121,7 +107,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
         <SidebarContent className="relative flex-1 min-h-0 overflow-hidden">
           {!activeWorkspace ? (
-            <div className="h-full w-full animate-in fade-in-50 duration-150 delay-subtle">
+            <div className="h-full w-full pt-12 animate-in fade-in-50 duration-150 delay-subtle overflow-y-auto">
               <EmptyWorkspaceView />
             </div>
           ) : activeTab === "explorer" ? (

@@ -65,6 +65,7 @@ export type IDEEventMap = {
   "editor:zoom-reset": void;
   "search:navigate-to-match": { path: string; line: number; column: number; matchLength?: number };
   "sidebar:switch-tab": "explorer" | "search";
+  "workbench:open-file": void;
 };
 
 type EventHandler<T> = (data: T) => void;

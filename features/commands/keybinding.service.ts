@@ -4,6 +4,8 @@ import { CommandRegistry } from "./command-registry";
 export const KEYBINDINGS_STORAGE_KEY = "kairo:keybindings";
 
 export const DEFAULT_KEYBINDINGS: Keybinding[] = [
+  { commandId: "workbench.openFile", key: "ctrl+o", macKey: "cmd+o" },
+  { commandId: "workbench.openFolder", key: "ctrl+shift+o", macKey: "cmd+shift+o" },
   { commandId: "workbench.commandPalette", key: "ctrl+shift+p", macKey: "cmd+shift+p" },
   { commandId: "workbench.quickOpen", key: "ctrl+p", macKey: "cmd+p" },
   { commandId: "workbench.openSettings", key: "ctrl+,", macKey: "cmd+," },

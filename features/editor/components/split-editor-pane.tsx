@@ -37,16 +37,39 @@ export function SplitEditorPane({
   isVertical = false,
 }: SplitEditorPaneProps) {
   const { documents, closeSplitView, setSplitDocumentId } = useEditor();
-  const [cursorPos, setCursorPos] = useState<{ lineNumber: number; column: number }>({
+  const [cursorMap, setCursorMap] = useState<
+    Record<
+      string,
+      { lineNumber: number; column: number; selectionCount?: number; totalLines?: number }
+    >
+  >({});
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  const handleCursorChange = React.useCallback(
+    (
+      docPath: string,
+      pos: { lineNumber: number; column: number; selectionCount?: number; totalLines?: number }
+    ) => {
+      setCursorMap((prev) => ({
+        ...prev,
+        [docPath]: pos,
+      }));
+    },
+    []
+  );
+
+  const currentCursorPos = cursorMap[document.path] || {
     lineNumber: 1,
     column: 1,
-  });
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    totalLines: document.content
+      ? document.content.split(/\r\n|\r|\n/).length
+      : 1,
+  };
 
   const handleClose = onClose || closeSplitView;
   const handleSelectDoc = onSelectDocument || setSplitDocumentId;
 
-  const parts = document.path.split("/").filter(Boolean);
+  const parts = document.path.replace(/\\/g, "/").split("/").filter(Boolean);
 
   return (
     <div
@@ -134,11 +157,11 @@ export function SplitEditorPane({
         ) : (
           <MonacoEditorView
             document={document}
-            onCursorChange={setCursorPos}
+            onCursorChange={handleCursorChange}
           />
         )}
 
-        <EditorStatusBar document={document} cursorPosition={cursorPos} />
+        <EditorStatusBar document={document} cursorPosition={currentCursorPos} />
       </div>
     </div>
   );

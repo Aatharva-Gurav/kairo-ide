@@ -72,8 +72,6 @@ export function AppTitleBar() {
   const { user, profile, isOffline, logout, exitOfflineMode } = useAuth();
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
-  const [isSplitMenuOpen, setIsSplitMenuOpen] = useState(false);
-  const splitMenuRef = useRef<HTMLDivElement>(null);
 
   const [isMaximized, setIsMaximized] = useState(false);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
@@ -127,9 +125,6 @@ export function AppTitleBar() {
       if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
         setIsProfileMenuOpen(false);
       }
-      if (splitMenuRef.current && !splitMenuRef.current.contains(e.target as Node)) {
-        setIsSplitMenuOpen(false);
-      }
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -137,11 +132,10 @@ export function AppTitleBar() {
         setActiveMenu(null);
         setActiveSubmenu(null);
         setIsProfileMenuOpen(false);
-        setIsSplitMenuOpen(false);
       }
     };
 
-    if (activeMenu || isProfileMenuOpen || isSplitMenuOpen) {
+    if (activeMenu || isProfileMenuOpen) {
       document.addEventListener("mousedown", handleClickOutside);
       document.addEventListener("keydown", handleKeyDown);
       return () => {
@@ -149,7 +143,7 @@ export function AppTitleBar() {
         document.removeEventListener("keydown", handleKeyDown);
       };
     }
-  }, [activeMenu, isProfileMenuOpen, isSplitMenuOpen]);
+  }, [activeMenu, isProfileMenuOpen]);
 
   // Window control handlers
   const handleMinimize = useCallback(async () => {
@@ -1061,243 +1055,6 @@ export function AppTitleBar() {
                   Sign Out
                 </button>
               )}
-            </div>
-          )}
-        </div>
-
-        {/* Split View Layout Dropdown beside Window Controls */}
-        <div ref={splitMenuRef} className="relative h-full flex items-center mr-1">
-          <button
-            type="button"
-            onClick={() => setIsSplitMenuOpen((prev) => !prev)}
-            title="Split Editor Layout Options"
-            aria-label="Split Editor Layout Options"
-            aria-expanded={isSplitMenuOpen}
-            className={cn(
-              "h-[22px] px-1.5 rounded-sm text-[11px] font-medium transition-all duration-100 flex items-center gap-1 focus:outline-none focus-visible:ring-1 focus-visible:ring-sidebar-ring cursor-pointer select-none",
-              isSplitMenuOpen
-                ? "bg-sidebar-accent text-sidebar-foreground shadow-2xs font-semibold"
-                : isSplit
-                ? "text-sidebar-primary bg-sidebar-primary/10 hover:bg-sidebar-primary/20"
-                : "text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent/70"
-            )}
-          >
-            {splitLayoutMode === "split-three" ? (
-              <svg viewBox="0 0 16 16" fill="currentColor" className="size-3.5">
-                <path d="M14 2H2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1zM2 13V3h3.5v10H2zm4.5 0V3h3v10h-3zm4 0V3H14v10h-3.5z" />
-              </svg>
-            ) : isSplit && splitDirection === "vertical" ? (
-              <svg viewBox="0 0 16 16" fill="currentColor" className="size-3.5">
-                <path d="M14 2H2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1zM2 7.5h12V3H2v4.5zm0 5.5h12V8.5H2V13z" />
-              </svg>
-            ) : (
-              <svg viewBox="0 0 16 16" fill="currentColor" className="size-3.5">
-                <path d="M14 2H2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1zM2 13V3h5v10H2zm12 0H8V3h6v10z" />
-              </svg>
-            )}
-            <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-2 opacity-60">
-              <path d="M2.5 4.5L6 8l3.5-3.5" />
-            </svg>
-          </button>
-
-          {/* Split Options Dropdown Popup (Single Vertical Line, Icon-Only) */}
-          {isSplitMenuOpen && (
-            <div
-              className="absolute top-[28px] right-0 z-50 flex flex-col items-center gap-1 p-1 rounded-lg border border-border/80 bg-popover/98 backdrop-blur-md shadow-2xl text-popover-foreground animate-in fade-in-0 zoom-in-95 duration-120 ease-out origin-top-right w-9 select-none"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Split Right (2 Columns) */}
-              <button
-                type="button"
-                onClick={() => {
-                  openSplitRight();
-                  setIsSplitMenuOpen(false);
-                }}
-                title="Split Right (Ctrl+\)"
-                aria-label="Split Right"
-                className={cn(
-                  "size-7 flex items-center justify-center rounded-md transition-colors duration-100 cursor-pointer active:scale-95",
-                  isSplit && splitDirection === "horizontal" && splitLayoutMode === "split-right"
-                    ? "bg-accent text-accent-foreground font-semibold"
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                )}
-              >
-                <svg viewBox="0 0 16 16" fill="currentColor" className="size-3.5">
-                  <path d="M14 2H2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1zM2 13V3h5v10H2zm12 0H8V3h6v10z" />
-                </svg>
-              </button>
-
-              {/* Split Down (2 Rows) */}
-              <button
-                type="button"
-                onClick={() => {
-                  openSplitDown();
-                  setIsSplitMenuOpen(false);
-                }}
-                title="Split Down (Ctrl+K Ctrl+\)"
-                aria-label="Split Down"
-                className={cn(
-                  "size-7 flex items-center justify-center rounded-md transition-colors duration-100 cursor-pointer active:scale-95",
-                  isSplit && splitDirection === "vertical"
-                    ? "bg-accent text-accent-foreground font-semibold"
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                )}
-              >
-                <svg viewBox="0 0 16 16" fill="currentColor" className="size-3.5">
-                  <path d="M14 2H2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1zM2 7.5h12V3H2v4.5zm0 5.5h12V8.5H2V13z" />
-                </svg>
-              </button>
-
-              {/* Split 3 Columns */}
-              <button
-                type="button"
-                onClick={() => {
-                  openThreeColumnSplit();
-                  setIsSplitMenuOpen(false);
-                }}
-                title="Split 3 Columns"
-                aria-label="Split 3 Columns"
-                className={cn(
-                  "size-7 flex items-center justify-center rounded-md transition-colors duration-100 cursor-pointer active:scale-95",
-                  isSplit && splitLayoutMode === "split-three"
-                    ? "bg-accent text-accent-foreground font-semibold"
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                )}
-              >
-                <svg viewBox="0 0 16 16" fill="currentColor" className="size-3.5">
-                  <path d="M14 2H2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1zM2 13V3h3.5v10H2zm4.5 0V3h3v10h-3zm4 0V3H14v10h-3.5z" />
-                </svg>
-              </button>
-
-              <div className="w-5 h-px bg-border/60 my-0.5" />
-
-              {/* Toggle Orientation */}
-              <button
-                type="button"
-                disabled={!isSplit}
-                onClick={() => {
-                  toggleSplitOrientation();
-                  setIsSplitMenuOpen(false);
-                }}
-                title={`Flip Layout (${splitDirection === "horizontal" ? "Columns → Rows" : "Rows → Columns"})`}
-                aria-label="Flip Layout"
-                className={cn(
-                  "size-7 flex items-center justify-center rounded-md transition-colors duration-100 select-none",
-                  !isSplit
-                    ? "opacity-30 cursor-not-allowed text-muted-foreground"
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer active:scale-95"
-                )}
-              >
-                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-3.5">
-                  <path d="M2 10.5h9a2.5 2.5 0 0 0 2.5-2.5V3M14 5.5l-2.5-2.5L9 5.5" />
-                </svg>
-              </button>
-
-              {/* Swap Panes */}
-              <button
-                type="button"
-                disabled={!isSplit}
-                onClick={() => {
-                  swapSplitDocuments();
-                  setIsSplitMenuOpen(false);
-                }}
-                title="Swap Editor Panes"
-                aria-label="Swap Editor Panes"
-                className={cn(
-                  "size-7 flex items-center justify-center rounded-md transition-colors duration-100 select-none",
-                  !isSplit
-                    ? "opacity-30 cursor-not-allowed text-muted-foreground"
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer active:scale-95"
-                )}
-              >
-                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-3.5">
-                  <path d="M3 5h10M10 2l3 3-3 3M13 11H3M6 8L3 11l3 3" />
-                </svg>
-              </button>
-
-              <div className="w-5 h-px bg-border/60 my-0.5" />
-
-              {/* Equalize Panes */}
-              <button
-                type="button"
-                disabled={!isSplit}
-                onClick={() => {
-                  setSplitRatioPreset("equal");
-                  setIsSplitMenuOpen(false);
-                }}
-                title="Equalize Panes (50% / 50%)"
-                aria-label="Equalize Panes"
-                className={cn(
-                  "size-7 flex items-center justify-center rounded-md transition-colors duration-100 select-none font-mono text-[11px]",
-                  !isSplit
-                    ? "opacity-30 cursor-not-allowed text-muted-foreground"
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer active:scale-95"
-                )}
-              >
-                ½
-              </button>
-
-              {/* Focus Left / Top */}
-              <button
-                type="button"
-                disabled={!isSplit}
-                onClick={() => {
-                  setSplitRatioPreset("left-heavy");
-                  setIsSplitMenuOpen(false);
-                }}
-                title={`Focus ${splitDirection === "vertical" ? "Top" : "Left"} (70% / 30%)`}
-                aria-label="Focus Left/Top"
-                className={cn(
-                  "size-7 flex items-center justify-center rounded-md transition-colors duration-100 select-none text-[11px]",
-                  !isSplit
-                    ? "opacity-30 cursor-not-allowed text-muted-foreground"
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer active:scale-95"
-                )}
-              >
-                ◀
-              </button>
-
-              {/* Focus Right / Bottom */}
-              <button
-                type="button"
-                disabled={!isSplit}
-                onClick={() => {
-                  setSplitRatioPreset("right-heavy");
-                  setIsSplitMenuOpen(false);
-                }}
-                title={`Focus ${splitDirection === "vertical" ? "Bottom" : "Right"} (30% / 70%)`}
-                aria-label="Focus Right/Bottom"
-                className={cn(
-                  "size-7 flex items-center justify-center rounded-md transition-colors duration-100 select-none text-[11px]",
-                  !isSplit
-                    ? "opacity-30 cursor-not-allowed text-muted-foreground"
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer active:scale-95"
-                )}
-              >
-                ▶
-              </button>
-
-              <div className="w-5 h-px bg-border/60 my-0.5" />
-
-              {/* Close Split View */}
-              <button
-                type="button"
-                disabled={!isSplit}
-                onClick={() => {
-                  closeSplitView();
-                  setIsSplitMenuOpen(false);
-                }}
-                title="Close Split Editor (Ctrl+\)"
-                aria-label="Close Split Editor"
-                className={cn(
-                  "size-7 flex items-center justify-center rounded-md transition-colors duration-100 select-none",
-                  !isSplit
-                    ? "opacity-30 cursor-not-allowed text-muted-foreground"
-                    : "text-destructive hover:bg-destructive/15 cursor-pointer active:scale-95"
-                )}
-              >
-                <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" />
-              </button>
             </div>
           )}
         </div>

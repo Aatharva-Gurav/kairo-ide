@@ -21,7 +21,7 @@ import { EditorService } from "./services/editor.service";
 import { ModelService } from "./services/model.service";
 import { FormatterService } from "./services/formatter.service";
 import { ideEvents } from "@/lib/events";
-import { normalizePath, basename } from "@/lib/tauri-ipc";
+import { normalizePath, basename, isTauriEnvironment, invokeCommand } from "@/lib/tauri-ipc";
 import { fsWatcher } from "@/lib/watcher";
 
 export interface EditorContextValue {
@@ -64,7 +64,8 @@ export interface EditorContextValue {
   zoomOut: () => void;
   zoomReset: () => void;
 
-  openDocument: (filePath: string) => Promise<EditorDocument>;
+  openDocument: (filePath: string, initialContent?: string) => Promise<EditorDocument>;
+  openFileDialog: () => Promise<EditorDocument | null>;
   closeDocument: (filePath: string, force?: boolean) => Promise<boolean>;
   closeAllDocuments: () => Promise<boolean>;
   closeOtherDocuments: (filePath: string) => Promise<boolean>;
@@ -409,7 +410,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const openDocument = useCallback(
-    async (filePath: string): Promise<EditorDocument> => {
+    async (filePath: string, initialContent?: string): Promise<EditorDocument> => {
       const norm = normalizePath(filePath);
 
       // Check if file is already open
@@ -420,7 +421,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Load document from disk
-      const doc = await EditorService.loadDocument(norm);
+      const doc = await EditorService.loadDocument(norm, initialContent);
 
       setDocuments((prev) => {
         if (prev.some((d) => d.id === norm)) return prev;
@@ -433,6 +434,43 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     },
     [setActiveDocumentId]
   );
+
+  const openFileDialog = useCallback(async (): Promise<EditorDocument | null> => {
+    try {
+      if (isTauriEnvironment()) {
+        const picked = await invokeCommand<string | null>("workspace_pick_file");
+        if (picked) {
+          return await openDocument(picked);
+        }
+      } else {
+        return new Promise<EditorDocument | null>((resolve) => {
+          const input = document.createElement("input");
+          input.type = "file";
+          input.onchange = async () => {
+            const file = input.files?.[0];
+            if (!file) {
+              resolve(null);
+              return;
+            }
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const nativePath = (file as any).path;
+            if (nativePath) {
+              const doc = await openDocument(nativePath);
+              resolve(doc);
+            } else {
+              const content = await file.text();
+              const doc = await openDocument(file.name, content);
+              resolve(doc);
+            }
+          };
+          input.click();
+        });
+      }
+    } catch (err) {
+      console.error("Failed to pick file:", err);
+    }
+    return null;
+  }, [openDocument]);
 
   const closeDocument = useCallback(
     async (filePath: string, force = false): Promise<boolean> => {
@@ -709,6 +747,10 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
         }
       }),
 
+      ideEvents.on("workbench:open-file", () => {
+        openFileDialog();
+      }),
+
       ideEvents.on("workspace:closed", () => {
         closeAllDocuments();
       }),
@@ -717,7 +759,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     return () => {
       unsubs.forEach((u) => u());
     };
-  }, [openDocument, closeDocument, closeAllDocuments, openSplitView]);
+  }, [openDocument, openFileDialog, closeDocument, closeAllDocuments, openSplitView]);
 
   // Auto-save on window blur
   useEffect(() => {
@@ -842,6 +884,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
       zoomReset,
 
       openDocument,
+      openFileDialog,
       closeDocument,
       closeAllDocuments,
       closeOtherDocuments,
@@ -892,6 +935,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
       zoomOut,
       zoomReset,
       openDocument,
+      openFileDialog,
       closeDocument,
       closeAllDocuments,
       closeOtherDocuments,

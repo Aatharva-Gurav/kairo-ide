@@ -11,6 +11,82 @@ interface SettingRowProps {
   definition: SettingDefinition;
 }
 
+function NumberSettingInput({
+  definition,
+  value,
+  onCommit,
+}: {
+  definition: SettingDefinition;
+  value: unknown;
+  onCommit: (val: number) => void;
+}) {
+  const currentNum = Number(value ?? definition.defaultValue);
+  const [localText, setLocalText] = React.useState<string>(String(currentNum));
+
+  // Sync with external value changes (e.g. reset to default or scope change)
+  React.useEffect(() => {
+    setLocalText(String(currentNum));
+  }, [currentNum]);
+
+  const commitValue = () => {
+    let parsed = Number(localText.trim());
+    if (isNaN(parsed) || localText.trim() === "") {
+      parsed = Number(definition.defaultValue);
+    }
+    if (definition.min !== undefined && parsed < definition.min) {
+      parsed = definition.min;
+    }
+    if (definition.max !== undefined && parsed > definition.max) {
+      parsed = definition.max;
+    }
+    setLocalText(String(parsed));
+    onCommit(parsed);
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    setLocalText(raw);
+    const parsed = Number(raw.trim());
+    // Live commit only if parsed is a complete valid number within bounds
+    if (
+      !isNaN(parsed) &&
+      raw.trim() !== "" &&
+      (definition.min === undefined || parsed >= definition.min) &&
+      (definition.max === undefined || parsed <= definition.max)
+    ) {
+      onCommit(parsed);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      commitValue();
+      (e.target as HTMLInputElement).blur();
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-2 max-w-[160px]">
+      <input
+        type="number"
+        min={definition.min}
+        max={definition.max}
+        step={definition.step || 1}
+        value={localText}
+        onChange={handleChange}
+        onBlur={commitValue}
+        onKeyDown={handleKeyDown}
+        className="h-7 w-full rounded-md border border-border/70 bg-background/80 px-2 py-0.5 text-xs text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-ring focus:border-border shadow-2xs transition-colors"
+      />
+      {definition.min !== undefined && definition.max !== undefined && (
+        <span className="text-[10px] text-muted-foreground font-mono shrink-0">
+          ({definition.min}–{definition.max})
+        </span>
+      )}
+    </div>
+  );
+}
+
 export function SettingRow({ definition }: SettingRowProps) {
   const {
     getSetting,
@@ -94,27 +170,11 @@ export function SettingRow({ definition }: SettingRowProps) {
         )}
 
         {definition.type === "number" && (
-          <div className="flex items-center gap-2 max-w-[160px]">
-            <input
-              type="number"
-              min={definition.min}
-              max={definition.max}
-              step={definition.step || 1}
-              value={Number(value ?? definition.defaultValue)}
-              onChange={(e) => {
-                const parsed = Number(e.target.value);
-                if (!isNaN(parsed)) {
-                  updateSetting(definition.key, parsed, activeScope);
-                }
-              }}
-              className="h-7 w-full rounded-md border border-border/70 bg-background/80 px-2 py-0.5 text-xs text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-ring focus:border-border shadow-2xs transition-colors"
-            />
-            {definition.min !== undefined && definition.max !== undefined && (
-              <span className="text-[10px] text-muted-foreground font-mono shrink-0">
-                ({definition.min}–{definition.max})
-              </span>
-            )}
-          </div>
+          <NumberSettingInput
+            definition={definition}
+            value={value}
+            onCommit={(val) => updateSetting(definition.key, val, activeScope)}
+          />
         )}
 
         {definition.type === "string" && (

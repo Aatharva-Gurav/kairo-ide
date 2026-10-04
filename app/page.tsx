@@ -30,33 +30,10 @@ import { AppTitleBar } from "@/components/app-titlebar";
 
 function PageContent() {
   const { activeWorkspace, openFolder } = useWorkspace();
-  const { documents, openDocument } = useEditor();
+  const { documents, openFileDialog } = useEditor();
 
   const handleOpenFile = async () => {
-    try {
-      if (isTauriEnvironment()) {
-        const picked = await invokeCommand<string | null>("workspace_pick_file");
-        if (picked) {
-          await openDocument(picked);
-        }
-      } else {
-        const input = document.createElement("input");
-        input.type = "file";
-        input.onchange = async () => {
-          const file = input.files?.[0];
-          if (file) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const nativePath = (file as any).path;
-            if (nativePath) {
-              await openDocument(nativePath);
-            }
-          }
-        };
-        input.click();
-      }
-    } catch (err) {
-      console.error("Failed to open file:", err);
-    }
+    await openFileDialog();
   };
 
   return (
@@ -77,11 +54,11 @@ function PageContent() {
             </EmptyHeader>
             <EmptyContent className="mt-2 flex items-center justify-center gap-2">
               <Button onClick={handleOpenFile} variant="outline" className="cursor-pointer shadow-2xs font-medium interactive-hover" size="default">
-                <HugeiconsIcon icon={File01Icon} className="size-3.5 mr-1.5 transition-transform duration-150 group-hover:scale-110" />
+                <HugeiconsIcon icon={File01Icon} size={16} className="size-4 mr-1.5 shrink-0 transition-transform duration-150 group-hover:scale-110" />
                 Open File
               </Button>
               <Button onClick={() => openFolder()} className="cursor-pointer shadow-2xs font-medium interactive-hover" size="default">
-                <HugeiconsIcon icon={Folder01Icon} className="size-3.5 mr-1.5 transition-transform duration-150 group-hover:scale-110" />
+                <HugeiconsIcon icon={Folder01Icon} size={16} className="size-4 mr-1.5 shrink-0 transition-transform duration-150 group-hover:scale-110" />
                 Open Folder
               </Button>
             </EmptyContent>

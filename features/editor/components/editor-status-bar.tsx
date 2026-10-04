@@ -9,33 +9,74 @@ import { CodeIcon } from "@hugeicons/core-free-icons";
 
 interface EditorStatusBarProps {
   document: EditorDocument | null;
-  cursorPosition?: { lineNumber: number; column: number };
+  cursorPosition?: {
+    lineNumber: number;
+    column: number;
+    selectionCount?: number;
+    totalLines?: number;
+  };
 }
 
 export function EditorStatusBar({ document, cursorPosition }: EditorStatusBarProps) {
-  const { settings, formatActiveDocument, editorZoomLevel, zoomIn, zoomOut, zoomReset } = useEditor();
+  const {
+    settings,
+    formatActiveDocument,
+    editorZoomLevel,
+    zoomIn,
+    zoomOut,
+    zoomReset,
+    setGoToLineVisible,
+  } = useEditor();
 
   if (!document) return null;
 
   const displayName = LanguageService.getDisplayName(document.language);
   const zoomPct = Math.round(100 + editorZoomLevel * 10);
+  const line = cursorPosition?.lineNumber ?? 1;
+  const col = cursorPosition?.column ?? 1;
+  const totalLines = cursorPosition?.totalLines;
+  const selectionCount = cursorPosition?.selectionCount;
+  const lineEnding = document.content.includes("\r\n") ? "CRLF" : "LF";
 
   return (
     <div className="relative z-20 shrink-0 flex h-6 w-full items-center justify-between border-t border-border/70 bg-sidebar/95 px-3 text-[11px] text-muted-foreground select-none font-mono shadow-xs">
-      {/* Left side: line and column */}
+      {/* Left side: line and column, indent, encoding, line endings */}
       <div className="flex items-center gap-2">
-        {cursorPosition && (
-          <span className="hover:text-foreground cursor-pointer transition-colors px-1 py-0.5 rounded hover:bg-sidebar-accent/60">
-            Ln {cursorPosition.lineNumber}, Col {cursorPosition.column}
+        <button
+          type="button"
+          onClick={() => setGoToLineVisible(true)}
+          title={`Line ${line}, Column ${col}${totalLines ? ` (Total: ${totalLines} lines)` : ""} — Click to Go to Line (Ctrl+G)`}
+          className="hover:text-foreground cursor-pointer transition-colors px-1 py-0.5 rounded hover:bg-sidebar-accent/60 flex items-center gap-1 font-mono text-[11px]"
+        >
+          <span>
+            Ln {line}, Col {col}
           </span>
-        )}
+          {selectionCount && selectionCount > 0 ? (
+            <span className="text-muted-foreground/80 font-normal">
+              ({selectionCount} selected)
+            </span>
+          ) : null}
+        </button>
         <span className="text-border/60">•</span>
-        <span className="hover:text-foreground cursor-pointer transition-colors px-1 py-0.5 rounded hover:bg-sidebar-accent/60">
+        <span
+          title="Indentation: Spaces"
+          className="hover:text-foreground cursor-pointer transition-colors px-1 py-0.5 rounded hover:bg-sidebar-accent/60"
+        >
           Spaces: {settings.tabSize}
         </span>
         <span className="text-border/60">•</span>
-        <span className="hover:text-foreground cursor-pointer transition-colors px-1 py-0.5 rounded hover:bg-sidebar-accent/60">
+        <span
+          title="File Encoding"
+          className="hover:text-foreground cursor-pointer transition-colors px-1 py-0.5 rounded hover:bg-sidebar-accent/60"
+        >
           UTF-8
+        </span>
+        <span className="text-border/60">•</span>
+        <span
+          title="End of Line Sequence"
+          className="hover:text-foreground cursor-pointer transition-colors px-1 py-0.5 rounded hover:bg-sidebar-accent/60 font-mono"
+        >
+          {lineEnding}
         </span>
       </div>
 
