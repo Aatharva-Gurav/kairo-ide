@@ -7,7 +7,6 @@ import {
 export const DEFAULT_SETTINGS: IDESettings = {
   appearance: {
     theme: "light",
-    uiDensity: "normal",
     fontSize: 13,
     sidebarVisible: true,
     sidebarPosition: "left",
@@ -109,20 +108,6 @@ export const SETTINGS_REGISTRY: SettingDefinition<any>[] = [
         "github-dark",
         "monokai",
       ].includes(val as string),
-  },
-  {
-    key: "appearance.uiDensity",
-    category: "appearance",
-    label: "UI Density",
-    description: "Controls the spacing and sizing of UI elements across panels.",
-    type: "select",
-    defaultValue: "normal",
-    scope: "user",
-    options: [
-      { label: "Normal", value: "normal" },
-      { label: "Compact", value: "compact" },
-    ],
-    validate: (val) => ["normal", "compact"].includes(val as string),
   },
   {
     key: "appearance.fontSize",

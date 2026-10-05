@@ -318,7 +318,8 @@ interface MonacoEditorViewProps {
 }
 
 export function MonacoEditorView({ document, onCursorChange }: MonacoEditorViewProps) {
-  const { settings, updateContent, monacoEditorRef } = useEditor();
+  const { settings, updateContent, monacoEditorRef, isSplit } = useEditor();
+  const minimapEnabled = !isSplit && (settings.minimap ?? true);
   const { settings: ideSettings } = useSettings();
   const suggestions = ideSettings.suggestions;
   const [currentTheme, setCurrentTheme] = useState("kairo-dark");
@@ -420,6 +421,15 @@ export function MonacoEditorView({ document, onCursorChange }: MonacoEditorViewP
     ];
     return () => unsubs.forEach((u) => u());
   }, []);
+
+  // Dynamically toggle minimap when split view state or settings change
+  useEffect(() => {
+    const ed = localEditorRef.current;
+    if (!ed) return;
+    ed.updateOptions({
+      minimap: { enabled: minimapEnabled },
+    });
+  }, [minimapEnabled]);
 
   // Intercept Ctrl/Cmd + Plus/Minus/Zero keyboard shortcuts inside editor container
   // to zoom the editor only, preventing whole-browser scaling
@@ -573,7 +583,7 @@ export function MonacoEditorView({ document, onCursorChange }: MonacoEditorViewP
           tabSize: settings.tabSize,
           insertSpaces: settings.insertSpaces,
           wordWrap: settings.wordWrap,
-          minimap: { enabled: settings.minimap },
+          minimap: { enabled: minimapEnabled },
           lineNumbers: settings.lineNumbers,
           cursorBlinking: settings.cursorBlinking,
           renderWhitespace: settings.renderWhitespace,

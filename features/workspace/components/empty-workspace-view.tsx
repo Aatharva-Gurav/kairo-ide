@@ -72,26 +72,6 @@ export function EmptyWorkspaceView() {
       )}
 
       <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground font-mono">
-            Recent Projects
-          </span>
-          {recentWorkspaces.length > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] text-muted-foreground font-mono">
-                {recentWorkspaces.length} saved
-              </span>
-              <button
-                onClick={clearRecent}
-                className="text-[10px] text-muted-foreground hover:text-destructive cursor-pointer transition-colors active:scale-95"
-                title="Clear all recent projects"
-              >
-                Clear
-              </button>
-            </div>
-          )}
-        </div>
-
         {recentWorkspaces.length > 3 && (
           <div className="relative my-0.5">
             <HugeiconsIcon

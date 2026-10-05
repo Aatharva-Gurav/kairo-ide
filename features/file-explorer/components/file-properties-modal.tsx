@@ -7,6 +7,7 @@ import { FileExplorerService } from "../service";
 import { ItemProperties } from "../types";
 import { formatBytes, copyToClipboard } from "@/lib/tauri-ipc";
 import { Button } from "@/components/ui/button";
+import { FileIcon } from "./file-icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   InformationCircleIcon,
@@ -94,8 +95,9 @@ export function FilePropertiesModal() {
         <div className="flex items-center justify-between pb-3 border-b border-border/60">
           <div className="flex items-center gap-2.5">
             <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20">
-              <HugeiconsIcon
-                icon={isDirectory ? Folder01Icon : File01Icon}
+              <FileIcon
+                name={propertiesCandidate.name}
+                isDirectory={isDirectory}
                 className="size-4"
               />
             </div>

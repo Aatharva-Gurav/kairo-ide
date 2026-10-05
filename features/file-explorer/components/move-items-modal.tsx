@@ -7,6 +7,7 @@ import { useWorkspace } from "../../workspace/store";
 import { FileSystemNode } from "../types";
 import { normalizePath, isDescendant, dirname } from "@/lib/tauri-ipc";
 import { Button } from "@/components/ui/button";
+import { FileIcon } from "./file-icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Folder01Icon,
@@ -101,11 +102,11 @@ function DirectoryPickerNode({
           <span className="size-4 shrink-0" />
         )}
 
-        <HugeiconsIcon
-          icon={isExpanded ? FolderOpenIcon : Folder01Icon}
-          className={`size-3.5 shrink-0 ${
-            isSelected ? "text-primary-foreground" : "text-amber-500/90"
-          }`}
+        <FileIcon
+          name={node.name}
+          isDirectory={true}
+          isExpanded={isExpanded}
+          className="size-3.5 shrink-0"
         />
 
         <span className="truncate flex-1 font-mono text-[11px] leading-tight">

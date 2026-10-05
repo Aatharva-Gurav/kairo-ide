@@ -27,7 +27,7 @@ import {
 import { cn } from "@/lib/utils";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { activeWorkspace } = useWorkspace();
+  const { activeWorkspace, recentWorkspaces, clearRecent } = useWorkspace();
   const { open, setOpen, toggleSidebar } = useSidebar();
   const { openSettings } = useSettings();
   const [activeTab, setActiveTab] = React.useState<"explorer" | "search">("explorer");
@@ -69,7 +69,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </button>
 
       <Sidebar side="right" variant="floating" className="top-[30px] h-[calc(100svh-30px)]" {...props}>
-        {activeWorkspace && (
+        {activeWorkspace ? (
           <SidebarHeader className="h-10 justify-center pr-2.5 pl-11 border-b border-sidebar-border/80">
             <div className="relative flex items-center p-0.5 rounded-lg bg-sidebar-accent/40 border border-sidebar-border/60 min-w-0 shadow-2xs">
               <button
@@ -103,11 +103,34 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               </button>
             </div>
           </SidebarHeader>
+        ) : (
+          <SidebarHeader className="h-10 justify-between pr-3 pl-11 border-b border-sidebar-border/80 flex flex-row items-center">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground font-mono truncate">
+                Recent Projects
+              </span>
+            </div>
+            {recentWorkspaces.length > 0 && (
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-[10px] text-muted-foreground font-mono">
+                  {recentWorkspaces.length}
+                </span>
+                <button
+                  type="button"
+                  onClick={clearRecent}
+                  className="text-[10px] text-muted-foreground hover:text-destructive cursor-pointer transition-colors active:scale-95"
+                  title="Clear all recent projects"
+                >
+                  Clear
+                </button>
+              </div>
+            )}
+          </SidebarHeader>
         )}
 
         <SidebarContent className="relative flex-1 min-h-0 overflow-hidden">
           {!activeWorkspace ? (
-            <div className="h-full w-full pt-12 animate-in fade-in-50 duration-150 delay-subtle overflow-y-auto">
+            <div className="h-full w-full animate-in fade-in-50 duration-150 delay-subtle overflow-y-auto">
               <EmptyWorkspaceView />
             </div>
           ) : activeTab === "explorer" ? (

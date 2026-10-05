@@ -21,10 +21,8 @@ export function EditorTabs() {
     splitDirection,
     openSplitRight,
     openSplitDown,
-    openThreeColumnSplit,
     toggleSplitOrientation,
     swapSplitDocuments,
-    setSplitRatioPreset,
     closeSplitView,
   } = useEditor();
 
@@ -61,7 +59,7 @@ export function EditorTabs() {
   }, [isSplitMenuOpen]);
 
   return (
-    <div className="relative z-20 shrink-0 flex h-[35px] w-full items-center justify-between border-b border-border/80 bg-sidebar/50 dark:bg-[#18181b]/80 select-none backdrop-blur-xs">
+    <div className="relative z-30 shrink-0 flex h-[35px] w-full items-center justify-between border-b border-border/80 bg-sidebar/50 dark:bg-[#18181b]/80 select-none backdrop-blur-xs">
       {/* Scrollable Tab List */}
       <div
         ref={scrollContainerRef}
@@ -112,7 +110,7 @@ export function EditorTabs() {
 
           {/* Horizontal Icon-Only Dropdown Toolbar */}
           {isSplitMenuOpen && (
-            <div className="absolute right-0 top-8 z-50 flex flex-row items-center gap-0.5 rounded-lg border border-border/80 bg-popover/98 backdrop-blur-md p-1 shadow-2xl text-popover-foreground animate-in fade-in-0 zoom-in-95 duration-120 ease-out origin-top-right">
+            <div className="absolute right-0 top-full mt-1 z-50 flex flex-row items-center gap-0.5 rounded-lg border border-border/80 bg-popover/98 backdrop-blur-md p-1 shadow-2xl text-popover-foreground animate-in fade-in-0 zoom-in-95 duration-120 ease-out origin-top-right">
               {/* Split Right (2 Columns) */}
               <button
                 type="button"
@@ -148,25 +146,6 @@ export function EditorTabs() {
               >
                 <svg viewBox="0 0 16 16" fill="currentColor" className="size-3.5">
                   <path d="M14 2H2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1zM2 7.5h12V3H2v4.5zm0 5.5h12V8.5H2V13z" />
-                </svg>
-              </button>
-
-              {/* Split 3 Columns */}
-              <button
-                type="button"
-                onClick={() => {
-                  openThreeColumnSplit();
-                  setIsSplitMenuOpen(false);
-                }}
-                title="Split into 3 Columns"
-                aria-label="Split into 3 Columns"
-                className={cn(
-                  "flex items-center justify-center size-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent cursor-pointer transition-colors active:scale-95",
-                  isSplit && splitLayoutMode === "split-three" && "bg-accent text-accent-foreground font-semibold"
-                )}
-              >
-                <svg viewBox="0 0 16 16" fill="currentColor" className="size-3.5">
-                  <path d="M14 2H2a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1zM2 13V3h3.5v10H2zm4.5 0V3h3v10h-3zm4 0V3H14v10h-3.5z" />
                 </svg>
               </button>
 
@@ -214,28 +193,6 @@ export function EditorTabs() {
                 <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-3.5">
                   <path d="M3 5h10M10 2l3 3-3 3M13 11H3M6 8L3 11l3 3" />
                 </svg>
-              </button>
-
-              <div className="w-px h-4.5 bg-border/70 mx-0.5 shrink-0" />
-
-              {/* Equalize Panes */}
-              <button
-                type="button"
-                disabled={!isSplit}
-                onClick={() => {
-                  setSplitRatioPreset("equal");
-                  setIsSplitMenuOpen(false);
-                }}
-                title="Equalize Panes (50% / 50%)"
-                aria-label="Equalize Panes"
-                className={cn(
-                  "flex items-center justify-center size-7 rounded-md transition-colors font-mono text-[11px] font-bold active:scale-95",
-                  !isSplit
-                    ? "opacity-30 cursor-not-allowed text-muted-foreground"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent cursor-pointer"
-                )}
-              >
-                ½
               </button>
 
               <div className="w-px h-4.5 bg-border/70 mx-0.5 shrink-0" />

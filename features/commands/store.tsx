@@ -407,18 +407,6 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
       }),
 
       CommandRegistry.register({
-        id: "workbench.action.splitEditorThree",
-        title: "View: Split Editor into 3 Columns",
-        description: "Split editor into three columns",
-        category: "view",
-        keywords: ["split", "three", "columns", "3", "view"],
-        enabled: () => Boolean(editorRef.current.activeDocument),
-        execute: () => {
-          editorRef.current.openThreeColumnSplit();
-        },
-      }),
-
-      CommandRegistry.register({
         id: "workbench.action.toggleEditorLayout",
         title: "View: Toggle Split Layout Orientation",
         description: "Toggle between vertical (columns) and horizontal (rows) split",

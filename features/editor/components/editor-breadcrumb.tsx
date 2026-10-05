@@ -44,7 +44,7 @@ export function EditorBreadcrumb({ document }: EditorBreadcrumbProps) {
   };
 
   return (
-    <div className="relative z-20 shrink-0 flex h-6 w-full items-center gap-1 border-b border-border/60 bg-background/80 px-2.5 text-[11px] text-muted-foreground select-none overflow-x-auto no-scrollbar font-sans backdrop-blur-xs">
+    <div className="relative z-10 shrink-0 flex h-6 w-full items-center gap-1 border-b border-border/60 bg-background/80 px-2.5 text-[11px] text-muted-foreground select-none overflow-x-auto no-scrollbar font-sans backdrop-blur-xs">
       {activeWorkspace && (
         <>
           <div

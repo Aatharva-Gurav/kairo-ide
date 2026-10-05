@@ -15,7 +15,7 @@ import { ReloadIcon } from "@hugeicons/core-free-icons";
 const CATEGORY_TITLES: Record<SettingsCategory, { title: string; description: string }> = {
   appearance: {
     title: "Appearance",
-    description: "Customize workbench themes, density, fonts, and layout visibility.",
+    description: "Customize workbench themes, fonts, and layout visibility.",
   },
   editor: {
     title: "Text Editor",

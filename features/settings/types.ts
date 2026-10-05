@@ -14,7 +14,6 @@ export type ThemePreference =
   | "tokyo-night"
   | "github-dark"
   | "monokai";
-export type UIDensity = "normal" | "compact";
 export type WordWrapPreference = "on" | "off" | "wordWrapColumn" | "bounded";
 export type LineNumbersPreference = "on" | "off" | "relative";
 export type CursorStylePreference = "line" | "block" | "underline" | "line-thin" | "block-outline" | "underline-thin";
@@ -25,7 +24,6 @@ export type ExplorerSortMode = "name" | "type" | "modified" | "size";
 
 export interface AppearanceSettings {
   theme: ThemePreference;
-  uiDensity: UIDensity;
   fontSize: number;
   sidebarVisible: boolean;
   sidebarPosition: "left" | "right";
