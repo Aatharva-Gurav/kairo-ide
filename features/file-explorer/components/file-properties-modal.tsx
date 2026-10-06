@@ -8,15 +8,7 @@ import { ItemProperties } from "../types";
 import { formatBytes, copyToClipboard } from "@/lib/tauri-ipc";
 import { Button } from "@/components/ui/button";
 import { FileIcon } from "./file-icon";
-import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  InformationCircleIcon,
-  Copy02Icon,
-  Cancel01Icon,
-  File01Icon,
-  Folder01Icon,
-  CheckmarkCircle02Icon,
-} from "@hugeicons/core-free-icons";
+import { X, CheckCircle2, Copy } from "lucide-react";
 
 export function FilePropertiesModal() {
   const { propertiesCandidate, closeProperties } = useFileExplorer();
@@ -114,7 +106,7 @@ export function FilePropertiesModal() {
             onClick={closeProperties}
             className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer transition-colors"
           >
-            <HugeiconsIcon icon={Cancel01Icon} className="size-4" />
+            <X className="size-4" />
           </button>
         </div>
 
@@ -135,10 +127,11 @@ export function FilePropertiesModal() {
                   onClick={() => handleCopy(properties.path, "path")}
                   className="flex items-center gap-1 text-[10px] text-primary hover:underline cursor-pointer"
                 >
-                  <HugeiconsIcon
-                    icon={copiedField === "path" ? CheckmarkCircle02Icon : Copy02Icon}
-                    className="size-3"
-                  />
+                  {copiedField === "path" ? (
+                    <CheckCircle2 className="size-3" />
+                  ) : (
+                    <Copy className="size-3" />
+                  )}
                   <span>{copiedField === "path" ? "Copied" : "Copy Path"}</span>
                 </button>
               </div>

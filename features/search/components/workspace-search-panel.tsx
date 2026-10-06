@@ -6,14 +6,13 @@ import { useWorkspace } from "@/features/workspace/store";
 import { SearchResultItem } from "./search-result-item";
 import { ReplaceConfirmModal } from "./replace-confirm-modal";
 import { FileIcon } from "@/features/icon-theme/components/file-icon";
-import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  ArrowDown01Icon,
-  ArrowRight01Icon,
-  FilterIcon,
-  RefreshIcon,
-  Delete02Icon,
-} from "@hugeicons/core-free-icons";
+  ChevronDown,
+  ChevronRight,
+  Filter,
+  RefreshCw,
+  Trash2,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function WorkspaceSearchPanel() {
@@ -75,8 +74,7 @@ export function WorkspaceSearchPanel() {
             title="Refresh Search"
             className="p-1 rounded hover:bg-sidebar-accent hover:text-sidebar-foreground text-muted-foreground cursor-pointer transition-colors"
           >
-            <HugeiconsIcon
-              icon={RefreshIcon}
+            <RefreshCw
               className={cn("size-3.5", isSearching && "animate-spin text-sidebar-primary")}
             />
           </button>
@@ -86,7 +84,7 @@ export function WorkspaceSearchPanel() {
             title="Clear Search"
             className="p-1 rounded hover:bg-sidebar-accent hover:text-sidebar-foreground text-muted-foreground cursor-pointer transition-colors"
           >
-            <HugeiconsIcon icon={Delete02Icon} className="size-3.5" />
+            <Trash2 className="size-3.5" />
           </button>
           <button
             type="button"
@@ -117,10 +115,11 @@ export function WorkspaceSearchPanel() {
             title="Toggle Replace"
             className="p-1 rounded hover:bg-sidebar-accent hover:text-sidebar-foreground text-muted-foreground cursor-pointer shrink-0 transition-colors"
           >
-            <HugeiconsIcon
-              icon={isReplaceOpen ? ArrowDown01Icon : ArrowRight01Icon}
-              className="size-3 transition-transform"
-            />
+            {isReplaceOpen ? (
+              <ChevronDown className="size-3 transition-transform" />
+            ) : (
+              <ChevronRight className="size-3 transition-transform" />
+            )}
           </button>
 
           <div className="relative flex-1 flex items-center min-w-0">
@@ -207,7 +206,7 @@ export function WorkspaceSearchPanel() {
             onClick={() => setShowFilters((prev) => !prev)}
             className="flex items-center gap-1 text-muted-foreground hover:text-sidebar-foreground cursor-pointer shrink-0 transition-colors active:scale-95"
           >
-            <HugeiconsIcon icon={FilterIcon} className="size-3" />
+            <Filter className="size-3" />
             <span>{showFilters ? "Hide include/exclude" : "Filter files"}</span>
           </button>
           {query.trim() && (
@@ -250,7 +249,7 @@ export function WorkspaceSearchPanel() {
           <div className="p-3 text-destructive text-xs">{error}</div>
         ) : isSearching ? (
           <div className="flex items-center justify-center p-6 text-xs text-muted-foreground gap-2">
-            <HugeiconsIcon icon={RefreshIcon} className="size-4 animate-spin text-sidebar-primary" />
+            <RefreshCw className="size-4 animate-spin text-sidebar-primary" />
             <span>Searching workspace...</span>
           </div>
         ) : results.length > 0 ? (
@@ -265,8 +264,7 @@ export function WorkspaceSearchPanel() {
                     className="flex items-center justify-between px-2 py-1 rounded hover:bg-sidebar-accent cursor-pointer group transition-all duration-120 active:scale-[0.99]"
                   >
                     <div className="flex items-center gap-1.5 overflow-hidden">
-                      <HugeiconsIcon
-                        icon={ArrowRight01Icon}
+                      <ChevronRight
                         className={cn(
                           "size-3 text-muted-foreground shrink-0 transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)]",
                           isExpanded && "rotate-90"

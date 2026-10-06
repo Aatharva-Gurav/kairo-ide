@@ -4,8 +4,7 @@ import React from "react";
 import { EditorDocument } from "../types";
 import { useEditor } from "../store";
 import { LanguageService } from "../services/language.service";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { CodeIcon } from "@hugeicons/core-free-icons";
+import { Code } from "lucide-react";
 
 interface EditorStatusBarProps {
   document: EditorDocument | null;
@@ -116,7 +115,7 @@ export function EditorStatusBar({ document, cursorPosition }: EditorStatusBarPro
           title="Format Document (Shift+Alt+F)"
           className="group flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer transition-colors duration-120 active:scale-95 px-1.5 py-0.5 rounded hover:bg-sidebar-accent/80 font-sans"
         >
-          <HugeiconsIcon icon={CodeIcon} className="size-3 transition-transform duration-140 group-hover:scale-105" />
+          <Code className="size-3 transition-transform duration-140 group-hover:scale-105" />
           <span>Format</span>
         </button>
 

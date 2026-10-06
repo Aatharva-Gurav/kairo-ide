@@ -5,25 +5,23 @@ import { createPortal } from "react-dom";
 import { ContextMenuState } from "../types";
 import { useFileExplorer } from "../store";
 import { useWorkspace } from "../../workspace/store";
-import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  FileAddIcon,
-  FolderAddIcon,
-  Edit02Icon,
-  Delete02Icon,
-  Copy01Icon,
-  Copy02Icon,
-  ScissorsIcon,
-  ClipboardPasteIcon,
-  RefreshIcon,
-  Cancel01Icon,
-  File01Icon,
-  Folder01Icon,
-  ArrowRight01Icon,
-  CollapseIcon,
-  CursorMove01Icon,
-  InformationCircleIcon,
-} from "@hugeicons/core-free-icons";
+  FilePlus,
+  FolderPlus,
+  Pencil,
+  Trash2,
+  Copy,
+  Scissors,
+  ClipboardPaste,
+  RefreshCw,
+  X,
+  File,
+  Folder,
+  ArrowRight,
+  ChevronsDownUp,
+  Move,
+  Info,
+} from "lucide-react";
 
 interface ContextMenuProps {
   state: ContextMenuState;
@@ -128,7 +126,7 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
             className="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
             <div className="flex items-center gap-2">
-              <HugeiconsIcon icon={ScissorsIcon} className="size-3.5 text-muted-foreground" />
+              <Scissors className="size-3.5 text-muted-foreground" />
               <span>Cut</span>
             </div>
             <kbd className="kbd-shortcut font-mono text-[9px] text-muted-foreground/80">Ctrl+X</kbd>
@@ -138,7 +136,7 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
             className="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
             <div className="flex items-center gap-2">
-              <HugeiconsIcon icon={Copy01Icon} className="size-3.5 text-muted-foreground" />
+              <Copy className="size-3.5 text-muted-foreground" />
               <span>Copy</span>
             </div>
             <kbd className="kbd-shortcut font-mono text-[9px] text-muted-foreground/80">Ctrl+C</kbd>
@@ -148,7 +146,7 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
             className="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
             <div className="flex items-center gap-2">
-              <HugeiconsIcon icon={Copy02Icon} className="size-3.5 text-muted-foreground" />
+              <Copy className="size-3.5 text-muted-foreground" />
               <span>Duplicate</span>
             </div>
             <kbd className="kbd-shortcut font-mono text-[9px] text-muted-foreground/80">Ctrl+D</kbd>
@@ -157,7 +155,7 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
             onClick={() => handleAction(() => startMove())}
             className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={CursorMove01Icon} className="size-3.5 text-muted-foreground" />
+            <Move className="size-3.5 text-muted-foreground" />
             <span>Move to...</span>
           </button>
           <button
@@ -165,7 +163,7 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
             className="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
             <div className="flex items-center gap-2">
-              <HugeiconsIcon icon={Edit02Icon} className="size-3.5 text-muted-foreground" />
+              <Pencil className="size-3.5 text-muted-foreground" />
               <span>Batch Rename...</span>
             </div>
             <kbd className="kbd-shortcut font-mono text-[9px] text-muted-foreground/80">F2</kbd>
@@ -175,21 +173,21 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
             onClick={() => handleAction(() => copySelectedPaths("absolute"))}
             className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={Copy02Icon} className="size-3.5 text-muted-foreground" />
+            <Copy className="size-3.5 text-muted-foreground" />
             <span>Copy Full Paths</span>
           </button>
           <button
             onClick={() => handleAction(() => copySelectedPaths("relative"))}
             className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={Copy02Icon} className="size-3.5 text-muted-foreground" />
+            <Copy className="size-3.5 text-muted-foreground" />
             <span>Copy Relative Paths</span>
           </button>
           <button
             onClick={() => handleAction(() => copySelectedPaths("name"))}
             className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={Copy02Icon} className="size-3.5 text-muted-foreground" />
+            <Copy className="size-3.5 text-muted-foreground" />
             <span>Copy Names</span>
           </button>
           <div className="my-1 h-px bg-border/70 mx-1" />
@@ -198,7 +196,7 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
             className="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left text-destructive hover:bg-destructive/15 cursor-pointer transition-colors duration-100"
           >
             <div className="flex items-center gap-2">
-              <HugeiconsIcon icon={Delete02Icon} className="size-3.5" />
+              <Trash2 className="size-3.5" />
               <span>Delete</span>
             </div>
             <kbd className="kbd-shortcut font-mono text-[9px] text-destructive/80">Del</kbd>
@@ -208,7 +206,7 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
             onClick={() => handleAction(() => clearSelection())}
             className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-muted-foreground hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" />
+            <X className="size-3.5" />
             <span>Deselect All</span>
           </button>
         </>
@@ -221,21 +219,21 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
             onClick={() => handleAction(() => openFile(node))}
             className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={File01Icon} className="size-3.5 text-muted-foreground" />
+            <File className="size-3.5 text-muted-foreground" />
             <span>Open</span>
           </button>
           <button
             onClick={() => handleAction(() => openToSide(node))}
             className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={ArrowRight01Icon} className="size-3.5 text-muted-foreground" />
+            <ArrowRight className="size-3.5 text-muted-foreground" />
             <span>Open to Side</span>
           </button>
           <button
             onClick={() => handleAction(() => revealInFileManager(node))}
             className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={Folder01Icon} className="size-3.5 text-muted-foreground" />
+            <Folder className="size-3.5 text-muted-foreground" />
             <span>Reveal in File Manager</span>
           </button>
           <div className="my-1 h-px bg-border/70 mx-1" />
@@ -244,7 +242,7 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
             className="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
             <div className="flex items-center gap-2">
-              <HugeiconsIcon icon={ScissorsIcon} className="size-3.5 text-muted-foreground" />
+              <Scissors className="size-3.5 text-muted-foreground" />
               <span>Cut</span>
             </div>
             <kbd className="kbd-shortcut font-mono text-[9px] text-muted-foreground/80">Ctrl+X</kbd>
@@ -254,7 +252,7 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
             className="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
             <div className="flex items-center gap-2">
-              <HugeiconsIcon icon={Copy01Icon} className="size-3.5 text-muted-foreground" />
+              <Copy className="size-3.5 text-muted-foreground" />
               <span>Copy</span>
             </div>
             <kbd className="kbd-shortcut font-mono text-[9px] text-muted-foreground/80">Ctrl+C</kbd>
@@ -264,7 +262,7 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
             className="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
             <div className="flex items-center gap-2">
-              <HugeiconsIcon icon={Copy02Icon} className="size-3.5 text-muted-foreground" />
+              <Copy className="size-3.5 text-muted-foreground" />
               <span>Duplicate</span>
             </div>
             <kbd className="kbd-shortcut font-mono text-[9px] text-muted-foreground/80">Ctrl+D</kbd>
@@ -273,7 +271,7 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
             onClick={() => handleAction(() => startMove([node]))}
             className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={CursorMove01Icon} className="size-3.5 text-muted-foreground" />
+            <Move className="size-3.5 text-muted-foreground" />
             <span>Move to...</span>
           </button>
           <div className="my-1 h-px bg-border/70 mx-1" />
@@ -281,21 +279,21 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
             onClick={() => handleAction(() => copyAbsolutePath(node))}
             className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={Copy02Icon} className="size-3.5 text-muted-foreground" />
+            <Copy className="size-3.5 text-muted-foreground" />
             <span>Copy Path</span>
           </button>
           <button
             onClick={() => handleAction(() => copyRelativePath(node))}
             className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={Copy02Icon} className="size-3.5 text-muted-foreground" />
+            <Copy className="size-3.5 text-muted-foreground" />
             <span>Copy Relative Path</span>
           </button>
           <button
             onClick={() => handleAction(() => copySelectedPaths("name", [node]))}
             className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={Copy02Icon} className="size-3.5 text-muted-foreground" />
+            <Copy className="size-3.5 text-muted-foreground" />
             <span>Copy Filename</span>
           </button>
           <div className="my-1 h-px bg-border/70 mx-1" />
@@ -304,7 +302,7 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
             className="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
             <div className="flex items-center gap-2">
-              <HugeiconsIcon icon={Edit02Icon} className="size-3.5 text-muted-foreground" />
+              <Pencil className="size-3.5 text-muted-foreground" />
               <span>Rename</span>
             </div>
             <kbd className="kbd-shortcut font-mono text-[9px] text-muted-foreground/80">F2</kbd>
@@ -314,7 +312,7 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
             className="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left text-destructive hover:bg-destructive/15 cursor-pointer transition-colors duration-100"
           >
             <div className="flex items-center gap-2">
-              <HugeiconsIcon icon={Delete02Icon} className="size-3.5" />
+              <Trash2 className="size-3.5" />
               <span>Delete</span>
             </div>
             <kbd className="kbd-shortcut font-mono text-[9px] text-destructive/80">Del</kbd>
@@ -324,7 +322,7 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
             onClick={() => handleAction(() => openProperties(node))}
             className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={InformationCircleIcon} className="size-3.5 text-muted-foreground" />
+            <Info className="size-3.5 text-muted-foreground" />
             <span>Properties</span>
           </button>
         </>
@@ -337,14 +335,14 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
             onClick={() => handleAction(() => startCreateFile(node.path))}
             className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={FileAddIcon} className="size-3.5 text-muted-foreground" />
+            <FilePlus className="size-3.5 text-muted-foreground" />
             <span>New File...</span>
           </button>
           <button
             onClick={() => handleAction(() => startCreateFolder(node.path))}
             className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={FolderAddIcon} className="size-3.5 text-muted-foreground" />
+            <FolderPlus className="size-3.5 text-muted-foreground" />
             <span>New Folder...</span>
           </button>
           <div className="my-1 h-px bg-border/70 mx-1" />
@@ -353,7 +351,7 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
             className="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
             <div className="flex items-center gap-2">
-              <HugeiconsIcon icon={ScissorsIcon} className="size-3.5 text-muted-foreground" />
+              <Scissors className="size-3.5 text-muted-foreground" />
               <span>Cut</span>
             </div>
             <kbd className="kbd-shortcut font-mono text-[9px] text-muted-foreground/80">Ctrl+X</kbd>
@@ -363,7 +361,7 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
             className="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
             <div className="flex items-center gap-2">
-              <HugeiconsIcon icon={Copy01Icon} className="size-3.5 text-muted-foreground" />
+              <Copy className="size-3.5 text-muted-foreground" />
               <span>Copy</span>
             </div>
             <kbd className="kbd-shortcut font-mono text-[9px] text-muted-foreground/80">Ctrl+C</kbd>
@@ -378,7 +376,7 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
             }`}
           >
             <div className="flex items-center gap-2">
-              <HugeiconsIcon icon={ClipboardPasteIcon} className="size-3.5 text-muted-foreground" />
+              <ClipboardPaste className="size-3.5 text-muted-foreground" />
               <span>Paste</span>
             </div>
             <kbd className="kbd-shortcut font-mono text-[9px] text-muted-foreground/80">Ctrl+V</kbd>
@@ -388,7 +386,7 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
             className="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
             <div className="flex items-center gap-2">
-              <HugeiconsIcon icon={Copy02Icon} className="size-3.5 text-muted-foreground" />
+              <Copy className="size-3.5 text-muted-foreground" />
               <span>Duplicate</span>
             </div>
             <kbd className="kbd-shortcut font-mono text-[9px] text-muted-foreground/80">Ctrl+D</kbd>
@@ -397,7 +395,7 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
             onClick={() => handleAction(() => startMove([node]))}
             className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={CursorMove01Icon} className="size-3.5 text-muted-foreground" />
+            <Move className="size-3.5 text-muted-foreground" />
             <span>Move to...</span>
           </button>
           <div className="my-1 h-px bg-border/70 mx-1" />
@@ -405,7 +403,7 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
             onClick={() => handleAction(() => revealInFileManager(node))}
             className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={Folder01Icon} className="size-3.5 text-muted-foreground" />
+            <Folder className="size-3.5 text-muted-foreground" />
             <span>Reveal in File Manager</span>
           </button>
           <div className="my-1 h-px bg-border/70 mx-1" />
@@ -413,21 +411,21 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
             onClick={() => handleAction(() => copyAbsolutePath(node))}
             className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={Copy02Icon} className="size-3.5 text-muted-foreground" />
+            <Copy className="size-3.5 text-muted-foreground" />
             <span>Copy Path</span>
           </button>
           <button
             onClick={() => handleAction(() => copyRelativePath(node))}
             className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={Copy02Icon} className="size-3.5 text-muted-foreground" />
+            <Copy className="size-3.5 text-muted-foreground" />
             <span>Copy Relative Path</span>
           </button>
           <button
             onClick={() => handleAction(() => copySelectedPaths("name", [node]))}
             className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={Copy02Icon} className="size-3.5 text-muted-foreground" />
+            <Copy className="size-3.5 text-muted-foreground" />
             <span>Copy Folder Name</span>
           </button>
           <div className="my-1 h-px bg-border/70 mx-1" />
@@ -436,7 +434,7 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
             className="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
             <div className="flex items-center gap-2">
-              <HugeiconsIcon icon={Edit02Icon} className="size-3.5 text-muted-foreground" />
+              <Pencil className="size-3.5 text-muted-foreground" />
               <span>Rename</span>
             </div>
             <kbd className="kbd-shortcut font-mono text-[9px] text-muted-foreground/80">F2</kbd>
@@ -446,7 +444,7 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
             className="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left text-destructive hover:bg-destructive/15 cursor-pointer transition-colors duration-100"
           >
             <div className="flex items-center gap-2">
-              <HugeiconsIcon icon={Delete02Icon} className="size-3.5" />
+              <Trash2 className="size-3.5" />
               <span>Delete</span>
             </div>
             <kbd className="kbd-shortcut font-mono text-[9px] text-destructive/80">Del</kbd>
@@ -456,7 +454,7 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
             onClick={() => handleAction(() => openProperties(node))}
             className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={InformationCircleIcon} className="size-3.5 text-muted-foreground" />
+            <Info className="size-3.5 text-muted-foreground" />
             <span>Properties</span>
           </button>
         </>
@@ -469,14 +467,14 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
             onClick={() => handleAction(() => startCreateFile(activeWorkspace.rootPath))}
             className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={FileAddIcon} className="size-3.5 text-muted-foreground" />
+            <FilePlus className="size-3.5 text-muted-foreground" />
             <span>New File...</span>
           </button>
           <button
             onClick={() => handleAction(() => startCreateFolder(activeWorkspace.rootPath))}
             className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={FolderAddIcon} className="size-3.5 text-muted-foreground" />
+            <FolderPlus className="size-3.5 text-muted-foreground" />
             <span>New Folder...</span>
           </button>
           <button
@@ -489,7 +487,7 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
             }`}
           >
             <div className="flex items-center gap-2">
-              <HugeiconsIcon icon={ClipboardPasteIcon} className="size-3.5 text-muted-foreground" />
+              <ClipboardPaste className="size-3.5 text-muted-foreground" />
               <span>Paste</span>
             </div>
             <kbd className="kbd-shortcut font-mono text-[9px] text-muted-foreground/80">Ctrl+V</kbd>
@@ -499,14 +497,14 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
             onClick={() => handleAction(() => collapseAll())}
             className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={CollapseIcon} className="size-3.5 text-muted-foreground" />
+            <ChevronsDownUp className="size-3.5 text-muted-foreground" />
             <span>Collapse All Folders</span>
           </button>
           <button
             onClick={() => handleAction(() => refresh())}
             className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={RefreshIcon} className="size-3.5 text-muted-foreground" />
+            <RefreshCw className="size-3.5 text-muted-foreground" />
             <span>Refresh</span>
           </button>
           <div className="my-1 h-px bg-border/70 mx-1" />
@@ -514,7 +512,7 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
             onClick={() => handleAction(() => closeWorkspace())}
             className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-destructive hover:bg-destructive/15 cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" />
+            <X className="size-3.5" />
             <span>Close Workspace</span>
           </button>
         </>

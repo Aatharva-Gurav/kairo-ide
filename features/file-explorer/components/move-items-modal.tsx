@@ -8,16 +8,14 @@ import { FileSystemNode } from "../types";
 import { normalizePath, isDescendant, dirname } from "@/lib/tauri-ipc";
 import { Button } from "@/components/ui/button";
 import { FileIcon } from "./file-icon";
-import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  Folder01Icon,
-  FolderOpenIcon,
-  ArrowRight01Icon,
-  Cancel01Icon,
-  Search01Icon,
-  CursorMove01Icon,
-  AlertCircleIcon,
-} from "@hugeicons/core-free-icons";
+  FolderOpen,
+  ChevronRight,
+  X,
+  Search,
+  Move,
+  AlertCircle,
+} from "lucide-react";
 
 interface DirectoryPickerNodeProps {
   node: FileSystemNode;
@@ -91,8 +89,7 @@ function DirectoryPickerNode({
             }}
             className="flex size-4 items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer rounded"
           >
-            <HugeiconsIcon
-              icon={ArrowRight01Icon}
+            <ChevronRight
               className={`size-2.5 transition-transform duration-140 ${
                 isExpanded ? "rotate-90" : ""
               } ${isSelected ? "text-primary-foreground" : ""}`}
@@ -259,7 +256,7 @@ export function MoveItemsModal() {
         <div className="flex items-center justify-between pb-3 border-b border-border/60 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20">
-              <HugeiconsIcon icon={CursorMove01Icon} className="size-4" />
+              <Move className="size-4" />
             </div>
             <div>
               <h3 id="move-modal-title" className="text-sm font-semibold tracking-tight text-foreground">
@@ -274,7 +271,7 @@ export function MoveItemsModal() {
             onClick={closeMove}
             className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer transition-colors"
           >
-            <HugeiconsIcon icon={Cancel01Icon} className="size-4" />
+            <X className="size-4" />
           </button>
         </div>
 
@@ -299,10 +296,7 @@ export function MoveItemsModal() {
 
         {/* Search filter input */}
         <div className="relative mb-2 shrink-0">
-          <HugeiconsIcon
-            icon={Search01Icon}
-            className="size-3.5 text-muted-foreground absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
-          />
+          <Search className="size-3.5 text-muted-foreground absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
             value={filterQuery}
@@ -315,7 +309,7 @@ export function MoveItemsModal() {
         {/* Error message */}
         {errorMsg && (
           <div className="mb-2 p-2 rounded bg-destructive/10 text-destructive text-xs flex items-center gap-1.5 shrink-0">
-            <HugeiconsIcon icon={AlertCircleIcon} className="size-4 shrink-0" />
+            <AlertCircle className="size-4 shrink-0" />
             <span>{errorMsg}</span>
           </div>
         )}
@@ -331,8 +325,7 @@ export function MoveItemsModal() {
                 : "hover:bg-accent/80 text-foreground cursor-pointer"
             }`}
           >
-            <HugeiconsIcon
-              icon={FolderOpenIcon}
+            <FolderOpen
               className={`size-3.5 shrink-0 ${
                 isRootSelected ? "text-primary-foreground" : "text-amber-500/90"
               }`}

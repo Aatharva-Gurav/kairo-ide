@@ -7,16 +7,15 @@ import { useSettings } from "@/features/settings/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { KairoBrandIcon } from "@/components/kairo-brand-icon";
-import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  ArrowRight01Icon,
-  ArrowLeft01Icon,
-  CheckmarkCircle02Icon,
-  PaintBoardIcon,
-  FileCodeIcon,
-  UserIcon,
-  SparklesIcon,
-} from "@hugeicons/core-free-icons";
+  ArrowRight,
+  ArrowLeft,
+  CheckCircle2,
+  Palette,
+  FileCode,
+  User,
+  Sparkles,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ThemePreference } from "@/features/settings/types";
 
@@ -163,7 +162,7 @@ export function OnboardingWizard() {
         {step === 1 && (
           <div className="space-y-5 animate-in fade-in duration-150">
             <div className="flex items-center gap-2 pb-2 border-b border-border/60">
-              <HugeiconsIcon icon={UserIcon} className="size-4 text-primary" />
+              <User className="size-4 text-primary" />
               <h2 className="text-sm font-semibold tracking-tight">Your Profile</h2>
             </div>
 
@@ -201,7 +200,7 @@ export function OnboardingWizard() {
                 className="cursor-pointer gap-1.5 font-medium"
               >
                 <span>Continue</span>
-                <HugeiconsIcon icon={ArrowRight01Icon} className="size-3.5" />
+                <ArrowRight className="size-3.5" />
               </Button>
             </div>
           </div>
@@ -211,7 +210,7 @@ export function OnboardingWizard() {
         {step === 2 && (
           <div className="space-y-5 animate-in fade-in duration-150">
             <div className="flex items-center gap-2 pb-2 border-b border-border/60">
-              <HugeiconsIcon icon={FileCodeIcon} className="size-4 text-primary" />
+              <FileCode className="size-4 text-primary" />
               <h2 className="text-sm font-semibold tracking-tight">Developer Preferences</h2>
             </div>
 
@@ -315,7 +314,7 @@ export function OnboardingWizard() {
                 onClick={() => handleStepChange(1)}
                 className="cursor-pointer gap-1.5"
               >
-                <HugeiconsIcon icon={ArrowLeft01Icon} className="size-3.5" />
+                <ArrowLeft className="size-3.5" />
                 <span>Back</span>
               </Button>
               <Button
@@ -324,7 +323,7 @@ export function OnboardingWizard() {
                 className="cursor-pointer gap-1.5 font-medium"
               >
                 <span>Continue</span>
-                <HugeiconsIcon icon={ArrowRight01Icon} className="size-3.5" />
+                <ArrowRight className="size-3.5" />
               </Button>
             </div>
           </div>
@@ -335,7 +334,7 @@ export function OnboardingWizard() {
           <div className="space-y-5 animate-in fade-in duration-150">
             <div className="flex items-center justify-between pb-2 border-b border-border/60">
               <div className="flex items-center gap-2">
-                <HugeiconsIcon icon={PaintBoardIcon} className="size-4 text-primary" />
+                <Palette className="size-4 text-primary" />
                 <h2 className="text-sm font-semibold tracking-tight">Theme & Appearance</h2>
               </div>
               <span className="text-[10px] text-primary font-medium bg-primary/10 px-2 py-0.5 rounded-full">
@@ -367,7 +366,7 @@ export function OnboardingWizard() {
                           {opt.name}
                         </span>
                         {isSelected && (
-                          <HugeiconsIcon icon={CheckmarkCircle02Icon} className="size-4 text-primary" />
+                          <CheckCircle2 className="size-4 text-primary" />
                         )}
                       </div>
                       <span className="text-[10.5px] text-muted-foreground mt-1 leading-snug">
@@ -386,7 +385,7 @@ export function OnboardingWizard() {
                 onClick={() => handleStepChange(2)}
                 className="cursor-pointer gap-1.5"
               >
-                <HugeiconsIcon icon={ArrowLeft01Icon} className="size-3.5" />
+                <ArrowLeft className="size-3.5" />
                 <span>Back</span>
               </Button>
               <Button
@@ -395,7 +394,7 @@ export function OnboardingWizard() {
                 className="cursor-pointer gap-1.5 font-medium"
               >
                 <span>Continue</span>
-                <HugeiconsIcon icon={ArrowRight01Icon} className="size-3.5" />
+                <ArrowRight className="size-3.5" />
               </Button>
             </div>
           </div>
@@ -406,7 +405,7 @@ export function OnboardingWizard() {
           <div className="space-y-5 animate-in fade-in duration-150 text-center">
             <div className="flex flex-col items-center justify-center py-2">
               <div className="size-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-3">
-                <HugeiconsIcon icon={SparklesIcon} className="size-6" />
+                <Sparkles className="size-6" />
               </div>
               <h2 className="text-base font-bold tracking-tight text-foreground">
                 You&apos;re All Set!
@@ -441,7 +440,7 @@ export function OnboardingWizard() {
                 className="cursor-pointer gap-1.5"
                 disabled={isSubmitting}
               >
-                <HugeiconsIcon icon={ArrowLeft01Icon} className="size-3.5" />
+                <ArrowLeft className="size-3.5" />
                 <span>Back</span>
               </Button>
               <Button
@@ -458,7 +457,7 @@ export function OnboardingWizard() {
                 ) : (
                   <>
                     <span>Open Kairo IDE</span>
-                    <HugeiconsIcon icon={ArrowRight01Icon} className="size-4" />
+                    <ArrowRight className="size-4" />
                   </>
                 )}
               </Button>

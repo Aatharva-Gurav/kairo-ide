@@ -5,8 +5,7 @@ import { CommandRegistry } from "@/features/commands/command-registry";
 import { KeybindingService } from "@/features/commands/keybinding.service";
 import { Command } from "@/features/commands/types";
 import { fuzzyFilter } from "@/features/commands/fuzzy-search";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { TerminalIcon } from "@hugeicons/core-free-icons";
+import { Terminal } from "lucide-react";
 
 interface CommandPaletteModalProps {
   isOpen: boolean;
@@ -113,7 +112,7 @@ export function CommandPaletteModal({
       >
         {/* Search Input Bar */}
         <div className="flex items-center gap-2.5 px-3.5 border-b border-border/70 bg-popover/80 backdrop-blur-sm">
-          <HugeiconsIcon icon={TerminalIcon} className="size-4 text-primary shrink-0" />
+          <Terminal className="size-4 text-primary shrink-0" />
           <span className="text-xs font-mono font-bold text-primary select-none">&gt;</span>
           <input
             ref={inputRef}

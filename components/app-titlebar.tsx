@@ -13,14 +13,13 @@ import { KairoBrandIcon } from "@/components/kairo-brand-icon";
 import { Button } from "@/components/ui/button";
 import { isTauriEnvironment, invokeCommand, basename, writeFileContent } from "@/lib/tauri-ipc";
 import { ideEvents } from "@/lib/events";
-import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  Cancel01Icon,
-  Search01Icon,
-  CheckmarkCircle02Icon,
-  ArrowRight01Icon,
-  SparklesIcon,
-} from "@hugeicons/core-free-icons";
+  X,
+  Search,
+  CheckCircle2,
+  ChevronRight,
+  Sparkles,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface MenuItemDef {
@@ -843,8 +842,7 @@ export function AppTitleBar() {
                                 </span>
                               )}
                               {hasSubmenu && (
-                                <HugeiconsIcon
-                                  icon={ArrowRight01Icon}
+                                <ChevronRight
                                   className="size-3 text-muted-foreground/60"
                                 />
                               )}
@@ -1079,7 +1077,7 @@ export function AppTitleBar() {
               onClick={() => setIsAboutOpen(false)}
               className="absolute top-3.5 right-3.5 p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer"
             >
-              <HugeiconsIcon icon={Cancel01Icon} className="size-4" />
+              <X className="size-4" />
             </button>
 
             <div className="animate-kairo-float mb-3">
@@ -1135,7 +1133,7 @@ export function AppTitleBar() {
           >
             <div className="flex items-center justify-between pb-3 border-b border-border/70">
               <div className="flex items-center gap-2">
-                <HugeiconsIcon icon={SparklesIcon} className="size-4 text-primary" />
+                <Sparkles className="size-4 text-primary" />
                 <h2 className="text-sm font-semibold tracking-tight text-foreground">
                   Keyboard Shortcuts & Documentation
                 </h2>
@@ -1144,14 +1142,13 @@ export function AppTitleBar() {
                 onClick={() => setIsDocOpen(false)}
                 className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer"
               >
-                <HugeiconsIcon icon={Cancel01Icon} className="size-4" />
+                <X className="size-4" />
               </button>
             </div>
 
             {/* Filter input */}
             <div className="relative my-3">
-              <HugeiconsIcon
-                icon={Search01Icon}
+              <Search
                 className="absolute left-2.5 top-2 size-3.5 text-muted-foreground pointer-events-none"
               />
               <input
@@ -1218,7 +1215,7 @@ export function AppTitleBar() {
             ) : (
               <>
                 <div className="size-9 rounded-full bg-success/15 text-success flex items-center justify-center mb-3">
-                  <HugeiconsIcon icon={CheckmarkCircle02Icon} className="size-5" />
+                  <CheckCircle2 className="size-5" />
                 </div>
                 <h3 className="text-sm font-semibold text-foreground">You Are Up to Date</h3>
                 <p className="text-xs text-muted-foreground mt-1 leading-relaxed">

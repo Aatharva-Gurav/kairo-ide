@@ -26,7 +26,7 @@ Kairo IDE is a high-performance, extensible desktop IDE shell built with **Next.
   - Drag-and-drop file and directory moving.
 - **Context Menus**: Context-aware menus for files, folders, and the root workspace.
 - **Keyboard Navigation**: Full arrow-key tree traversal, `Enter` to open, `F2` to rename, `Delete` to remove.
-- **Icon Set**: Extension- and file-type aware icons powered by `@hugeicons/core-free-icons`.
+- **Icon Set**: Lucide React icons (`lucide-react`) and Seti file-type icons.
 
 ### 3. Code Editor
 - **Monaco Editor Integration**: Embedded industry-standard Monaco Editor (`^0.56.0`) with dark and light theme synchronization matching the Kairo IDE design system.

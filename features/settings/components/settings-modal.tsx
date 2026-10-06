@@ -6,36 +6,35 @@ import { useWorkspace } from "@/features/workspace/store";
 import { SettingsCategoryView } from "./settings-category-view";
 import { KeyboardShortcutsSettings } from "./keyboard-shortcuts-settings";
 import { Button } from "@/components/ui/button";
-import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  Cancel01Icon,
-  Search01Icon,
-  PaintBoardIcon,
-  File01Icon,
-  Folder01Icon,
-  FolderSearchIcon,
-  KeyboardIcon,
-  Settings01Icon,
-  ReloadIcon,
-  SparklesIcon,
-} from "@hugeicons/core-free-icons";
+  X,
+  Search,
+  Palette,
+  FileText,
+  File,
+  Folder,
+  FolderSearch,
+  Keyboard,
+  Settings,
+  RotateCcw,
+  Sparkles,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface CategoryNavOption {
   id: SettingsViewTab;
   label: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  icon: any;
+  icon: React.ComponentType<{ className?: string }>;
 }
 
 const CATEGORIES: CategoryNavOption[] = [
-  { id: "appearance", label: "Appearance", icon: PaintBoardIcon },
-  { id: "editor", label: "Text Editor", icon: File01Icon },
-  { id: "suggestions", label: "Code Suggestions", icon: SparklesIcon },
-  { id: "files", label: "Files & Autosave", icon: File01Icon },
-  { id: "explorer", label: "File Explorer", icon: Folder01Icon },
-  { id: "search", label: "Search", icon: FolderSearchIcon },
-  { id: "shortcuts", label: "Keyboard Shortcuts", icon: KeyboardIcon },
+  { id: "appearance", label: "Appearance", icon: Palette },
+  { id: "editor", label: "Text Editor", icon: FileText },
+  { id: "suggestions", label: "Code Suggestions", icon: Sparkles },
+  { id: "files", label: "Files & Autosave", icon: File },
+  { id: "explorer", label: "File Explorer", icon: Folder },
+  { id: "search", label: "Search", icon: FolderSearch },
+  { id: "shortcuts", label: "Keyboard Shortcuts", icon: Keyboard },
 ];
 
 export function SettingsModal() {
@@ -83,7 +82,7 @@ export function SettingsModal() {
         <div className="flex items-center justify-between px-5 py-3 border-b border-border/80 bg-background/60 backdrop-blur-sm">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <HugeiconsIcon icon={Settings01Icon} className="size-4 text-primary" />
+              <Settings className="size-4 text-primary" />
               <h1 className="text-sm font-semibold tracking-tight text-foreground">Settings</h1>
             </div>
 
@@ -105,7 +104,7 @@ export function SettingsModal() {
                 type="button"
                 onClick={() => {
                   if (activeWorkspace) {
-                    setActiveScope("workspace");
+                     setActiveScope("workspace");
                   }
                 }}
                 disabled={!activeWorkspace}
@@ -142,7 +141,7 @@ export function SettingsModal() {
               title={`Reset all ${activeScope} settings to defaults`}
               className="cursor-pointer group active:scale-95 transition-all duration-120"
             >
-              <HugeiconsIcon icon={ReloadIcon} className="size-3 mr-1 transition-transform duration-300 group-hover:rotate-180" />
+              <RotateCcw className="size-3 mr-1 transition-transform duration-300 group-hover:rotate-180" />
               Reset All
             </Button>
             <Button
@@ -152,14 +151,14 @@ export function SettingsModal() {
               title="Close Settings (Esc)"
               className="cursor-pointer text-muted-foreground hover:text-foreground active:scale-95 transition-all duration-120"
             >
-              <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" />
+              <X className="size-3.5" />
             </Button>
           </div>
         </div>
 
         {/* Search Bar */}
         <div className="px-5 py-2 border-b border-border/60 bg-muted/15 flex items-center gap-2.5">
-          <HugeiconsIcon icon={Search01Icon} className="size-4 text-muted-foreground/70 shrink-0" />
+          <Search className="size-4 text-muted-foreground/70 shrink-0" />
           <input
             type="text"
             value={searchQuery}
@@ -202,7 +201,7 @@ export function SettingsModal() {
                       : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/50"
                   )}
                 >
-                  <HugeiconsIcon icon={cat.icon} className="size-3.5 shrink-0 text-muted-foreground group-hover:text-foreground transition-colors" />
+                  <cat.icon className="size-3.5 shrink-0 text-muted-foreground group-hover:text-foreground transition-colors" />
                   <span className="truncate">{cat.label}</span>
                 </button>
               );

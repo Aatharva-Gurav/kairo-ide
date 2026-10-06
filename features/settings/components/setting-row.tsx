@@ -4,8 +4,7 @@ import React from "react";
 import { SettingDefinition } from "../types";
 import { useSettings } from "../store";
 import { Button } from "@/components/ui/button";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { ReloadIcon } from "@hugeicons/core-free-icons";
+import { RotateCcw } from "lucide-react";
 
 interface SettingRowProps {
   definition: SettingDefinition;
@@ -134,7 +133,7 @@ export function SettingRow({ definition }: SettingRowProps) {
             title="Reset to default"
             className="text-muted-foreground hover:text-foreground shrink-0 cursor-pointer active:scale-95 transition-all duration-120"
           >
-            <HugeiconsIcon icon={ReloadIcon} className="size-3" />
+            <RotateCcw className="size-3" />
           </Button>
         )}
       </div>

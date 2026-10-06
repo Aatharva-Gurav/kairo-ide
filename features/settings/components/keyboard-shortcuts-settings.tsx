@@ -6,8 +6,7 @@ import { CommandRegistry } from "@/features/commands/command-registry";
 import { Command, ResolvedKeybinding } from "@/features/commands/types";
 import { ShortcutRecorderModal } from "@/features/commands/components/shortcut-recorder-modal";
 import { Button } from "@/components/ui/button";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Edit01Icon, ReloadIcon, Delete02Icon, Search01Icon } from "@hugeicons/core-free-icons";
+import { Pencil, RotateCcw, Trash2, Search } from "lucide-react";
 
 export function KeyboardShortcutsSettings() {
   const [search, setSearch] = useState("");
@@ -60,14 +59,14 @@ export function KeyboardShortcutsSettings() {
           title="Reset all shortcuts to factory defaults"
           className="cursor-pointer"
         >
-          <HugeiconsIcon icon={ReloadIcon} className="size-3 mr-1" />
+          <RotateCcw className="size-3 mr-1" />
           Reset All Shortcuts
         </Button>
       </div>
 
       {/* Filter Bar */}
       <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-border/80 bg-background text-xs shadow-2xs">
-        <HugeiconsIcon icon={Search01Icon} className="size-3.5 text-muted-foreground/70 shrink-0" />
+        <Search className="size-3.5 text-muted-foreground/70 shrink-0" />
         <input
           type="text"
           value={search}
@@ -138,7 +137,7 @@ export function KeyboardShortcutsSettings() {
                     title="Change keybinding"
                     className="opacity-70 group-hover:opacity-100 cursor-pointer active:scale-95 transition-all duration-120"
                   >
-                    <HugeiconsIcon icon={Edit01Icon} className="size-3" />
+                    <Pencil className="size-3" />
                   </Button>
 
                   {source === "user" && (
@@ -152,7 +151,7 @@ export function KeyboardShortcutsSettings() {
                       title="Reset to default"
                       className="cursor-pointer text-muted-foreground hover:text-foreground"
                     >
-                      <HugeiconsIcon icon={ReloadIcon} className="size-3" />
+                      <RotateCcw className="size-3" />
                     </Button>
                   )}
 
@@ -167,7 +166,7 @@ export function KeyboardShortcutsSettings() {
                       title="Unbind shortcut"
                       className="cursor-pointer text-muted-foreground hover:text-destructive"
                     >
-                      <HugeiconsIcon icon={Delete02Icon} className="size-3" />
+                      <Trash2 className="size-3" />
                     </Button>
                   )}
                 </div>

@@ -3,8 +3,7 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useEditor } from "../store";
 import { EditorDocument } from "../types";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Cancel01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
+import { X, ChevronRight } from "lucide-react";
 import { FileIcon } from "@/features/file-explorer/components/file-icon";
 import { BinaryFileView } from "./binary-file-view";
 import dynamic from "next/dynamic";
@@ -93,7 +92,7 @@ export function SplitEditorPane({
           {parts.slice(-3, -1).map((part, idx) => (
             <React.Fragment key={idx}>
               <span className="truncate max-w-[80px] text-muted-foreground/80">{part}</span>
-              <HugeiconsIcon icon={ArrowRight01Icon} className="size-2.5 opacity-50 shrink-0" />
+              <ChevronRight className="size-2.5 opacity-50 shrink-0" />
             </React.Fragment>
           ))}
           <span className="text-foreground font-medium truncate max-w-[130px]">
@@ -126,7 +125,7 @@ export function SplitEditorPane({
             aria-label="Close Split View"
             className="h-5 w-5 flex items-center justify-center rounded hover:bg-muted/70 text-muted-foreground hover:text-foreground cursor-pointer transition-all active:scale-95"
           >
-            <HugeiconsIcon icon={Cancel01Icon} className="size-3" />
+            <X className="size-3" />
           </button>
 
           {/* Quick File Switcher Dropdown List */}

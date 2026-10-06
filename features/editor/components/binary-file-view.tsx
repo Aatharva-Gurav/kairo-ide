@@ -6,8 +6,7 @@ import { useEditor } from "../store";
 import { getFileExtension, revealInFileManager } from "@/lib/tauri-ipc";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { Button } from "@/components/ui/button";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { File01Icon, Folder01Icon } from "@hugeicons/core-free-icons";
+import { File, Folder } from "lucide-react";
 
 interface BinaryFileViewProps {
   document: EditorDocument;
@@ -49,7 +48,7 @@ export function BinaryFileView({ document }: BinaryFileViewProps) {
           <div className="mt-3 flex items-center justify-between w-full text-xs text-muted-foreground font-mono">
             <span className="truncate max-w-[200px] text-foreground/80">{document.title}</span>
             <Button size="xs" variant="outline" onClick={handleReveal} className="cursor-pointer">
-              <HugeiconsIcon icon={Folder01Icon} className="size-3 mr-1.5" />
+              <Folder className="size-3 mr-1.5" />
               Reveal in File Manager
             </Button>
           </div>
@@ -61,7 +60,7 @@ export function BinaryFileView({ document }: BinaryFileViewProps) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center p-8 text-center select-none bg-background">
       <div className="flex size-12 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500 mb-3 border border-amber-500/20 shadow-2xs">
-        <HugeiconsIcon icon={File01Icon} className="size-6" />
+        <File className="size-6" />
       </div>
 
       <h2 className="text-base font-semibold tracking-tight text-foreground">
@@ -75,7 +74,7 @@ export function BinaryFileView({ document }: BinaryFileViewProps) {
 
       <div className="mt-5">
         <Button onClick={handleReveal} size="sm" variant="outline" className="cursor-pointer">
-          <HugeiconsIcon icon={Folder01Icon} className="size-3.5 mr-1.5" />
+          <Folder className="size-3.5 mr-1.5" />
           Reveal in File Manager
         </Button>
       </div>

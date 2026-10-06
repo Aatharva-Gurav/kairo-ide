@@ -4,8 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Command, KeybindingConflict } from "../types";
 import { KeybindingService } from "../keybinding.service";
 import { Button } from "@/components/ui/button";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { AlertCircleIcon } from "@hugeicons/core-free-icons";
+import { AlertCircle } from "lucide-react";
 
 interface ShortcutRecorderModalProps {
   command: Command | null;
@@ -113,7 +112,7 @@ function ShortcutRecorderContent({
         {/* Conflict Warning */}
         {conflict && (
           <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-foreground flex items-start gap-2.5">
-            <HugeiconsIcon icon={AlertCircleIcon} className="size-4 text-amber-500 shrink-0 mt-0.5" />
+            <AlertCircle className="size-4 text-amber-500 shrink-0 mt-0.5" />
             <div className="flex-1">
               <p className="font-semibold text-amber-600 dark:text-amber-400">Shortcut Conflict</p>
               <p className="text-muted-foreground mt-0.5 leading-relaxed text-[11px]">

@@ -2,8 +2,7 @@
 
 import React from "react";
 import { useEditor } from "../store";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { CodeIcon, Search01Icon, Folder01Icon, File01Icon } from "@hugeicons/core-free-icons";
+import { Code, Search, Folder, File } from "lucide-react";
 import { KairoBrandIcon } from "@/components/kairo-brand-icon";
 import { ideEvents } from "@/lib/events";
 
@@ -33,7 +32,7 @@ export function EditorEmptyState() {
           className="group flex items-center justify-between px-3 py-1.5 cursor-pointer hover:bg-muted/40 rounded-lg text-muted-foreground hover:text-foreground transition-colors duration-120 ease-out active:scale-[0.98] text-left"
         >
           <div className="flex items-center gap-2">
-            <HugeiconsIcon icon={File01Icon} className="size-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
+            <File className="size-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
             <span className="font-medium">Open File</span>
           </div>
           <kbd className="kbd-shortcut font-medium">
@@ -47,7 +46,7 @@ export function EditorEmptyState() {
           className="group flex items-center justify-between px-3 py-1.5 cursor-pointer hover:bg-muted/40 rounded-lg text-muted-foreground hover:text-foreground transition-colors duration-120 ease-out active:scale-[0.98] text-left"
         >
           <div className="flex items-center gap-2">
-            <HugeiconsIcon icon={Folder01Icon} className="size-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
+            <Folder className="size-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
             <span className="font-medium">Quick Open File</span>
           </div>
           <kbd className="kbd-shortcut font-medium">
@@ -61,7 +60,7 @@ export function EditorEmptyState() {
           className="group flex items-center justify-between px-3 py-1.5 cursor-pointer hover:bg-muted/40 rounded-lg text-muted-foreground hover:text-foreground transition-colors duration-120 ease-out active:scale-[0.98] text-left"
         >
           <div className="flex items-center gap-2">
-            <HugeiconsIcon icon={Search01Icon} className="size-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
+            <Search className="size-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
             <span>Find in Workspace</span>
           </div>
           <kbd className="kbd-shortcut font-medium">
@@ -75,7 +74,7 @@ export function EditorEmptyState() {
           className="group flex items-center justify-between px-3 py-1.5 cursor-pointer hover:bg-muted/40 rounded-lg text-muted-foreground hover:text-foreground transition-colors duration-120 ease-out active:scale-[0.98] text-left"
         >
           <div className="flex items-center gap-2">
-            <HugeiconsIcon icon={CodeIcon} className="size-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
+            <Code className="size-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
             <span>Format Document</span>
           </div>
           <kbd className="kbd-shortcut font-medium">

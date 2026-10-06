@@ -3,8 +3,7 @@
 import React, { useEffect } from "react";
 import { useSearch } from "../store";
 import { Button } from "@/components/ui/button";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { AlertCircleIcon } from "@hugeicons/core-free-icons";
+import { AlertCircle } from "lucide-react";
 
 export function ReplaceConfirmModal() {
   const {
@@ -35,7 +34,7 @@ export function ReplaceConfirmModal() {
       <div className="w-full max-w-md rounded-xl border border-border/80 bg-card p-5 shadow-2xl text-card-foreground animate-in zoom-in-95 duration-150 delay-subtle ease-[cubic-bezier(0.16,1,0.3,1)]">
         <div className="flex items-start gap-3.5">
           <div className="rounded-full bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/20 p-2 text-amber-600 dark:text-amber-400 shrink-0">
-            <HugeiconsIcon icon={AlertCircleIcon} className="size-5" />
+            <AlertCircle className="size-5" />
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="text-sm font-semibold tracking-tight text-foreground">Confirm Workspace Replace</h3>

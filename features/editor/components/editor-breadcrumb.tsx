@@ -6,8 +6,7 @@ import { useWorkspace } from "@/features/workspace/store";
 import { useEditor } from "../store";
 import { relativePath } from "@/lib/tauri-ipc";
 import { FileIcon } from "@/features/icon-theme/components/file-icon";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Folder01Icon } from "@hugeicons/core-free-icons";
+import { Folder } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface EditorBreadcrumbProps {
@@ -52,7 +51,7 @@ export function EditorBreadcrumb({ document }: EditorBreadcrumbProps) {
             title={activeWorkspace.rootPath}
             className="flex items-center gap-1.5 shrink-0 font-medium text-foreground/80 hover:text-foreground text-[11px] px-1 py-0.5 rounded hover:bg-muted/50 cursor-pointer transition-colors duration-100"
           >
-            <HugeiconsIcon icon={Folder01Icon} className="size-3 text-primary/90 shrink-0" />
+            <Folder className="size-3 text-primary/90 shrink-0" />
             <span className="tracking-tight truncate max-w-[120px]">{activeWorkspace.name}</span>
           </div>
 

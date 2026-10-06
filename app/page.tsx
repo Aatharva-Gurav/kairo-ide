@@ -20,8 +20,7 @@ import { EditorProvider, useEditor } from "@/features/editor/store";
 import { SearchProvider } from "@/features/search/store";
 import { EditorWorkspace } from "@/features/editor/components/editor-workspace";
 import { IconThemeProvider } from "@/features/icon-theme";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Folder01Icon, File01Icon } from "@hugeicons/core-free-icons";
+import { Folder, File } from "lucide-react";
 import { KairoBrandIcon } from "@/components/kairo-brand-icon";
 import { isTauriEnvironment, invokeCommand } from "@/lib/tauri-ipc";
 import { TauriDragDropListener } from "@/components/tauri-drag-drop-listener";
@@ -54,11 +53,11 @@ function PageContent() {
             </EmptyHeader>
             <EmptyContent className="mt-2 flex items-center justify-center gap-2">
               <Button onClick={handleOpenFile} variant="outline" className="cursor-pointer shadow-2xs font-medium interactive-hover" size="default">
-                <HugeiconsIcon icon={File01Icon} size={16} className="size-4 mr-1.5 shrink-0 transition-transform duration-150 group-hover:scale-110" />
+                <File className="size-4 mr-1.5 shrink-0 transition-transform duration-150 group-hover:scale-110" />
                 Open File
               </Button>
               <Button onClick={() => openFolder()} className="cursor-pointer shadow-2xs font-medium interactive-hover" size="default">
-                <HugeiconsIcon icon={Folder01Icon} size={16} className="size-4 mr-1.5 shrink-0 transition-transform duration-150 group-hover:scale-110" />
+                <Folder className="size-4 mr-1.5 shrink-0 transition-transform duration-150 group-hover:scale-110" />
                 Open Folder
               </Button>
             </EmptyContent>

@@ -3,8 +3,7 @@
 import React, { useEffect } from "react";
 import { useEditor } from "../store";
 import { Button } from "@/components/ui/button";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { AlertCircleIcon } from "@hugeicons/core-free-icons";
+import { AlertCircle } from "lucide-react";
 
 export function CloseConfirmModal() {
   const { dirtyCloseCandidate, confirmDirtyClose } = useEditor();
@@ -28,7 +27,7 @@ export function CloseConfirmModal() {
       <div className="w-full max-w-md rounded-xl border border-border/80 bg-card p-5 shadow-2xl text-card-foreground animate-in zoom-in-95 duration-150 delay-subtle ease-[cubic-bezier(0.16,1,0.3,1)]">
         <div className="flex items-start gap-3.5">
           <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500 border border-amber-500/20 shadow-2xs">
-            <HugeiconsIcon icon={AlertCircleIcon} className="size-4.5" />
+            <AlertCircle className="size-4.5" />
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="text-sm font-semibold tracking-tight text-foreground">

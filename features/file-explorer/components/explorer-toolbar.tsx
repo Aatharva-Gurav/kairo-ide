@@ -4,17 +4,16 @@ import React, { useState, useRef, useEffect } from "react";
 import { useFileExplorer } from "../store";
 import { useWorkspace } from "../../workspace/store";
 import { ExplorerSortMode } from "../types";
-import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  FileAddIcon,
-  FolderAddIcon,
-  RefreshIcon,
-  CollapseIcon,
-  ArrowUpDownIcon,
-  EyeIcon,
-  EyeOffIcon,
-  Cancel01Icon,
-} from "@hugeicons/core-free-icons";
+  FilePlus,
+  FolderPlus,
+  RefreshCw,
+  ChevronsDownUp,
+  ArrowUpDown,
+  Eye,
+  EyeOff,
+  X,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const SORT_OPTIONS: Array<{ mode: ExplorerSortMode; label: string }> = [
@@ -74,22 +73,21 @@ export function ExplorerToolbar() {
         className="p-1 rounded-full hover:bg-sidebar-accent hover:text-sidebar-foreground cursor-pointer transition-colors duration-140 active:scale-95"
         title="New File (in selected folder or root)"
       >
-        <HugeiconsIcon icon={FileAddIcon} className="size-3.5" />
+        <FilePlus className="size-3.5" />
       </button>
       <button
         onClick={() => startCreateFolder()}
         className="p-1 rounded-full hover:bg-sidebar-accent hover:text-sidebar-foreground cursor-pointer transition-colors duration-140 active:scale-95"
         title="New Folder (in selected folder or root)"
       >
-        <HugeiconsIcon icon={FolderAddIcon} className="size-3.5" />
+        <FolderPlus className="size-3.5" />
       </button>
       <button
         onClick={handleRefresh}
         className="p-1 rounded-full hover:bg-sidebar-accent hover:text-sidebar-foreground cursor-pointer transition-colors duration-140 active:scale-95"
         title="Refresh Explorer"
       >
-        <HugeiconsIcon
-          icon={RefreshIcon}
+        <RefreshCw
           className={cn(
             "size-3.5 transition-transform duration-300",
             (isLoading || isRefreshing) && "animate-kairo-spin text-sidebar-primary"
@@ -101,7 +99,7 @@ export function ExplorerToolbar() {
         className="p-1 rounded-full hover:bg-sidebar-accent hover:text-sidebar-foreground cursor-pointer transition-colors duration-140 active:scale-95"
         title="Collapse All Folders"
       >
-        <HugeiconsIcon icon={CollapseIcon} className="size-3.5" />
+        <ChevronsDownUp className="size-3.5" />
       </button>
 
       {/* Divider */}
@@ -119,7 +117,7 @@ export function ExplorerToolbar() {
           )}
           title={`Sort: ${SORT_OPTIONS.find((s) => s.mode === sortConfig.mode)?.label}`}
         >
-          <HugeiconsIcon icon={ArrowUpDownIcon} className="size-3.5" />
+          <ArrowUpDown className="size-3.5" />
         </button>
 
         {isSortMenuOpen && (
@@ -165,10 +163,11 @@ export function ExplorerToolbar() {
         )}
         title={showHidden ? "Hide Hidden Files" : "Show Hidden Files"}
       >
-        <HugeiconsIcon
-          icon={showHidden ? EyeIcon : EyeOffIcon}
-          className="size-3.5"
-        />
+        {showHidden ? (
+          <Eye className="size-3.5" />
+        ) : (
+          <EyeOff className="size-3.5" />
+        )}
       </button>
 
       {/* Divider */}
@@ -180,7 +179,7 @@ export function ExplorerToolbar() {
         className="p-1 rounded-full text-muted-foreground hover:bg-destructive/15 hover:text-destructive cursor-pointer transition-colors duration-140 active:scale-95"
         title="Close Workspace"
       >
-        <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" />
+        <X className="size-3.5" />
       </button>
     </div>
   );

@@ -5,8 +5,7 @@ import { useEditor } from "../store";
 import { useWorkspace } from "@/features/workspace/store";
 import { listWorkspaceFiles, relativePath, basename } from "@/lib/tauri-ipc";
 import { FileIcon } from "@/features/icon-theme/components/file-icon";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Search01Icon } from "@hugeicons/core-free-icons";
+import { Search } from "lucide-react";
 import { fuzzyFilter } from "@/features/commands/fuzzy-search";
 
 interface FileEntry {
@@ -144,7 +143,7 @@ export function QuickOpenModal({
       >
         {/* Search Input Bar */}
         <div className="flex items-center gap-2.5 px-3.5 border-b border-border/70 bg-popover/80 backdrop-blur-sm">
-          <HugeiconsIcon icon={Search01Icon} className="size-4 text-muted-foreground/70 shrink-0" />
+          <Search className="size-4 text-muted-foreground/70 shrink-0" />
           <input
             ref={inputRef}
             type="text"

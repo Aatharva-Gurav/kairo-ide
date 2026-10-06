@@ -7,8 +7,7 @@ import { FileTreeNode, InlineCreationInput } from "./file-tree-node";
 import { FileSystemNode } from "../types";
 import { normalizePath, dirname, isDescendant } from "@/lib/tauri-ipc";
 import { FileExplorerService } from "../service";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { AlertCircleIcon, Cancel01Icon } from "@hugeicons/core-free-icons";
+import { AlertCircle, X } from "lucide-react";
 
 interface ExplorerTreeProps {
   onOpenContextMenu: (e: React.MouseEvent, node: FileSystemNode | null) => void;
@@ -137,14 +136,14 @@ export function ExplorerTree({ onOpenContextMenu }: ExplorerTreeProps) {
       {/* Error alert banner */}
       {error && (
         <div className="mx-2 mb-2 flex items-start gap-2 rounded-md bg-destructive/10 p-2 text-xs text-destructive">
-          <HugeiconsIcon icon={AlertCircleIcon} className="size-4 shrink-0 mt-0.5" />
+          <AlertCircle className="size-4 shrink-0 mt-0.5" />
           <div className="flex-1 leading-tight">{error}</div>
           <button
             onClick={clearError}
             className="text-destructive/70 hover:text-destructive shrink-0 cursor-pointer"
             title="Dismiss error"
           >
-            <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" />
+            <X className="size-3.5" />
           </button>
         </div>
       )}

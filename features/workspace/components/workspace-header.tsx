@@ -2,11 +2,7 @@
 
 import React from "react";
 import { useWorkspace } from "../store";
-import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  Folder01Icon,
-  Cancel01Icon,
-} from "@hugeicons/core-free-icons";
+import { Folder, X } from "lucide-react";
 
 export interface WorkspaceHeaderProps {
   onNewFileRoot?: () => void;
@@ -32,7 +28,7 @@ export function WorkspaceHeader({}: WorkspaceHeaderProps = {}) {
             className="p-1 rounded text-muted-foreground hover:bg-destructive/15 hover:text-destructive cursor-pointer transition-colors"
             title="Close Workspace"
           >
-            <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" />
+            <X className="size-3.5" />
           </button>
         </div>
       </div>
@@ -42,7 +38,7 @@ export function WorkspaceHeader({}: WorkspaceHeaderProps = {}) {
           className="flex items-center gap-1.5 font-semibold text-xs text-sidebar-foreground truncate"
           title={activeWorkspace.rootPath}
         >
-          <HugeiconsIcon icon={Folder01Icon} className="size-3.5 shrink-0 text-sidebar-primary" />
+          <Folder className="size-3.5 shrink-0 text-sidebar-primary" />
           <span className="truncate tracking-tight">{activeWorkspace.name}</span>
         </div>
 

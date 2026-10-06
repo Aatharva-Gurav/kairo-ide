@@ -4,8 +4,7 @@ import React, { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useFileExplorer } from "../store";
 import { Button } from "@/components/ui/button";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { AlertCircleIcon } from "@hugeicons/core-free-icons";
+import { AlertCircle } from "lucide-react";
 
 export function ConfirmDeleteModal() {
   const { bulkDeleteCandidate, deleteCandidate, cancelDelete, confirmDelete } =
@@ -41,7 +40,7 @@ export function ConfirmDeleteModal() {
       >
         <div className="flex items-start gap-3.5">
           <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-destructive border border-destructive/20">
-            <HugeiconsIcon icon={AlertCircleIcon} className="size-4.5" />
+            <AlertCircle className="size-4.5" />
           </div>
           <div className="flex-1">
             <h3 id="delete-dialog-title" className="text-sm font-semibold tracking-tight text-foreground">

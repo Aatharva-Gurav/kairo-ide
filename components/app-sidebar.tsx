@@ -15,15 +15,13 @@ import { ideEvents } from "@/lib/events";
 import { EmptyWorkspaceView } from "@/features/workspace/components/empty-workspace-view";
 import { FileExplorer } from "@/features/file-explorer/components/file-explorer";
 import { WorkspaceSearchPanel } from "@/features/search/components/workspace-search-panel";
-import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  LayoutBottomIcon,
-  SidebarLeftIcon,
-  SidebarRightIcon,
-  Folder01Icon,
-  Search01Icon,
-  Settings01Icon,
-} from "@hugeicons/core-free-icons";
+  PanelLeft,
+  PanelRight,
+  Folder,
+  Search,
+  Settings,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -58,13 +56,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         )}
       >
         <div className="flex items-center justify-center size-5 rounded bg-sidebar-accent/50 dark:bg-sidebar-accent/30 transition-transform duration-200">
-          <HugeiconsIcon
-            icon={open ? SidebarRightIcon : SidebarLeftIcon}
-            className={cn(
-              "size-3.5 transition-all duration-200 ease-out",
-              open ? "rotate-0 scale-100" : "rotate-180 scale-105"
-            )}
-          />
+          {open ? (
+            <PanelRight
+              className={cn(
+                "size-3.5 transition-all duration-200 ease-out rotate-0 scale-100"
+              )}
+            />
+          ) : (
+            <PanelLeft
+              className={cn(
+                "size-3.5 transition-all duration-200 ease-out rotate-180 scale-105"
+              )}
+            />
+          )}
         </div>
       </button>
 
@@ -83,7 +87,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     : "text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
                 )}
               >
-                <HugeiconsIcon icon={Folder01Icon} className="size-3.5" />
+                <Folder className="size-3.5" />
                 <span className="tracking-tight">Explorer</span>
               </button>
 
@@ -98,7 +102,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     : "text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
                 )}
               >
-                <HugeiconsIcon icon={Search01Icon} className="size-3.5" />
+                <Search className="size-3.5" />
                 <span className="tracking-tight">Search</span>
               </button>
             </div>
@@ -151,7 +155,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             title="Open Settings (Ctrl+,)"
             className="group flex items-center gap-2 w-full px-2.5 py-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/60 transition-all duration-140 cursor-pointer select-none active:scale-[0.98]"
           >
-            <HugeiconsIcon icon={Settings01Icon} className="size-3.5 transition-transform duration-300 ease-out group-hover:rotate-45 text-muted-foreground group-hover:text-sidebar-foreground" />
+            <Settings className="size-3.5 transition-transform duration-300 ease-out group-hover:rotate-45 text-muted-foreground group-hover:text-sidebar-foreground" />
             <span className="tracking-tight">Settings</span>
             <kbd className="ml-auto kbd-shortcut transition-colors group-hover:border-sidebar-primary/40 group-hover:text-sidebar-foreground">
               {KeybindingService.formatDisplay("ctrl+,")}

@@ -7,14 +7,13 @@ import { FileExplorerService } from "../service";
 import { BatchRenameMode, BatchRenamePreviewItem } from "../types";
 import { dirname } from "@/lib/tauri-ipc";
 import { Button } from "@/components/ui/button";
-import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  Edit02Icon,
-  AlertCircleIcon,
-  CheckmarkCircle02Icon,
-  Cancel01Icon,
-  ArrowRight01Icon,
-} from "@hugeicons/core-free-icons";
+  Pencil,
+  AlertCircle,
+  CheckCircle2,
+  X,
+  ArrowRight,
+} from "lucide-react";
 
 export function BatchRenameModal() {
   const { batchRenameCandidates, closeBatchRename, refresh } = useFileExplorer();
@@ -120,7 +119,7 @@ export function BatchRenameModal() {
         <div className="flex items-center justify-between pb-3 border-b border-border/60 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20">
-              <HugeiconsIcon icon={Edit02Icon} className="size-4" />
+              <Pencil className="size-4" />
             </div>
             <div>
               <h3 id="batch-rename-title" className="text-sm font-semibold tracking-tight text-foreground">
@@ -135,7 +134,7 @@ export function BatchRenameModal() {
             onClick={closeBatchRename}
             className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer transition-colors"
           >
-            <HugeiconsIcon icon={Cancel01Icon} className="size-4" />
+            <X className="size-4" />
           </button>
         </div>
 
@@ -314,7 +313,7 @@ export function BatchRenameModal() {
         {/* Error message */}
         {errorMsg && (
           <div className="mb-2 p-2 rounded bg-destructive/10 text-destructive text-xs flex items-center gap-1.5 shrink-0">
-            <HugeiconsIcon icon={AlertCircleIcon} className="size-4 shrink-0" />
+            <AlertCircle className="size-4 shrink-0" />
             <span>{errorMsg}</span>
           </div>
         )}
@@ -340,8 +339,7 @@ export function BatchRenameModal() {
                   <span className="truncate text-foreground/80 font-mono text-[11px]" title={item.originalName}>
                     {item.originalName}
                   </span>
-                  <HugeiconsIcon
-                    icon={ArrowRight01Icon}
+                  <ArrowRight
                     className="size-3 text-muted-foreground shrink-0"
                   />
                   <span
@@ -362,12 +360,12 @@ export function BatchRenameModal() {
                         className="inline-flex items-center gap-1 text-[10px] text-destructive bg-destructive/15 px-1.5 py-0.5 rounded font-medium"
                         title={item.conflictReason}
                       >
-                        <HugeiconsIcon icon={AlertCircleIcon} className="size-3" />
+                        <AlertCircle className="size-3" />
                         Conflict
                       </span>
                     ) : isChanged ? (
                       <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded font-medium">
-                        <HugeiconsIcon icon={CheckmarkCircle02Icon} className="size-3" />
+                        <CheckCircle2 className="size-3" />
                         Rename
                       </span>
                     ) : (
@@ -385,7 +383,7 @@ export function BatchRenameModal() {
           <div className="text-xs text-muted-foreground">
             {hasConflicts ? (
               <span className="text-destructive font-medium flex items-center gap-1">
-                <HugeiconsIcon icon={AlertCircleIcon} className="size-3.5" />
+                <AlertCircle className="size-3.5" />
                 {conflicts.length} conflict{conflicts.length > 1 ? "s" : ""} detected. Resolve before applying.
               </span>
             ) : changesCount > 0 ? (

@@ -4,8 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { FileSystemNode } from "../types";
 import { useFileExplorer, findNodesByPaths } from "../store";
 import { FileIcon } from "./file-icon";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
+import { ChevronRight } from "lucide-react";
 import { normalizePath, isDescendant, dirname } from "@/lib/tauri-ipc";
 import { cn } from "@/lib/utils";
 import { FileExplorerService } from "../service";
@@ -266,8 +265,7 @@ export function FileTreeNode({
             {node.isLoading ? (
               <span className="size-1.5 rounded-full bg-sidebar-primary animate-pulse" />
             ) : (
-              <HugeiconsIcon
-                icon={ArrowRight01Icon}
+              <ChevronRight
                 className={cn(
                   "size-2.5 transition-transform duration-160 ease-[cubic-bezier(0.16,1,0.3,1)]",
                   isExpanded && "rotate-90"

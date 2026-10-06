@@ -4,8 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { EditorDocument } from "../types";
 import { useEditor } from "../store";
 import { FileIcon } from "@/features/icon-theme/components/file-icon";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Cancel01Icon } from "@hugeicons/core-free-icons";
+import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface EditorTabProps {
@@ -95,7 +94,7 @@ export function EditorTab({ document, isActive, onSelect, onClose }: EditorTabPr
               isActive && !document.isDirty && "opacity-70 hover:opacity-100"
             )}
           >
-            <HugeiconsIcon icon={Cancel01Icon} className="size-3" />
+            <X className="size-3" />
           </button>
         </div>
       </div>

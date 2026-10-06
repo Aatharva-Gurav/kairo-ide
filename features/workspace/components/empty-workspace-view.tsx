@@ -9,14 +9,13 @@ import {
   EmptyDescription,
   EmptyMedia,
 } from "@/components/ui/empty";
-import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  Folder01Icon,
-  Cancel01Icon,
-  AlertCircleIcon,
-  Clock01Icon,
-  Search01Icon,
-} from "@hugeicons/core-free-icons";
+  Folder,
+  X,
+  AlertCircle,
+  Clock,
+  Search,
+} from "lucide-react";
 
 function formatRelativeTime(timestamp: number): string {
   const diff = Date.now() - timestamp;
@@ -59,14 +58,14 @@ export function EmptyWorkspaceView() {
     <div className="flex flex-col gap-3 p-3.5 text-sidebar-foreground">
       {error && (
         <div className="flex items-start gap-2 rounded-md bg-destructive/10 p-2.5 text-xs text-destructive">
-          <HugeiconsIcon icon={AlertCircleIcon} className="size-4 shrink-0 mt-0.5" />
+          <AlertCircle className="size-4 shrink-0 mt-0.5" />
           <div className="flex-1 leading-snug">{error}</div>
           <button
             onClick={clearError}
             className="text-destructive/70 hover:text-destructive shrink-0 cursor-pointer"
             title="Dismiss error"
           >
-            <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" />
+            <X className="size-3.5" />
           </button>
         </div>
       )}
@@ -74,8 +73,7 @@ export function EmptyWorkspaceView() {
       <div className="flex flex-col gap-2">
         {recentWorkspaces.length > 3 && (
           <div className="relative my-0.5">
-            <HugeiconsIcon
-              icon={Search01Icon}
+            <Search
               className="absolute left-2.5 top-2 size-3.5 text-muted-foreground pointer-events-none"
             />
             <Input
@@ -91,7 +89,7 @@ export function EmptyWorkspaceView() {
         {recentWorkspaces.length === 0 ? (
           <Empty className="border-0 bg-transparent py-6 px-2 gap-1.5">
             <EmptyMedia variant="icon" className="size-7 rounded-md bg-muted/50 text-muted-foreground mb-0">
-              <HugeiconsIcon icon={Clock01Icon} className="size-3.5" />
+              <Clock className="size-3.5" />
             </EmptyMedia>
             <EmptyTitle className="text-xs font-normal text-muted-foreground">
               No recently opened projects
@@ -126,8 +124,7 @@ export function EmptyWorkspaceView() {
                     className="flex flex-1 flex-col truncate cursor-pointer text-left overflow-hidden min-w-0"
                   >
                     <div className="flex items-center gap-1.5 font-medium truncate">
-                      <HugeiconsIcon
-                        icon={Folder01Icon}
+                      <Folder
                         className={`size-3.5 shrink-0 transition-colors duration-120 ${
                           isUnavailable
                             ? "text-muted-foreground"
@@ -151,7 +148,7 @@ export function EmptyWorkspaceView() {
                       {project.rootPath}
                     </span>
                     <div className="flex items-center gap-1 text-[9px] text-muted-foreground/60 pl-5 mt-0.5 font-mono">
-                      <HugeiconsIcon icon={Clock01Icon} className="size-2.5" />
+                      <Clock className="size-2.5" />
                       <span>{formatRelativeTime(project.lastOpenedAt)}</span>
                     </div>
                   </button>
@@ -164,7 +161,7 @@ export function EmptyWorkspaceView() {
                     className="opacity-0 group-hover:opacity-100 transition-all duration-150 p-1 text-muted-foreground/60 hover:text-destructive rounded hover:bg-destructive/10 cursor-pointer shrink-0 ml-1 active:scale-90"
                     title="Remove from recent list"
                   >
-                    <HugeiconsIcon icon={Cancel01Icon} className="size-3" />
+                    <X className="size-3" />
                   </button>
                 </div>
               );

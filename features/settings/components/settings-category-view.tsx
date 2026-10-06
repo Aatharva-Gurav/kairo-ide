@@ -9,8 +9,7 @@ import {
 } from "../registry";
 import { SettingsCategory } from "../types";
 import { Button } from "@/components/ui/button";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { ReloadIcon } from "@hugeicons/core-free-icons";
+import { RotateCcw } from "lucide-react";
 
 const CATEGORY_TITLES: Record<SettingsCategory, { title: string; description: string }> = {
   appearance: {
@@ -113,7 +112,7 @@ export function SettingsCategoryView() {
           title={`Reset ${meta.title} settings to default`}
           className="cursor-pointer"
         >
-          <HugeiconsIcon icon={ReloadIcon} className="size-3 mr-1" />
+          <RotateCcw className="size-3 mr-1" />
           Reset Category
         </Button>
       </div>

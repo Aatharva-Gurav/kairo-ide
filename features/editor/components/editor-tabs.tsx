@@ -5,8 +5,7 @@ import { useEditor } from "../store";
 import { EditorTab } from "./editor-tab";
 import { useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Cancel01Icon } from "@hugeicons/core-free-icons";
+import { X } from "lucide-react";
 
 export function EditorTabs() {
   const { open } = useSidebar();
@@ -214,7 +213,7 @@ export function EditorTabs() {
                     : "text-destructive hover:bg-destructive/15 cursor-pointer"
                 )}
               >
-                <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" />
+                <X className="size-3.5" />
               </button>
             </div>
           )}
@@ -228,7 +227,7 @@ export function EditorTabs() {
           aria-label="Close All Tabs"
           className="flex items-center justify-center size-6 rounded hover:bg-muted/70 text-muted-foreground hover:text-foreground cursor-pointer transition-colors duration-120 active:scale-95"
         >
-          <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" />
+          <X className="size-3.5" />
         </button>
       </div>
     </div>

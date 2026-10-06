@@ -2,8 +2,7 @@
 
 import React, { useRef, useEffect } from "react";
 import { useFileExplorer } from "../store";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Search01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
+import { Search, X } from "lucide-react";
 
 export function ExplorerSearchBar() {
   const { filterQuery, setFilterQuery, matchingCount } = useFileExplorer();
@@ -45,8 +44,7 @@ export function ExplorerSearchBar() {
   return (
     <div className="flex items-center h-9 px-2.5 border-b border-sidebar-border/70 bg-sidebar/80 select-none shrink-0">
       <div className="relative flex flex-1 items-center min-w-0">
-        <HugeiconsIcon
-          icon={Search01Icon}
+        <Search
           className="absolute left-2 size-3 text-muted-foreground/70 pointer-events-none"
         />
         <input
@@ -71,7 +69,7 @@ export function ExplorerSearchBar() {
               className="p-0.5 text-muted-foreground hover:text-foreground cursor-pointer rounded hover:bg-sidebar-accent transition-colors"
               title="Clear filter (Esc)"
             >
-              <HugeiconsIcon icon={Cancel01Icon} className="size-3" />
+              <X className="size-3" />
             </button>
           </div>
         ) : (
