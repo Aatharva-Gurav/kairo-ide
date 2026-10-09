@@ -1,11 +1,10 @@
 import { IconTheme } from "../types";
-import { setiTheme } from "./seti";
+import { simpleIconsTheme, simpleIconsDefinitions } from "./simple-icons";
 
-export { setiTheme, setiDefinitions } from "./seti";
+export { simpleIconsTheme, simpleIconsDefinitions } from "./simple-icons";
 
 export const iconThemes: Record<string, IconTheme> = {
-  seti: setiTheme,
+  "simple-icons": simpleIconsTheme,
 };
 
-export const defaultTheme: IconTheme = setiTheme;
-
+export const defaultTheme: IconTheme = simpleIconsTheme;

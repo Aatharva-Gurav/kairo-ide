@@ -9,8 +9,8 @@ export const DEFAULT_SETTINGS: IDESettings = {
     theme: "light",
     fontSize: 13,
     sidebarVisible: true,
-    sidebarPosition: "left",
-    iconTheme: "seti",
+    sidebarPosition: "right",
+    iconTheme: "simple-icons",
   },
   editor: {
     fontSize: 13,
@@ -121,19 +121,6 @@ export const SETTINGS_REGISTRY: SettingDefinition<any>[] = [
     max: 20,
     step: 1,
     validate: (val) => typeof val === "number" && val >= 10 && val <= 20,
-  },
-  {
-    key: "appearance.iconTheme",
-    category: "appearance",
-    label: "File Icon Theme",
-    description: "Specifies the file icon set used in the explorer and editor tabs.",
-    type: "select",
-    defaultValue: "seti",
-    scope: "user",
-    options: [
-      { label: "Seti (Custom)", value: "seti" },
-    ],
-    validate: (val) => typeof val === "string" && val.length > 0,
   },
 
   // ─── EDITOR ───────────────────────────────────────────────────────────

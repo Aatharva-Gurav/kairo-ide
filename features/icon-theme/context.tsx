@@ -7,7 +7,7 @@ import { resolveIcon as baseResolveIcon } from "./resolver";
 
 const fallbackContextValue: IconThemeContextValue = {
   theme: defaultTheme,
-  themeId: "seti",
+  themeId: "simple-icons",
   setThemeId: () => {},
   resolveIcon: (options: IconResolveOptions) => baseResolveIcon(options, defaultTheme),
 };
@@ -21,7 +21,7 @@ export interface IconThemeProviderProps {
 
 export function IconThemeProvider({
   children,
-  initialThemeId = "seti",
+  initialThemeId = "simple-icons",
 }: IconThemeProviderProps) {
   const [themeId, setThemeId] = useState<string>(initialThemeId);
 
@@ -56,4 +56,3 @@ export function IconThemeProvider({
 export function useIconTheme(): IconThemeContextValue {
   return useContext(IconThemeContext);
 }
-
