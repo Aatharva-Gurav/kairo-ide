@@ -3,7 +3,12 @@
 import React from "react";
 import { DestinationFolder } from "./types";
 import { FileIcon } from "@/features/icon-theme";
-import { ChevronRight, Loader2, Folder as FolderIcon, HardDrive } from "lucide-react";
+import {
+  ChevronRight,
+  Loader2,
+  HardDrive,
+  FolderTree as FolderTreeIcon,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { normalizePath } from "@/lib/tauri-ipc";
 
@@ -42,9 +47,10 @@ function FolderRow({
   const isSelected = normalizePath(selectedPath).toLowerCase() === normPath.toLowerCase();
   const isLoading = loadingPaths.has(normPath);
   const hasChildren = Boolean(folder.children && folder.children.length > 0);
+  const childCount = folder.children?.length ?? 0;
 
   return (
-    <div className="flex flex-col select-none">
+    <div className="flex flex-col select-none relative">
       <div
         role="button"
         tabIndex={0}
@@ -61,12 +67,12 @@ function FolderRow({
             onToggleExpand(normPath);
           }
         }}
-        style={{ paddingLeft: `${depth * 14 + 8}px` }}
+        style={{ paddingLeft: `${depth * 14 + 6}px` }}
         className={cn(
-          "group flex h-7.5 items-center gap-1.5 pr-2.5 rounded-lg text-xs cursor-pointer transition-all duration-120 border border-transparent",
+          "group flex h-7 items-center gap-1.5 pr-2 rounded-lg text-xs cursor-pointer transition-all duration-120 border",
           isSelected
             ? "bg-primary/12 text-primary font-medium border-primary/25 shadow-2xs"
-            : "hover:bg-muted/70 text-foreground/90 hover:text-foreground"
+            : "hover:bg-muted/70 text-foreground/90 hover:text-foreground border-transparent"
         )}
       >
         {/* Expand / Collapse Disclosure Chevron */}
@@ -78,10 +84,10 @@ function FolderRow({
             e.stopPropagation();
             onToggleExpand(normPath);
           }}
-          className="flex size-4.5 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors shrink-0"
+          className="flex size-4 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors shrink-0"
         >
           {isLoading ? (
-            <Loader2 className="size-3 animate-spin text-primary" />
+            <Loader2 className="size-2.5 animate-spin text-primary" />
           ) : (
             <ChevronRight
               className={cn(
@@ -92,8 +98,8 @@ function FolderRow({
           )}
         </button>
 
-        {/* Folder Icon from theme */}
-        <div className="size-4 shrink-0 flex items-center justify-center">
+        {/* Themed Folder Icon */}
+        <div className="size-3.5 shrink-0 flex items-center justify-center">
           <FileIcon
             name={folder.name}
             isDirectory={true}
@@ -103,24 +109,38 @@ function FolderRow({
         </div>
 
         {/* Folder Name */}
-        <span className="truncate flex-1 font-mono text-[11.5px] tracking-tight">
+        <span className="truncate flex-1 font-mono text-[11px] tracking-tight">
           {folder.name}
         </span>
 
-        {/* Selected Pill Indicator */}
+        {/* Subfolder count badge if expanded and has subfolders */}
+        {hasChildren && (
+          <span className="text-[9px] font-mono text-muted-foreground/60 px-1 rounded group-hover:text-muted-foreground shrink-0">
+            {childCount}
+          </span>
+        )}
+
+        {/* Selected dot indicator */}
         {isSelected && (
           <span className="size-1.5 rounded-full bg-primary shrink-0 animate-in fade-in-50 duration-150" />
         )}
       </div>
 
-      {/* Render Subfolders if expanded */}
+      {/* Render Subfolders with Notion-style Indentation Guide Line */}
       {isExpanded && hasChildren && (
-        <div className="flex flex-col space-y-0.5 mt-0.5">
+        <div
+          className="flex flex-col space-y-0.5 mt-0.5 relative"
+          style={{
+            marginLeft: `${depth * 14 + 13}px`,
+            borderLeft: "1px solid var(--border)",
+            paddingLeft: "2px",
+          }}
+        >
           {folder.children!.map((child) => (
             <FolderRow
               key={child.id}
               folder={child}
-              depth={depth + 1}
+              depth={0}
               selectedPath={selectedPath}
               onSelectPath={onSelectPath}
               expandedPaths={expandedPaths}
@@ -135,9 +155,9 @@ function FolderRow({
       {isExpanded && !hasChildren && !isLoading && folder.isLoaded && (
         <div
           style={{ paddingLeft: `${(depth + 1) * 14 + 18}px` }}
-          className="py-1 text-[10px] text-muted-foreground/60 italic font-mono select-none"
+          className="py-0.5 text-[9.5px] text-muted-foreground/50 italic font-mono select-none"
         >
-          No subfolders
+          (empty)
         </div>
       )}
     </div>
@@ -158,7 +178,7 @@ export function DestinationFolderTree({
   const isRootSelected = normalizePath(selectedPath).toLowerCase() === normRoot.toLowerCase();
 
   return (
-    <div className="flex flex-col gap-1 w-full">
+    <div className="flex flex-col gap-0.5 w-full">
       {/* Workspace Root Destination Row */}
       <div
         role="button"
@@ -171,34 +191,38 @@ export function DestinationFolderTree({
           }
         }}
         className={cn(
-          "group flex h-8 items-center gap-2 px-2 rounded-lg text-xs cursor-pointer transition-all duration-120 border",
+          "group flex h-7.5 items-center gap-2 px-2 rounded-lg text-xs cursor-pointer transition-all duration-120 border",
           isRootSelected
             ? "bg-primary/12 text-primary font-semibold border-primary/30 shadow-2xs"
             : "hover:bg-muted/70 text-foreground border-border/40 hover:border-border/70"
         )}
       >
-        <div className="flex size-5 items-center justify-center rounded-md bg-sidebar-accent/50 text-foreground shrink-0">
-          <HardDrive className={cn("size-3.5", isRootSelected ? "text-primary" : "text-muted-foreground")} />
+        <div className="flex size-4.5 items-center justify-center rounded bg-sidebar-accent/50 text-foreground shrink-0">
+          <HardDrive className={cn("size-3", isRootSelected ? "text-primary" : "text-muted-foreground")} />
         </div>
 
-        <div className="flex flex-col flex-1 min-w-0">
-          <span className="truncate font-sans font-medium text-[11.5px] leading-tight">
+        <div className="flex items-center gap-1.5 flex-1 min-w-0">
+          <span className="truncate font-sans font-medium text-[11px] leading-tight">
             {workspaceName}
           </span>
-          <span className="text-[10px] text-muted-foreground leading-none font-mono">
-            Workspace Root (/)
+          <span className="text-[9.5px] text-muted-foreground font-mono shrink-0">
+            (Root)
           </span>
         </div>
 
-        {isRootSelected && (
-          <span className="px-1.5 py-0.5 rounded text-[9.5px] font-sans font-medium bg-primary/20 text-primary shrink-0">
+        {isRootSelected ? (
+          <span className="px-1.5 py-0.2 rounded text-[9px] font-sans font-medium bg-primary/20 text-primary shrink-0">
             Selected
+          </span>
+        ) : (
+          <span className="text-[9.5px] text-muted-foreground/60 font-mono opacity-0 group-hover:opacity-100 transition-opacity">
+            Select
           </span>
         )}
       </div>
 
       {/* Subfolder Tree */}
-      <div className="flex flex-col space-y-0.5 mt-1">
+      <div className="flex flex-col space-y-0.5 mt-0.5">
         {folders.map((folder) => (
           <FolderRow
             key={folder.id}
@@ -213,12 +237,11 @@ export function DestinationFolderTree({
         ))}
 
         {folders.length === 0 && (
-          <div className="py-3 text-center text-xs text-muted-foreground font-sans">
-            No folders found in workspace.
+          <div className="py-2.5 text-center text-[11px] text-muted-foreground font-sans">
+            No matching folders.
           </div>
         )}
       </div>
     </div>
   );
 }
-

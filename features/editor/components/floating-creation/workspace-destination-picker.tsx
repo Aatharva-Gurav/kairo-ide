@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useId } from "react";
+import React, { useState, useEffect, useRef, useId, useMemo } from "react";
 import {
   X,
   File,
@@ -11,6 +11,9 @@ import {
   Loader2,
   AlertCircle,
   FolderCheck,
+  ChevronRight,
+  HardDrive,
+  RotateCcw,
 } from "lucide-react";
 import { CreationType } from "./types";
 import { validateCreationInput } from "./validation";
@@ -21,6 +24,7 @@ import { useEditor } from "@/features/editor/store";
 import { useWorkspace } from "@/features/workspace/store";
 import { FileExplorerService } from "@/features/file-explorer/service";
 import { ideEvents } from "@/lib/events";
+import { FileIcon } from "@/features/icon-theme";
 import {
   normalizePath,
   joinPath,
@@ -31,6 +35,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+
+const COMMON_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".json", ".css", ".md"];
 
 interface WorkspaceDestinationPickerProps {
   isOpen: boolean;
@@ -62,13 +68,12 @@ export function WorkspaceDestinationPicker({
     setCreationType(initialType);
   }, [initialType]);
 
-  // Reset form when opened or closed
+  // Reset form and focus on open
   useEffect(() => {
     if (isOpen) {
       setItemName("");
       setSubmissionError(null);
       setDuplicateWarning(null);
-      // Focus input on open
       const timer = setTimeout(() => {
         inputRef.current?.focus();
       }, 50);
@@ -152,6 +157,13 @@ export function WorkspaceDestinationPicker({
     };
 
     const handleClickOutside = (e: MouseEvent) => {
+      const isFabClick = Boolean(
+        (e.target as HTMLElement)?.closest?.('[data-floating-fab="true"]')
+      );
+      if (isFabClick) {
+        // Main FAB handles closing and canceling creation
+        return;
+      }
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         onClose();
       }
@@ -192,7 +204,7 @@ export function WorkspaceDestinationPicker({
           name: cleanName,
           isDirectory: false,
         });
-        // Open the newly created file in the editor
+        // Open newly created file in Monaco editor
         await openDocument(newFilePath);
       } else {
         const newDirPath = await FileExplorerService.createDirectory(
@@ -216,9 +228,25 @@ export function WorkspaceDestinationPicker({
     }
   };
 
+  // Interactive Breadcrumb Navigation
+  const breadcrumbs = useMemo(() => {
+    const rel = relativePath(normRoot, selectedPath);
+    if (!rel) return [];
+
+    const segments = rel.split("/").filter(Boolean);
+    const crumbs: { name: string; fullPath: string }[] = [];
+    let currentAcc = normRoot;
+
+    for (const segment of segments) {
+      currentAcc = joinPath(currentAcc, segment);
+      crumbs.push({ name: segment, fullPath: currentAcc });
+    }
+    return crumbs;
+  }, [normRoot, selectedPath]);
+
   if (!isOpen) return null;
 
-  // Compute clean relative display path
+  // Clean relative display path
   const relPath = relativePath(normRoot, selectedPath);
   const displayDest = relPath ? `/${relPath}` : "/";
   const previewPath = itemName.trim()
@@ -226,6 +254,7 @@ export function WorkspaceDestinationPicker({
     : null;
 
   const isFormValid = validation.valid && !duplicateWarning && !isSubmitting;
+  const hasExtension = itemName.includes(".");
 
   return (
     <div
@@ -234,24 +263,33 @@ export function WorkspaceDestinationPicker({
       aria-modal="true"
       aria-labelledby="creation-panel-title"
       className={cn(
-        "absolute bottom-16 right-0 z-50 w-[380px] max-w-[calc(100vw-32px)] flex flex-col",
+        "absolute bottom-13 right-0 z-50 w-[380px] max-w-[calc(100vw-28px)] flex flex-col",
         "rounded-2xl border border-border/80 bg-popover/98 text-popover-foreground shadow-2xl backdrop-blur-xl",
         "ring-1 ring-black/5 dark:ring-white/10 select-none overflow-hidden",
         "animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-2 duration-180 ease-out"
       )}
     >
       {/* Panel Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border/60 bg-muted/20">
-        <div className="flex flex-col min-w-0">
-          <h2
-            id="creation-panel-title"
-            className="text-xs font-semibold tracking-tight text-foreground"
-          >
-            Create in workspace
-          </h2>
-          <p className="text-[10.5px] text-muted-foreground leading-snug">
-            Choose where to add your new item
-          </p>
+      <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-border/60 bg-muted/20">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="flex size-6 items-center justify-center rounded-md bg-primary/10 text-primary shrink-0 shadow-2xs">
+            {creationType === "file" ? (
+              <FilePlus className="size-3.5" />
+            ) : (
+              <FolderPlus className="size-3.5" />
+            )}
+          </div>
+          <div className="flex flex-col min-w-0">
+            <h2
+              id="creation-panel-title"
+              className="text-xs font-semibold tracking-tight text-foreground truncate"
+            >
+              Create {creationType === "file" ? "New File" : "New Folder"}
+            </h2>
+            <span className="text-[10px] text-muted-foreground truncate font-mono">
+              in {displayDest}
+            </span>
+          </div>
         </div>
 
         <button
@@ -265,9 +303,9 @@ export function WorkspaceDestinationPicker({
         </button>
       </div>
 
-      {/* Creation Type Selector (Segmented Control) */}
-      <div className="p-3 pb-2">
-        <div className="grid grid-cols-2 p-1 rounded-xl bg-muted/60 border border-border/40 gap-1">
+      {/* Creation Type Selector (Segmented Tabs) */}
+      <div className="px-3 pt-2 pb-1">
+        <div className="grid grid-cols-2 p-0.5 rounded-lg bg-muted/60 border border-border/40 gap-1">
           <button
             type="button"
             onClick={() => {
@@ -275,13 +313,13 @@ export function WorkspaceDestinationPicker({
               inputRef.current?.focus();
             }}
             className={cn(
-              "flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-all duration-140",
+              "flex items-center justify-center gap-1.5 py-1 rounded-md text-[11px] font-medium cursor-pointer transition-all duration-120",
               creationType === "file"
                 ? "bg-background text-foreground shadow-2xs font-semibold"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
             )}
           >
-            <File className="size-3.5" />
+            <File className="size-3" />
             <span>New File</span>
           </button>
 
@@ -292,41 +330,87 @@ export function WorkspaceDestinationPicker({
               inputRef.current?.focus();
             }}
             className={cn(
-              "flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-all duration-140",
+              "flex items-center justify-center gap-1.5 py-1 rounded-md text-[11px] font-medium cursor-pointer transition-all duration-120",
               creationType === "folder"
                 ? "bg-background text-foreground shadow-2xs font-semibold"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
             )}
           >
-            <Folder className="size-3.5" />
+            <Folder className="size-3" />
             <span>New Folder</span>
           </button>
         </div>
       </div>
 
-      {/* Destination Folder Picker Section */}
+      {/* Destination Folder Section */}
       <div className="px-3 py-1 flex flex-col gap-1.5">
-        <div className="flex items-center justify-between text-[11px] font-medium text-muted-foreground">
-          <span className="font-sans">Destination Folder</span>
-          <span className="text-[10px] font-mono text-muted-foreground/80 truncate max-w-[170px]">
-            {displayDest}
-          </span>
+        {/* Interactive Breadcrumb Bar */}
+        <div className="flex items-center justify-between text-[10.5px] font-medium text-muted-foreground">
+          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5 max-w-[280px]">
+            <button
+              type="button"
+              onClick={() => setSelectedPath(normRoot)}
+              className={cn(
+                "hover:text-foreground cursor-pointer transition-colors px-1 py-0.5 rounded hover:bg-muted/60 font-sans flex items-center gap-1",
+                selectedPath === normRoot ? "text-primary font-semibold" : ""
+              )}
+            >
+              <HardDrive className="size-2.5" />
+              <span>root</span>
+            </button>
+            {breadcrumbs.map((crumb) => (
+              <React.Fragment key={crumb.fullPath}>
+                <ChevronRight className="size-2.5 text-muted-foreground/60 shrink-0" />
+                <button
+                  type="button"
+                  onClick={() => setSelectedPath(crumb.fullPath)}
+                  className={cn(
+                    "hover:text-foreground cursor-pointer transition-colors px-1 py-0.5 rounded hover:bg-muted/60 font-mono truncate max-w-[80px]",
+                    selectedPath === crumb.fullPath ? "text-primary font-semibold" : ""
+                  )}
+                >
+                  {crumb.name}
+                </button>
+              </React.Fragment>
+            ))}
+          </div>
+
+          {selectedPath !== normRoot && (
+            <button
+              type="button"
+              onClick={() => setSelectedPath(normRoot)}
+              title="Reset to workspace root"
+              className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-0.5 cursor-pointer hover:bg-muted/60 px-1 py-0.5 rounded transition-colors"
+            >
+              <RotateCcw className="size-2.5" />
+              <span>Root</span>
+            </button>
+          )}
         </div>
 
         {/* Folder search input */}
         <div className="relative flex items-center">
-          <Search className="absolute left-2.5 size-3.5 text-muted-foreground pointer-events-none" />
+          <Search className="absolute left-2.5 size-3 text-muted-foreground pointer-events-none" />
           <input
             type="text"
             value={filterQuery}
             onChange={(e) => setFilterQuery(e.target.value)}
             placeholder="Search folders..."
-            className="w-full h-7 pl-8 pr-2.5 rounded-lg text-xs bg-muted/40 border border-border/50 text-foreground placeholder:text-muted-foreground/70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary/50 transition-colors font-sans"
+            className="w-full h-6.5 pl-7 pr-6 rounded-md text-[11px] bg-muted/40 border border-border/50 text-foreground placeholder:text-muted-foreground/70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary/50 transition-colors font-sans"
           />
+          {filterQuery && (
+            <button
+              type="button"
+              onClick={() => setFilterQuery("")}
+              className="absolute right-1.5 text-muted-foreground hover:text-foreground cursor-pointer p-0.5"
+            >
+              <X className="size-2.5" />
+            </button>
+          )}
         </div>
 
         {/* Scrollable Folder Tree Viewport */}
-        <div className="max-h-36 overflow-y-auto rounded-xl border border-border/50 bg-background/50 p-1.5">
+        <div className="max-h-32 overflow-y-auto rounded-lg border border-border/50 bg-background/50 p-1">
           <DestinationFolderTree
             workspaceName={workspaceName}
             workspaceRootPath={workspaceRoot}
@@ -340,26 +424,32 @@ export function WorkspaceDestinationPicker({
         </div>
       </div>
 
-      {/* Item Name Input */}
-      <form onSubmit={handleConfirm} className="p-3 pt-2 flex flex-col gap-1.5">
-        <label
-          htmlFor={inputId}
-          className="text-[11px] font-medium text-muted-foreground flex items-center gap-1"
-        >
-          {creationType === "file" ? (
-            <>
-              <FilePlus className="size-3 text-primary" />
-              <span>File Name</span>
-            </>
-          ) : (
-            <>
-              <FolderPlus className="size-3 text-primary" />
-              <span>Folder Name</span>
-            </>
-          )}
-        </label>
+      {/* Item Name Input with Live File Icon Preview */}
+      <form onSubmit={handleConfirm} className="px-3 pt-1.5 pb-2.5 flex flex-col gap-1.5">
+        <div className="flex items-center justify-between text-[11px] font-medium text-muted-foreground">
+          <label htmlFor={inputId} className="flex items-center gap-1.5">
+            <span>{creationType === "file" ? "File Name" : "Folder Name"}</span>
+          </label>
+        </div>
 
         <div className="relative flex items-center">
+          {/* Live Icon resolved dynamically from the typed filename */}
+          <div className="absolute left-2.5 pointer-events-none flex items-center justify-center size-3.5">
+            {creationType === "file" ? (
+              <FileIcon
+                name={itemName.trim() || "file.txt"}
+                className="size-3.5"
+              />
+            ) : (
+              <FileIcon
+                name={itemName.trim() || "folder"}
+                isDirectory={true}
+                isExpanded={false}
+                className="size-3.5"
+              />
+            )}
+          </div>
+
           <Input
             id={inputId}
             ref={inputRef}
@@ -371,13 +461,14 @@ export function WorkspaceDestinationPicker({
             }}
             placeholder={
               creationType === "file"
-                ? "e.g. page.tsx, styles.css"
+                ? "e.g. index.tsx, styles.css"
                 : "e.g. components, utils"
             }
-            className="h-8 text-xs font-mono pr-7"
+            className="h-7.5 text-xs font-mono pl-8 pr-7"
             autoComplete="off"
             spellCheck={false}
           />
+
           {itemName.trim() && (
             <button
               type="button"
@@ -389,19 +480,41 @@ export function WorkspaceDestinationPicker({
           )}
         </div>
 
+        {/* Quick extension chips for files */}
+        {creationType === "file" && !hasExtension && (
+          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
+            <span className="text-[10px] text-muted-foreground/70 font-sans mr-0.5">
+              Quick:
+            </span>
+            {COMMON_EXTENSIONS.map((ext) => (
+              <button
+                key={ext}
+                type="button"
+                onClick={() => {
+                  setItemName((prev) => (prev.trim() ? `${prev.trim()}${ext}` : `index${ext}`));
+                  inputRef.current?.focus();
+                }}
+                className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-muted/50 hover:bg-primary/10 hover:text-primary text-muted-foreground border border-border/40 transition-colors cursor-pointer"
+              >
+                {ext}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Inline Validation / Error feedback */}
         {submissionError ? (
-          <div className="flex items-center gap-1 text-[11px] text-destructive animate-in fade-in-50 duration-150">
+          <div className="flex items-center gap-1 text-[10.5px] text-destructive animate-in fade-in-50 duration-150">
             <AlertCircle className="size-3 shrink-0" />
             <span className="truncate">{submissionError}</span>
           </div>
         ) : duplicateWarning ? (
-          <div className="flex items-center gap-1 text-[11px] text-destructive animate-in fade-in-50 duration-150">
+          <div className="flex items-center gap-1 text-[10.5px] text-destructive animate-in fade-in-50 duration-150">
             <AlertCircle className="size-3 shrink-0" />
             <span className="truncate">{duplicateWarning}</span>
           </div>
         ) : !validation.valid && itemName.trim().length > 0 ? (
-          <div className="flex items-center gap-1 text-[11px] text-destructive animate-in fade-in-50 duration-150">
+          <div className="flex items-center gap-1 text-[10.5px] text-destructive animate-in fade-in-50 duration-150">
             <AlertCircle className="size-3 shrink-0" />
             <span className="truncate">{validation.error}</span>
           </div>
@@ -409,21 +522,21 @@ export function WorkspaceDestinationPicker({
 
         {/* Target Path Preview */}
         {previewPath && isFormValid && (
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted/40 text-[10px] text-muted-foreground font-mono truncate">
+          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/40 text-[9.5px] text-muted-foreground font-mono truncate">
             <FolderCheck className="size-3 text-primary shrink-0" />
             <span className="truncate">Will create: {previewPath}</span>
           </div>
         )}
 
         {/* Footer Actions */}
-        <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/50 mt-1">
+        <div className="flex items-center justify-end gap-1.5 pt-1.5 border-t border-border/50 mt-0.5">
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={onClose}
             disabled={isSubmitting}
-            className="h-7 text-xs font-medium cursor-pointer"
+            className="h-6.5 text-[11px] font-medium cursor-pointer px-2"
           >
             Cancel
           </Button>
@@ -432,7 +545,7 @@ export function WorkspaceDestinationPicker({
             type="submit"
             size="sm"
             disabled={!isFormValid}
-            className="h-7 text-xs font-semibold cursor-pointer shadow-xs gap-1.5"
+            className="h-6.5 text-[11px] font-semibold cursor-pointer shadow-xs gap-1.5 px-2.5"
           >
             {isSubmitting ? (
               <>
@@ -448,4 +561,3 @@ export function WorkspaceDestinationPicker({
     </div>
   );
 }
-

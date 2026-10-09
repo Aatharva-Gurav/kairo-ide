@@ -1,8 +1,14 @@
 "use client";
 
 import React, { useEffect, useRef } from "react";
-import { FilePlus, FolderPlus, ArrowRight } from "lucide-react";
+import { FilePlus, FolderPlus } from "lucide-react";
 import { CreationType } from "./types";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 interface CreationOptionsPopupProps {
@@ -18,7 +24,7 @@ export function CreationOptionsPopup({
 }: CreationOptionsPopupProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Close on Escape or click outside
+  // Close on Escape or click outside (ignoring clicks on the main FAB)
   useEffect(() => {
     if (!isOpen) return;
 
@@ -30,13 +36,19 @@ export function CreationOptionsPopup({
     };
 
     const handleClickOutside = (e: MouseEvent) => {
+      const isFabClick = Boolean(
+        (e.target as HTMLElement)?.closest?.('[data-floating-fab="true"]')
+      );
+      if (isFabClick) {
+        // Allow the main FAB's own click listener to toggle/close
+        return;
+      }
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         onClose();
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
-    // Use pointerdown with delay or mousedown
     const timer = setTimeout(() => {
       window.addEventListener("mousedown", handleClickOutside);
     }, 10);
@@ -53,69 +65,79 @@ export function CreationOptionsPopup({
   return (
     <div
       ref={containerRef}
-      className={cn(
-        "absolute bottom-16 right-0 z-40 w-64 p-1.5 rounded-2xl",
-        "bg-popover/95 text-popover-foreground border border-border/80 shadow-2xl backdrop-blur-xl",
-        "ring-1 ring-black/5 dark:ring-white/10 select-none",
-        "animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-3 duration-150 ease-out"
-      )}
+      className="absolute bottom-12 right-0 w-10 z-40 flex flex-col items-center gap-2 select-none"
     >
-      <div className="px-2.5 py-1.5 mb-1 border-b border-border/50">
-        <span className="text-[10.5px] font-semibold uppercase tracking-wider text-muted-foreground font-mono">
-          Create Item
-        </span>
-      </div>
-
-      <div className="flex flex-col gap-1">
-        {/* Option: New File */}
-        <button
-          type="button"
-          onClick={() => onSelectType("file")}
+      <TooltipProvider delay={150}>
+        {/* Circular Option 2: New Folder (Same size as main button, no text) */}
+        <div
           className={cn(
-            "group flex items-center gap-3 w-full p-2.5 rounded-xl cursor-pointer text-left",
-            "hover:bg-primary/10 hover:text-primary transition-all duration-140 active:scale-[0.98]",
-            "border border-transparent hover:border-primary/20"
+            "flex items-center justify-center cursor-pointer",
+            "animate-in fade-in-0 zoom-in-50 slide-in-from-bottom-4 duration-200 delay-50 ease-out fill-mode-both"
           )}
-        >
-          <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-140 shrink-0 shadow-2xs">
-            <FilePlus className="size-4.5" />
-          </div>
-          <div className="flex flex-col flex-1 min-w-0">
-            <span className="text-xs font-semibold tracking-tight leading-tight">
-              New File
-            </span>
-            <span className="text-[10px] text-muted-foreground group-hover:text-foreground/80 leading-snug">
-              Create a document in workspace
-            </span>
-          </div>
-          <ArrowRight className="size-3.5 text-muted-foreground group-hover:text-primary opacity-0 group-hover:opacity-100 transition-all -translate-x-1 group-hover:translate-x-0" />
-        </button>
-
-        {/* Option: New Folder */}
-        <button
-          type="button"
           onClick={() => onSelectType("folder")}
-          className={cn(
-            "group flex items-center gap-3 w-full p-2.5 rounded-xl cursor-pointer text-left",
-            "hover:bg-primary/10 hover:text-primary transition-all duration-140 active:scale-[0.98]",
-            "border border-transparent hover:border-primary/20"
-          )}
         >
-          <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-140 shrink-0 shadow-2xs">
-            <FolderPlus className="size-4.5" />
-          </div>
-          <div className="flex flex-col flex-1 min-w-0">
-            <span className="text-xs font-semibold tracking-tight leading-tight">
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <button
+                  type="button"
+                  aria-label="Create New Folder"
+                  className={cn(
+                    "flex size-10 items-center justify-center rounded-full cursor-pointer",
+                    // Same size & 3D elevated surface as main button
+                    "bg-card text-foreground border border-border/80",
+                    "shadow-[0_4px_12px_rgba(0,0,0,0.18),0_1.5px_3px_rgba(0,0,0,0.1),inset_0_1px_1px_0_rgba(255,255,255,0.4)]",
+                    "dark:shadow-[0_6px_18px_rgba(0,0,0,0.65),0_2px_4px_rgba(0,0,0,0.45),inset_0_1px_1px_0_rgba(255,255,255,0.2)]",
+                    "hover:bg-primary hover:text-primary-foreground hover:border-primary/50 hover:-translate-y-0.5 hover:shadow-lg",
+                    "active:scale-95 active:translate-y-0",
+                    "transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  )}
+                >
+                  <FolderPlus className="size-4.5 stroke-[2] transition-transform duration-140 group-hover:scale-110" />
+                </button>
+              }
+            />
+            <TooltipContent side="left" sideOffset={10}>
               New Folder
-            </span>
-            <span className="text-[10px] text-muted-foreground group-hover:text-foreground/80 leading-snug">
-              Create a directory in workspace
-            </span>
-          </div>
-          <ArrowRight className="size-3.5 text-muted-foreground group-hover:text-primary opacity-0 group-hover:opacity-100 transition-all -translate-x-1 group-hover:translate-x-0" />
-        </button>
-      </div>
+            </TooltipContent>
+          </Tooltip>
+        </div>
+
+        {/* Circular Option 1: New File (Same size as main button, no text) */}
+        <div
+          className={cn(
+            "flex items-center justify-center cursor-pointer",
+            "animate-in fade-in-0 zoom-in-50 slide-in-from-bottom-2 duration-150 ease-out fill-mode-both"
+          )}
+          onClick={() => onSelectType("file")}
+        >
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <button
+                  type="button"
+                  aria-label="Create New File"
+                  className={cn(
+                    "flex size-10 items-center justify-center rounded-full cursor-pointer",
+                    // Same size & 3D elevated surface as main button
+                    "bg-card text-foreground border border-border/80",
+                    "shadow-[0_4px_12px_rgba(0,0,0,0.18),0_1.5px_3px_rgba(0,0,0,0.1),inset_0_1px_1px_0_rgba(255,255,255,0.4)]",
+                    "dark:shadow-[0_6px_18px_rgba(0,0,0,0.65),0_2px_4px_rgba(0,0,0,0.45),inset_0_1px_1px_0_rgba(255,255,255,0.2)]",
+                    "hover:bg-primary hover:text-primary-foreground hover:border-primary/50 hover:-translate-y-0.5 hover:shadow-lg",
+                    "active:scale-95 active:translate-y-0",
+                    "transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  )}
+                >
+                  <FilePlus className="size-4.5 stroke-[2] transition-transform duration-140 group-hover:scale-110" />
+                </button>
+              }
+            />
+            <TooltipContent side="left" sideOffset={10}>
+              New File
+            </TooltipContent>
+          </Tooltip>
+        </div>
+      </TooltipProvider>
     </div>
   );
 }
-

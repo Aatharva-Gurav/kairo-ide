@@ -50,6 +50,7 @@ export function FloatingCreationFeature({
   const handleFabClick = () => {
     if (isPickerOpen) {
       setIsPickerOpen(false);
+      setIsOptionsOpen(false);
       return;
     }
 
@@ -106,7 +107,6 @@ export function FloatingCreationFeature({
           isVisible={isButtonVisible}
           isOpen={isAnyMenuOpen}
           onClick={handleFabClick}
-          hasStatusBar={false} /* Position is handled by parent wrapper */
         />
       </div>
     </div>
