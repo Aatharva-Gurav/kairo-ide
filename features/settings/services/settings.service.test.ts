@@ -24,7 +24,7 @@ describe("SettingsService", () => {
 
   it("loads default settings initially", () => {
     const effective = SettingsService.getEffectiveSettings();
-    expect(effective.appearance.theme).toBe("light");
+    expect(effective.appearance.theme).toBe("dark-modern");
     expect(effective.editor.fontSize).toBe(13);
     expect(effective.editor.tabSize).toBe(2);
     expect(effective.editor.wordWrap).toBe("on");
@@ -33,7 +33,7 @@ describe("SettingsService", () => {
 
   it("reads single setting by keypath", () => {
     expect(SettingsService.getSetting<number>("editor.fontSize")).toBe(13);
-    expect(SettingsService.getSetting<string>("appearance.theme")).toBe("light");
+    expect(SettingsService.getSetting<string>("appearance.theme")).toBe("dark-modern");
   });
 
   it("updates user setting and updates effective value", () => {
@@ -85,11 +85,11 @@ describe("SettingsService", () => {
 
   it("resets all user settings", () => {
     SettingsService.updateSetting("editor.fontSize", 20, "user");
-    SettingsService.updateSetting("appearance.theme", "dracula", "user");
+    SettingsService.updateSetting("appearance.theme", "midnight-blue", "user");
 
     SettingsService.resetAll("user");
     expect(SettingsService.getSetting<number>("editor.fontSize")).toBe(13);
-    expect(SettingsService.getSetting<string>("appearance.theme")).toBe("light");
+    expect(SettingsService.getSetting<string>("appearance.theme")).toBe("dark-modern");
   });
 
   it("validates and clamps number settings to bounds", () => {
@@ -118,7 +118,7 @@ describe("SettingsService", () => {
       changedKeyRef = changedKey;
     });
 
-    SettingsService.updateSetting("appearance.theme", "dracula", "user");
+    SettingsService.updateSetting("appearance.theme", "midnight-blue", "user");
     expect(notified).toBe(true);
     expect(changedKeyRef).toBe("appearance.theme");
 
@@ -128,21 +128,21 @@ describe("SettingsService", () => {
   it("isolates settings between different user accounts", () => {
     // User A
     SettingsService.setUser("user-a");
-    SettingsService.updateSetting("appearance.theme", "dracula", "user");
+    SettingsService.updateSetting("appearance.theme", "midnight-blue", "user");
     SettingsService.updateSetting("editor.fontSize", 16, "user");
-    expect(SettingsService.getSetting<string>("appearance.theme")).toBe("dracula");
+    expect(SettingsService.getSetting<string>("appearance.theme")).toBe("midnight-blue");
     expect(SettingsService.getSetting<number>("editor.fontSize")).toBe(16);
 
     // Switch to User B
     SettingsService.setUser("user-b");
-    expect(SettingsService.getSetting<string>("appearance.theme")).toBe("light");
+    expect(SettingsService.getSetting<string>("appearance.theme")).toBe("dark-modern");
     expect(SettingsService.getSetting<number>("editor.fontSize")).toBe(13);
-    SettingsService.updateSetting("appearance.theme", "tokyo-night", "user");
-    expect(SettingsService.getSetting<string>("appearance.theme")).toBe("tokyo-night");
+    SettingsService.updateSetting("appearance.theme", "forest-dark", "user");
+    expect(SettingsService.getSetting<string>("appearance.theme")).toBe("forest-dark");
 
     // Switch back to User A -> previous settings are preserved without bleeding
     SettingsService.setUser("user-a");
-    expect(SettingsService.getSetting<string>("appearance.theme")).toBe("dracula");
+    expect(SettingsService.getSetting<string>("appearance.theme")).toBe("midnight-blue");
     expect(SettingsService.getSetting<number>("editor.fontSize")).toBe(16);
   });
 
@@ -153,11 +153,28 @@ describe("SettingsService", () => {
     );
 
     SettingsService.setUser("migrated-user");
-    expect(SettingsService.getSetting<string>("appearance.theme")).toBe("monokai");
+    expect(SettingsService.getSetting<string>("appearance.theme")).toBe("forest-dark");
 
     // Check migrated into user-scoped key
     const scopedRaw = localStorage.getItem(SettingsService.getUserStorageKey("migrated-user"));
     expect(scopedRaw).toBeDefined();
-    expect(JSON.parse(scopedRaw!).appearance.theme).toBe("monokai");
+    expect(JSON.parse(scopedRaw!).appearance.theme).toBe("forest-dark");
+  });
+
+  it("migrates legacy theme IDs to their modern equivalents", () => {
+    SettingsService.updateSetting("appearance.theme", "dracula", "user");
+    expect(SettingsService.getSetting<string>("appearance.theme")).toBe("midnight-blue");
+
+    SettingsService.updateSetting("appearance.theme", "one-dark-pro", "user");
+    expect(SettingsService.getSetting<string>("appearance.theme")).toBe("graphite");
+
+    SettingsService.updateSetting("appearance.theme", "dark", "user");
+    expect(SettingsService.getSetting<string>("appearance.theme")).toBe("dark-modern");
+
+    SettingsService.updateSetting("appearance.theme", "light", "user");
+    expect(SettingsService.getSetting<string>("appearance.theme")).toBe("light-modern");
+
+    SettingsService.updateSetting("appearance.theme", "tokyo-night", "user");
+    expect(SettingsService.getSetting<string>("appearance.theme")).toBe("midnight-blue");
   });
 });

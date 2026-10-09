@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Command, KeybindingConflict } from "../types";
 import { KeybindingService } from "../keybinding.service";
 import { Button } from "@/components/ui/button";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Keyboard, X } from "lucide-react";
 
 interface ShortcutRecorderModalProps {
   command: Command | null;
@@ -81,28 +81,46 @@ function ShortcutRecorderContent({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in-0"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in-0 duration-200"
     >
       <div
         ref={containerRef}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-xl border border-border/80 bg-card p-5 shadow-2xl text-card-foreground animate-in zoom-in-95 duration-150"
+        className="w-full max-w-md rounded-2xl border border-border/70 dark:border-white/10 bg-card/98 dark:bg-[#1e1e1e]/98 p-6 shadow-2xl ring-1 ring-black/5 dark:ring-white/10 backdrop-blur-xl text-card-foreground animate-in zoom-in-95 duration-200"
       >
-        <div className="flex flex-col gap-1">
-          <h3 className="text-sm font-semibold tracking-tight text-foreground">
-            Keyboard Shortcut: {command.title}
-          </h3>
-          <p className="text-xs text-muted-foreground">
-            Press the desired key combination, then click Save or press Enter.
-          </p>
+        <div className="flex items-start justify-between gap-3 mb-1">
+          <div className="flex items-center gap-3">
+            <div className="size-10 rounded-2xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0">
+              <Keyboard className="size-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold tracking-tight text-foreground">
+                Record Shortcut
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5 font-medium truncate max-w-[260px]">
+                {command.title}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="size-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-all cursor-pointer"
+          >
+            <X className="size-4" />
+          </button>
         </div>
 
+        <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+          Press the desired key combination on your keyboard, then save your changes.
+        </p>
+
         {/* Shortcut Input Display */}
-        <div className="my-5 flex flex-col items-center justify-center p-5 rounded-lg border border-dashed border-border/80 bg-muted/20">
-          <span className="text-[11px] text-muted-foreground mb-2 font-medium select-none">
-            {displayKey ? "Recorded Combination" : "Press keys on keyboard..."}
+        <div className="my-5 flex flex-col items-center justify-center p-5 rounded-2xl border border-border/70 dark:border-white/10 bg-muted/30 dark:bg-black/20">
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground mb-2.5 font-medium select-none">
+            <span className="size-1.5 rounded-full bg-primary animate-pulse" />
+            {displayKey ? "Recorded Combination" : "Listening for keystrokes..."}
           </span>
-          <div className="h-10 px-4 rounded-md bg-background border border-border/80 flex items-center justify-center shadow-2xs min-w-[140px]">
+          <div className="h-11 px-5 rounded-xl bg-background border border-border/80 dark:border-white/15 flex items-center justify-center shadow-xs min-w-[150px]">
             <span className="text-sm font-semibold font-mono tracking-wide text-foreground">
               {displayKey || "..."}
             </span>
@@ -111,10 +129,10 @@ function ShortcutRecorderContent({
 
         {/* Conflict Warning */}
         {conflict && (
-          <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-foreground flex items-start gap-2.5">
+          <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-xs text-foreground flex items-start gap-2.5">
             <AlertCircle className="size-4 text-amber-500 shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="font-semibold text-amber-600 dark:text-amber-400">Shortcut Conflict</p>
+              <p className="font-semibold text-amber-600 dark:text-amber-400 text-xs">Shortcut Conflict</p>
               <p className="text-muted-foreground mt-0.5 leading-relaxed text-[11px]">
                 <strong className="text-foreground font-mono">{conflict.key}</strong> is already assigned to{" "}
                 <strong className="text-foreground">&ldquo;{conflict.existingCommand.title}&rdquo;</strong>.
@@ -124,25 +142,25 @@ function ShortcutRecorderContent({
           </div>
         )}
 
-        <div className="flex items-center justify-between gap-2 pt-3 border-t border-border/60">
+        <div className="flex items-center justify-between gap-2 pt-4 border-t border-border/60">
           <div className="flex items-center gap-1.5">
-            <Button variant="ghost" size="xs" onClick={handleReset} className="cursor-pointer">
+            <Button variant="ghost" size="xs" onClick={handleReset} className="rounded-lg cursor-pointer">
               Default
             </Button>
-            <Button variant="ghost" size="xs" onClick={handleClear} className="cursor-pointer text-muted-foreground hover:text-destructive">
+            <Button variant="ghost" size="xs" onClick={handleClear} className="rounded-lg cursor-pointer text-muted-foreground hover:text-destructive">
               Remove
             </Button>
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={onClose} className="cursor-pointer">
+            <Button variant="outline" size="sm" onClick={onClose} className="rounded-xl cursor-pointer">
               Cancel
             </Button>
             <Button
               size="sm"
               onClick={handleSave}
               disabled={!recordedRawKey}
-              className="cursor-pointer"
+              className="rounded-xl cursor-pointer shadow-xs font-medium"
             >
               {conflict ? "Replace & Save" : "Save Shortcut"}
             </Button>

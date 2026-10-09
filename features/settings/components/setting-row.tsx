@@ -3,8 +3,8 @@
 import React from "react";
 import { SettingDefinition } from "../types";
 import { useSettings } from "../store";
-import { Button } from "@/components/ui/button";
 import { RotateCcw } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface SettingRowProps {
   definition: SettingDefinition;
@@ -65,7 +65,7 @@ function NumberSettingInput({
   };
 
   return (
-    <div className="flex items-center gap-2 max-w-[160px]">
+    <div className="flex items-center gap-2 max-w-[180px]">
       <input
         type="number"
         min={definition.min}
@@ -75,7 +75,7 @@ function NumberSettingInput({
         onChange={handleChange}
         onBlur={commitValue}
         onKeyDown={handleKeyDown}
-        className="h-7 w-full rounded-md border border-border/70 bg-background/80 px-2 py-0.5 text-xs text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-ring focus:border-border shadow-2xs transition-colors"
+        className="h-8.5 w-full rounded-xl border border-border/70 bg-background/80 px-3 py-1 text-xs text-foreground font-mono focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-2xs transition-all"
       />
       {definition.min !== undefined && definition.max !== undefined && (
         <span className="text-[10px] text-muted-foreground font-mono shrink-0">
@@ -103,7 +103,7 @@ export function SettingRow({ definition }: SettingRowProps) {
   };
 
   return (
-    <div className="py-2.5 px-3.5 rounded-lg border border-border/60 bg-card/40 hover:bg-card/75 transition-colors duration-150 flex flex-col gap-2 shadow-2xs">
+    <div className="p-4 rounded-2xl border border-border/60 bg-card/60 dark:bg-[#202020]/50 hover:bg-card/90 dark:hover:bg-[#252525]/80 transition-all duration-150 flex flex-col gap-2.5 shadow-2xs">
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
@@ -111,7 +111,7 @@ export function SettingRow({ definition }: SettingRowProps) {
               {definition.label}
             </span>
             {isModified && (
-              <span className="text-[9px] uppercase font-mono px-1.5 py-0.2 rounded bg-amber-500/10 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400 font-semibold border border-amber-500/25">
+              <span className="text-[9px] uppercase font-mono px-2 py-0.5 rounded-full bg-amber-500/10 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400 font-semibold border border-amber-500/25">
                 Modified
               </span>
             )}
@@ -126,39 +126,49 @@ export function SettingRow({ definition }: SettingRowProps) {
 
         {/* Reset button if modified */}
         {isModified && (
-          <Button
-            variant="ghost"
-            size="icon-xs"
+          <button
             onClick={handleReset}
             title="Reset to default"
-            className="text-muted-foreground hover:text-foreground shrink-0 cursor-pointer active:scale-95 transition-all duration-120"
+            className="size-7 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 shrink-0 cursor-pointer active:scale-95 transition-all duration-120"
           >
             <RotateCcw className="size-3" />
-          </Button>
+          </button>
         )}
       </div>
 
       {/* Value Control */}
-      <div className="pt-0.5">
+      <div className="pt-1">
         {definition.type === "boolean" && (
-          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={Boolean(value)}
-              onChange={(e) => updateSetting(definition.key, e.target.checked, activeScope)}
-              className="size-3.5 rounded border-border text-primary focus:ring-1 focus:ring-ring cursor-pointer accent-primary transition-colors"
-            />
-            <span className="text-xs text-foreground font-medium">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={Boolean(value)}
+              onClick={() => updateSetting(definition.key, !value, activeScope)}
+              className={cn(
+                "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+                value ? "bg-primary" : "bg-muted/80 dark:bg-white/20"
+              )}
+            >
+              <span
+                aria-hidden="true"
+                className={cn(
+                  "pointer-events-none inline-block size-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out",
+                  value ? "translate-x-5" : "translate-x-0"
+                )}
+              />
+            </button>
+            <span className="text-xs text-foreground font-medium select-none">
               {value ? "Enabled" : "Disabled"}
             </span>
-          </label>
+          </div>
         )}
 
         {definition.type === "select" && (
           <select
             value={String(value ?? definition.defaultValue)}
             onChange={(e) => updateSetting(definition.key, e.target.value, activeScope)}
-            className="h-7 w-full max-w-xs rounded-md border border-border/70 bg-background/80 px-2 py-0.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring focus:border-border cursor-pointer shadow-2xs transition-colors"
+            className="h-8.5 w-full max-w-xs rounded-xl border border-border/70 bg-background/80 px-3 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary cursor-pointer shadow-2xs transition-all"
           >
             {definition.options?.map((opt) => (
               <option key={String(opt.value)} value={String(opt.value)}>
@@ -181,7 +191,7 @@ export function SettingRow({ definition }: SettingRowProps) {
             type="text"
             value={String(value ?? definition.defaultValue)}
             onChange={(e) => updateSetting(definition.key, e.target.value, activeScope)}
-            className="h-7 w-full max-w-md rounded-md border border-border/70 bg-background/80 px-2 py-0.5 text-xs text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-ring focus:border-border shadow-2xs transition-colors"
+            className="h-8.5 w-full max-w-md rounded-xl border border-border/70 bg-background/80 px-3 text-xs text-foreground font-mono focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-2xs transition-all"
           />
         )}
       </div>

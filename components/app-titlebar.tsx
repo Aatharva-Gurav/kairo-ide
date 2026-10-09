@@ -13,6 +13,7 @@ import { KairoBrandIcon } from "@/components/kairo-brand-icon";
 import { Button } from "@/components/ui/button";
 import { isTauriEnvironment, invokeCommand, basename, writeFileContent } from "@/lib/tauri-ipc";
 import { ideEvents } from "@/lib/events";
+import { isDarkTheme } from "@/features/theme";
 import {
   X,
   Search,
@@ -573,7 +574,8 @@ export function AppTitleBar() {
             label: "Toggle Dark / Light Theme",
             action: () => {
               const cur = settings.appearance.theme;
-              updateSetting("appearance.theme", cur === "dark" ? "light" : "dark");
+              const isDark = isDarkTheme(cur);
+              updateSetting("appearance.theme", isDark ? "light-modern" : "dark-modern");
             },
           },
           { id: "sep-app1", label: "", separator: true },

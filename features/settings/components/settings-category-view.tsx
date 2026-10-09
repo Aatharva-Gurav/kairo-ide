@@ -64,27 +64,32 @@ export function SettingsCategoryView() {
 
   if (isSearching) {
     return (
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between pb-3 border-b border-border/80">
+      <div className="flex flex-col gap-5">
+        <div className="flex items-center justify-between pb-3.5 border-b border-border/60">
           <div>
-            <h2 className="text-sm font-semibold tracking-tight text-foreground">
-              Search Results ({displayedDefinitions.length})
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-semibold tracking-tight text-foreground">
+                Search Results
+              </h2>
+              <span className="text-[11px] font-medium font-mono px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                {displayedDefinitions.length}
+              </span>
+            </div>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Matching &ldquo;{searchQuery}&rdquo; across all settings
+              Matching &ldquo;{searchQuery}&rdquo; across all workbench settings
             </p>
           </div>
         </div>
 
         {displayedDefinitions.length > 0 ? (
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3.5">
             {displayedDefinitions.map((def) => (
               <SettingRow key={def.key} definition={def} />
             ))}
           </div>
         ) : (
-          <div className="py-16 text-center text-xs text-muted-foreground italic">
-            No settings match your search query.
+          <div className="py-20 text-center text-xs text-muted-foreground">
+            No settings match &ldquo;{searchQuery}&rdquo;.
           </div>
         )}
       </div>
@@ -98,11 +103,11 @@ export function SettingsCategoryView() {
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between pb-3 border-b border-border/80">
+    <div className="flex flex-col gap-5">
+      <div className="flex items-center justify-between pb-3.5 border-b border-border/60">
         <div>
-          <h2 className="text-sm font-semibold tracking-tight text-foreground">{meta.title}</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">{meta.description}</p>
+          <h2 className="text-base font-semibold tracking-tight text-foreground">{meta.title}</h2>
+          <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{meta.description}</p>
         </div>
 
         <Button
@@ -110,14 +115,14 @@ export function SettingsCategoryView() {
           size="xs"
           onClick={() => resetCategory(categoryKey, activeScope)}
           title={`Reset ${meta.title} settings to default`}
-          className="cursor-pointer"
+          className="rounded-xl h-8 px-3 text-xs font-medium cursor-pointer"
         >
-          <RotateCcw className="size-3 mr-1" />
+          <RotateCcw className="size-3 mr-1.5" />
           Reset Category
         </Button>
       </div>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3.5">
         {displayedDefinitions.map((def) => (
           <SettingRow key={def.key} definition={def} />
         ))}

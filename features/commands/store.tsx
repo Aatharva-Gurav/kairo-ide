@@ -22,6 +22,7 @@ import { SettingsModal } from "@/features/settings/components/settings-modal";
 import { ideEvents } from "@/lib/events";
 import { isTauriEnvironment, invokeCommand, writeFileContent } from "@/lib/tauri-ipc";
 import { WorkspaceService } from "@/features/workspace/service";
+import { isDarkTheme } from "@/features/theme";
 
 export interface CommandContextValue {
   isCommandPaletteOpen: boolean;
@@ -500,7 +501,8 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
         keywords: ["theme", "color", "dark", "light"],
         execute: () => {
           const current = settingsRef.current.settings.appearance.theme;
-          const next = current === "dark" ? "light" : "dark";
+          const isDark = isDarkTheme(current);
+          const next = isDark ? "light-modern" : "dark-modern";
           settingsRef.current.updateSetting("appearance.theme", next);
         },
       })

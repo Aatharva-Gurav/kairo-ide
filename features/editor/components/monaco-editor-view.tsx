@@ -10,6 +10,7 @@ import { IntelliSenseService } from "../services/intellisense.service";
 import { NavigationService } from "../services/navigation.service";
 import { EditorDocument } from "../types";
 import { ideEvents } from "@/lib/events";
+import { THEME_DEFINITIONS, migrateLegacyTheme } from "@/features/theme";
 
 // Ensure Monaco runs completely offline from bundled npm module with offline Web Worker stub
 if (typeof window !== "undefined") {
@@ -43,264 +44,71 @@ if (typeof window !== "undefined") {
   // 3. Configure loader to use the bundled monaco instance directly
   loader.config({ monaco });
 
-  // 4. Register custom IDE themes matching Kairo and VS Code / popular palettes
+  // 4. Register custom IDE themes matching all 14 VS Code-inspired themes
   try {
+    for (const [id, def] of Object.entries(THEME_DEFINITIONS)) {
+      monaco.editor.defineTheme(id, {
+        base: def.monaco.base,
+        inherit: true,
+        rules: def.monaco.rules,
+        colors: def.monaco.colors,
+      });
+    }
+
+    // Register legacy aliases for backward compatibility
     monaco.editor.defineTheme("kairo-dark", {
-      base: "vs-dark",
+      base: THEME_DEFINITIONS["dark-modern"].monaco.base,
       inherit: true,
-      rules: [
-        { token: "comment", foreground: "71717a", fontStyle: "italic" },
-        { token: "keyword", foreground: "a78bfa", fontStyle: "bold" },
-        { token: "string", foreground: "34d399" },
-        { token: "number", foreground: "fbbf24" },
-        { token: "type", foreground: "38bdf8" },
-        { token: "class", foreground: "38bdf8" },
-        { token: "function", foreground: "60a5fa" },
-        { token: "variable", foreground: "f4f4f5" },
-        { token: "delimiter", foreground: "a1a1aa" },
-      ],
-      colors: {
-        "editor.background": "#141416",
-        "editor.foreground": "#f4f4f5",
-        "editorCursor.foreground": "#a78bfa",
-        "editor.lineHighlightBackground": "#1e1e24",
-        "editorLineNumber.foreground": "#52525b",
-        "editorLineNumber.activeForeground": "#a1a1aa",
-        "editor.selectionBackground": "#3b305480",
-        "editor.inactiveSelectionBackground": "#27272a80",
-        "editorIndentGuide.background": "#27272a",
-        "editorIndentGuide.activeBackground": "#52525b",
-        "editorBracketMatch.background": "#3f3f4650",
-        "editorBracketMatch.border": "#8b5cf6",
-        "editorSuggestWidget.background": "#18181b",
-        "editorSuggestWidget.border": "#27272a",
-        "editorSuggestWidget.foreground": "#f4f4f5",
-        "editorSuggestWidget.selectedBackground": "#27272a",
-        "editorSuggestWidget.highlightForeground": "#a78bfa",
-        "editorSuggestWidget.focusHighlightForeground": "#c4b5fd",
-      },
+      rules: THEME_DEFINITIONS["dark-modern"].monaco.rules,
+      colors: THEME_DEFINITIONS["dark-modern"].monaco.colors,
     });
-
     monaco.editor.defineTheme("kairo-light", {
-      base: "vs",
+      base: THEME_DEFINITIONS["light-modern"].monaco.base,
       inherit: true,
-      rules: [],
-      colors: {
-        "editor.background": "#ffffff",
-        "editor.foreground": "#18181b",
-        "editorCursor.foreground": "#6366f1",
-        "editor.lineHighlightBackground": "#f4f4f5",
-        "editorLineNumber.foreground": "#a1a1aa",
-        "editorLineNumber.activeForeground": "#18181b",
-        "editorSuggestWidget.background": "#ffffff",
-        "editorSuggestWidget.border": "#e4e4e7",
-        "editorSuggestWidget.foreground": "#18181b",
-        "editorSuggestWidget.selectedBackground": "#f4f4f5",
-        "editorSuggestWidget.highlightForeground": "#6366f1",
-        "editorSuggestWidget.focusHighlightForeground": "#4f46e5",
-      },
+      rules: THEME_DEFINITIONS["light-modern"].monaco.rules,
+      colors: THEME_DEFINITIONS["light-modern"].monaco.colors,
     });
-
-    monaco.editor.defineTheme("vs-dark", {
-      base: "vs-dark",
+    monaco.editor.defineTheme("dark", {
+      base: THEME_DEFINITIONS["dark-modern"].monaco.base,
       inherit: true,
-      rules: [
-        { token: "comment", foreground: "6A9955", fontStyle: "italic" },
-        { token: "keyword", foreground: "C586C0" },
-        { token: "string", foreground: "CE9178" },
-        { token: "number", foreground: "B5CEA8" },
-        { token: "type", foreground: "4EC9B0" },
-        { token: "class", foreground: "4EC9B0" },
-        { token: "function", foreground: "DCDCAA" },
-        { token: "variable", foreground: "9CDCFE" },
-        { token: "delimiter", foreground: "D4D4D4" },
-      ],
-      colors: {
-        "editor.background": "#1e1e1e",
-        "editor.foreground": "#d4d4d4",
-        "editorCursor.foreground": "#aeafad",
-        "editor.lineHighlightBackground": "#282828",
-        "editorLineNumber.foreground": "#858585",
-        "editorLineNumber.activeForeground": "#c6c6c6",
-        "editor.selectionBackground": "#264f78",
-        "editor.inactiveSelectionBackground": "#3a3d41",
-        "editorSuggestWidget.background": "#252526",
-        "editorSuggestWidget.border": "#454545",
-        "editorSuggestWidget.foreground": "#cccccc",
-        "editorSuggestWidget.selectedBackground": "#04395e",
-        "editorSuggestWidget.highlightForeground": "#0097fb",
-        "editorSuggestWidget.focusHighlightForeground": "#18a3ff",
-      },
+      rules: THEME_DEFINITIONS["dark-modern"].monaco.rules,
+      colors: THEME_DEFINITIONS["dark-modern"].monaco.colors,
     });
-
-    monaco.editor.defineTheme("vs-light", {
-      base: "vs",
+    monaco.editor.defineTheme("light", {
+      base: THEME_DEFINITIONS["light-modern"].monaco.base,
       inherit: true,
-      rules: [
-        { token: "comment", foreground: "008000", fontStyle: "italic" },
-        { token: "keyword", foreground: "AF00DB" },
-        { token: "string", foreground: "A31515" },
-        { token: "number", foreground: "098658" },
-        { token: "type", foreground: "267F99" },
-        { token: "class", foreground: "267F99" },
-        { token: "function", foreground: "795E26" },
-        { token: "variable", foreground: "001080" },
-      ],
-      colors: {
-        "editor.background": "#ffffff",
-        "editor.foreground": "#000000",
-        "editorCursor.foreground": "#000000",
-        "editor.lineHighlightBackground": "#f5f5f5",
-        "editorLineNumber.foreground": "#717171",
-        "editorLineNumber.activeForeground": "#000000",
-        "editor.selectionBackground": "#add6ff",
-        "editorSuggestWidget.background": "#f3f3f3",
-        "editorSuggestWidget.border": "#c8c8c8",
-        "editorSuggestWidget.foreground": "#1e1e1e",
-        "editorSuggestWidget.selectedBackground": "#0060c025",
-        "editorSuggestWidget.highlightForeground": "#0066bf",
-        "editorSuggestWidget.focusHighlightForeground": "#0066bf",
-      },
+      rules: THEME_DEFINITIONS["light-modern"].monaco.rules,
+      colors: THEME_DEFINITIONS["light-modern"].monaco.colors,
     });
-
     monaco.editor.defineTheme("one-dark-pro", {
-      base: "vs-dark",
+      base: THEME_DEFINITIONS["graphite"].monaco.base,
       inherit: true,
-      rules: [
-        { token: "comment", foreground: "5c6370", fontStyle: "italic" },
-        { token: "keyword", foreground: "c678dd" },
-        { token: "string", foreground: "98c379" },
-        { token: "number", foreground: "d19a66" },
-        { token: "type", foreground: "e5c07b" },
-        { token: "class", foreground: "e5c07b" },
-        { token: "function", foreground: "61afef" },
-        { token: "variable", foreground: "e06c75" },
-        { token: "delimiter", foreground: "abb2bf" },
-      ],
-      colors: {
-        "editor.background": "#282c34",
-        "editor.foreground": "#abb2bf",
-        "editorCursor.foreground": "#528bff",
-        "editor.lineHighlightBackground": "#2c313c",
-        "editorLineNumber.foreground": "#4b5263",
-        "editorLineNumber.activeForeground": "#abb2bf",
-        "editor.selectionBackground": "#3e4451",
-        "editor.inactiveSelectionBackground": "#333842",
-        "editorIndentGuide.background": "#3b4048",
-        "editorIndentGuide.activeBackground": "#5c6370",
-      },
+      rules: THEME_DEFINITIONS["graphite"].monaco.rules,
+      colors: THEME_DEFINITIONS["graphite"].monaco.colors,
     });
-
     monaco.editor.defineTheme("dracula", {
-      base: "vs-dark",
+      base: THEME_DEFINITIONS["midnight-blue"].monaco.base,
       inherit: true,
-      rules: [
-        { token: "comment", foreground: "6272a4", fontStyle: "italic" },
-        { token: "keyword", foreground: "ff79c6" },
-        { token: "string", foreground: "f1fa8c" },
-        { token: "number", foreground: "bd93f9" },
-        { token: "type", foreground: "8be9fd", fontStyle: "italic" },
-        { token: "class", foreground: "8be9fd" },
-        { token: "function", foreground: "50fa7b" },
-        { token: "variable", foreground: "f8f8f2" },
-        { token: "delimiter", foreground: "ff79c6" },
-      ],
-      colors: {
-        "editor.background": "#282a36",
-        "editor.foreground": "#f8f8f2",
-        "editorCursor.foreground": "#f8f8f0",
-        "editor.lineHighlightBackground": "#44475a75",
-        "editorLineNumber.foreground": "#6272a4",
-        "editorLineNumber.activeForeground": "#f8f8f2",
-        "editor.selectionBackground": "#44475a",
-        "editor.inactiveSelectionBackground": "#343746",
-        "editorIndentGuide.background": "#44475a80",
-        "editorIndentGuide.activeBackground": "#bd93f9",
-      },
+      rules: THEME_DEFINITIONS["midnight-blue"].monaco.rules,
+      colors: THEME_DEFINITIONS["midnight-blue"].monaco.colors,
     });
-
     monaco.editor.defineTheme("tokyo-night", {
-      base: "vs-dark",
+      base: THEME_DEFINITIONS["midnight-blue"].monaco.base,
       inherit: true,
-      rules: [
-        { token: "comment", foreground: "565f89", fontStyle: "italic" },
-        { token: "keyword", foreground: "bb9af7" },
-        { token: "string", foreground: "9ece6a" },
-        { token: "number", foreground: "ff9e64" },
-        { token: "type", foreground: "2ac3de" },
-        { token: "class", foreground: "2ac3de" },
-        { token: "function", foreground: "7aa2f7" },
-        { token: "variable", foreground: "c0caf5" },
-        { token: "delimiter", foreground: "89ddff" },
-      ],
-      colors: {
-        "editor.background": "#1a1b26",
-        "editor.foreground": "#a9b1d6",
-        "editorCursor.foreground": "#c0caf5",
-        "editor.lineHighlightBackground": "#1f2335",
-        "editorLineNumber.foreground": "#3b4261",
-        "editorLineNumber.activeForeground": "#7aa2f7",
-        "editor.selectionBackground": "#283457",
-        "editor.inactiveSelectionBackground": "#222944",
-        "editorIndentGuide.background": "#292e42",
-        "editorIndentGuide.activeBackground": "#7aa2f7",
-      },
+      rules: THEME_DEFINITIONS["midnight-blue"].monaco.rules,
+      colors: THEME_DEFINITIONS["midnight-blue"].monaco.colors,
     });
-
     monaco.editor.defineTheme("github-dark", {
-      base: "vs-dark",
+      base: THEME_DEFINITIONS["dark-modern"].monaco.base,
       inherit: true,
-      rules: [
-        { token: "comment", foreground: "8b949e", fontStyle: "italic" },
-        { token: "keyword", foreground: "ff7b72" },
-        { token: "string", foreground: "a5d6ff" },
-        { token: "number", foreground: "79c0ff" },
-        { token: "type", foreground: "7ee787" },
-        { token: "class", foreground: "ffa657" },
-        { token: "function", foreground: "d2a8ff" },
-        { token: "variable", foreground: "c9d1d9" },
-        { token: "delimiter", foreground: "c9d1d9" },
-      ],
-      colors: {
-        "editor.background": "#0d1117",
-        "editor.foreground": "#c9d1d9",
-        "editorCursor.foreground": "#58a6ff",
-        "editor.lineHighlightBackground": "#161b22",
-        "editorLineNumber.foreground": "#484f58",
-        "editorLineNumber.activeForeground": "#c9d1d9",
-        "editor.selectionBackground": "#1f6feb40",
-        "editor.inactiveSelectionBackground": "#1f6feb20",
-        "editorIndentGuide.background": "#21262d",
-        "editorIndentGuide.activeBackground": "#30363d",
-      },
+      rules: THEME_DEFINITIONS["dark-modern"].monaco.rules,
+      colors: THEME_DEFINITIONS["dark-modern"].monaco.colors,
     });
-
     monaco.editor.defineTheme("monokai", {
-      base: "vs-dark",
+      base: THEME_DEFINITIONS["forest-dark"].monaco.base,
       inherit: true,
-      rules: [
-        { token: "comment", foreground: "75715e", fontStyle: "italic" },
-        { token: "keyword", foreground: "f92672" },
-        { token: "string", foreground: "e6db74" },
-        { token: "number", foreground: "ae81ff" },
-        { token: "type", foreground: "66d9ef", fontStyle: "italic" },
-        { token: "class", foreground: "a6e22e" },
-        { token: "function", foreground: "a6e22e" },
-        { token: "variable", foreground: "f8f8f2" },
-        { token: "delimiter", foreground: "f8f8f2" },
-      ],
-      colors: {
-        "editor.background": "#272822",
-        "editor.foreground": "#f8f8f2",
-        "editorCursor.foreground": "#f8f8f0",
-        "editor.lineHighlightBackground": "#3e3d32",
-        "editorLineNumber.foreground": "#90908a",
-        "editorLineNumber.activeForeground": "#f8f8f2",
-        "editor.selectionBackground": "#49483e",
-        "editor.inactiveSelectionBackground": "#3e3d32",
-        "editorIndentGuide.background": "#3e3d32",
-        "editorIndentGuide.activeBackground": "#75715e",
-      },
+      rules: THEME_DEFINITIONS["forest-dark"].monaco.rules,
+      colors: THEME_DEFINITIONS["forest-dark"].monaco.colors,
     });
   } catch {
     // Themes already registered
@@ -322,7 +130,7 @@ export function MonacoEditorView({ document, onCursorChange }: MonacoEditorViewP
   const minimapEnabled = !isSplit && (settings.minimap ?? true);
   const { settings: ideSettings } = useSettings();
   const suggestions = ideSettings.suggestions;
-  const [currentTheme, setCurrentTheme] = useState("kairo-dark");
+  const [currentTheme, setCurrentTheme] = useState("dark-modern");
   const containerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const localEditorRef = useRef<any>(null);
@@ -378,17 +186,22 @@ export function MonacoEditorView({ document, onCursorChange }: MonacoEditorViewP
     const updateTheme = () => {
       if (typeof window === "undefined") return;
       const root = window.document.documentElement;
-      const themeAttr = root.getAttribute("data-theme") || "dark";
+      const themeAttr = root.getAttribute("data-theme") || "dark-modern";
+      const resolved = migrateLegacyTheme(themeAttr);
       const isDarkClass = root.classList.contains("dark");
 
-      if (themeAttr === "system") {
-        setCurrentTheme(isDarkClass ? "kairo-dark" : "kairo-light");
-      } else if (themeAttr === "dark") {
-        setCurrentTheme("kairo-dark");
-      } else if (themeAttr === "light") {
-        setCurrentTheme("kairo-light");
-      } else {
-        setCurrentTheme(themeAttr);
+      const finalTheme =
+        resolved === "system"
+          ? isDarkClass
+            ? "dark-modern"
+            : "light-modern"
+          : resolved;
+
+      setCurrentTheme(finalTheme);
+      try {
+        monaco.editor.setTheme(finalTheme);
+      } catch {
+        // Monaco editor instance may not yet be initialized
       }
     };
 

@@ -6,6 +6,7 @@ import {
 } from "../types";
 import { DEFAULT_SETTINGS, SETTINGS_REGISTRY, getSettingDefinition } from "../registry";
 import { normalizePath } from "@/lib/tauri-ipc";
+import { migrateLegacyTheme, isDarkTheme } from "@/features/theme";
 
 export const SETTINGS_STORAGE_KEYS = {
   USER_SETTINGS: "kairo:user_settings",
@@ -47,6 +48,9 @@ function deepClone<T>(obj: T): T {
  * Falls back to default if invalid or out of bounds.
  */
 function sanitizeValue(key: string, value: unknown, defaultValue: unknown): unknown {
+  if (key === "appearance.theme" && typeof value === "string") {
+    value = migrateLegacyTheme(value);
+  }
   const def = getSettingDefinition(key);
   if (!def) return value ?? defaultValue;
 
@@ -134,6 +138,21 @@ export class SettingsService {
     this.recalculateEffectiveSettings();
     this.applyLiveSettings(this.effectiveSettings);
     this.initialized = true;
+
+    if (typeof window !== "undefined" && window.matchMedia) {
+      try {
+        const mq = window.matchMedia("(prefers-color-scheme: dark)");
+        mq.addEventListener("change", () => {
+          if (this.effectiveSettings.appearance.theme === "system") {
+            this.applyLiveSettings(this.effectiveSettings, "appearance.theme");
+            this.notifyListeners("appearance.theme");
+          }
+        });
+      } catch {
+        // matchMedia listeners not supported in test environment
+      }
+    }
+
     return this.effectiveSettings;
   }
 
@@ -403,23 +422,38 @@ export class SettingsService {
     if (!changedKey || changedKey === "appearance.theme") {
       const root = document.documentElement;
       const theme = settings.appearance.theme;
-      root.setAttribute("data-theme", theme);
+      const resolved = migrateLegacyTheme(theme);
 
-      const isLightTheme = theme === "light" || theme === "vs-light";
-      const isSystem = theme === "system";
+      const isSystem = resolved === "system";
+      let effectiveTheme: string = "dark-modern";
 
       if (isSystem) {
-        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const prefersDark = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)").matches : true;
+        effectiveTheme = prefersDark ? "dark-modern" : "light-modern";
         if (prefersDark) {
           root.classList.add("dark");
+          root.classList.remove("kairo-light");
+          root.classList.add("kairo-dark");
         } else {
           root.classList.remove("dark");
+          root.classList.remove("kairo-dark");
+          root.classList.add("kairo-light");
         }
-      } else if (isLightTheme) {
-        root.classList.remove("dark");
       } else {
-        root.classList.add("dark");
+        effectiveTheme = resolved;
+        const dark = isDarkTheme(resolved);
+        if (dark) {
+          root.classList.add("dark");
+          root.classList.remove("kairo-light");
+          root.classList.add("kairo-dark");
+        } else {
+          root.classList.remove("dark");
+          root.classList.remove("kairo-dark");
+          root.classList.add("kairo-light");
+        }
       }
+
+      root.setAttribute("data-theme", effectiveTheme);
     }
   }
 
@@ -435,18 +469,33 @@ export class SettingsService {
       if (!raw) {
         const legacy = storage.getItem(SETTINGS_STORAGE_KEYS.LEGACY_USER_SETTINGS);
         if (legacy) {
-          raw = legacy;
           try {
-            storage.setItem(userKey, legacy);
+            const parsedLegacy = JSON.parse(legacy);
+            if (parsedLegacy && typeof parsedLegacy === "object") {
+              if (parsedLegacy.appearance && parsedLegacy.appearance.theme) {
+                parsedLegacy.appearance.theme = migrateLegacyTheme(parsedLegacy.appearance.theme);
+              }
+              const migratedStr = JSON.stringify(parsedLegacy);
+              raw = migratedStr;
+              storage.setItem(userKey, migratedStr);
+            } else {
+              raw = legacy;
+            }
           } catch {
-            // Ignore write errors during read
+            raw = legacy;
           }
         }
       }
 
       if (!raw) return {};
       const parsed = JSON.parse(raw);
-      return typeof parsed === "object" && parsed !== null ? parsed : {};
+      if (typeof parsed === "object" && parsed !== null) {
+        if (parsed.appearance && parsed.appearance.theme) {
+          parsed.appearance.theme = migrateLegacyTheme(parsed.appearance.theme);
+        }
+        return parsed;
+      }
+      return {};
     } catch (error) {
       console.warn("[SettingsService] Corrupt user settings in storage, resetting to defaults:", error);
       return {};

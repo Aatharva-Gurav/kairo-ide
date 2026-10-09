@@ -108,45 +108,45 @@ export function BatchRenameModal() {
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in-0 duration-150 ease-out">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-md animate-in fade-in-0 duration-200 ease-out">
       <div
-        className="w-full max-w-2xl rounded-xl border border-border/80 bg-card p-5 shadow-2xl text-card-foreground animate-in zoom-in-95 duration-150 ease-out flex flex-col max-h-[85vh]"
+        className="w-full max-w-2xl rounded-2xl border border-border/70 dark:border-white/10 bg-card/98 dark:bg-[#1e1e1e]/98 p-6 shadow-2xl ring-1 ring-black/5 dark:ring-white/10 backdrop-blur-xl text-card-foreground animate-in zoom-in-95 duration-200 ease-out flex flex-col max-h-[86vh]"
         role="dialog"
         aria-modal="true"
         aria-labelledby="batch-rename-title"
       >
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-border/60 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20">
+        <div className="flex items-center justify-between pb-3.5 border-b border-border/60 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="flex size-9 items-center justify-center rounded-2xl bg-primary/10 text-primary border border-primary/20">
               <Pencil className="size-4" />
             </div>
             <div>
               <h3 id="batch-rename-title" className="text-sm font-semibold tracking-tight text-foreground">
                 Batch Rename
               </h3>
-              <p className="text-[11px] text-muted-foreground">
-                Renaming {candidates.length} selected items
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Renaming {candidates.length} selected item{candidates.length === 1 ? "" : "s"}
               </p>
             </div>
           </div>
           <button
             onClick={closeBatchRename}
-            className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer transition-colors"
+            className="size-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted/80 hover:text-foreground cursor-pointer transition-all"
           >
             <X className="size-4" />
           </button>
         </div>
 
-        {/* Mode Selector Tabs */}
-        <div className="flex items-center gap-1.5 pt-3 pb-2 shrink-0">
+        {/* Mode Selector Tabs (ChatGPT Segmented Pill Style) */}
+        <div className="flex items-center gap-1 p-1 bg-muted/40 border border-border/50 rounded-xl my-3 shrink-0">
           <button
             type="button"
             onClick={() => setMode("find-replace")}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer ${
+            className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-120 cursor-pointer ${
               mode === "find-replace"
-                ? "bg-primary text-primary-foreground shadow-xs"
-                : "bg-muted/40 text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+                ? "bg-card text-foreground font-semibold shadow-xs"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
             }`}
           >
             Find &amp; Replace
@@ -154,10 +154,10 @@ export function BatchRenameModal() {
           <button
             type="button"
             onClick={() => setMode("prefix-suffix")}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer ${
+            className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-120 cursor-pointer ${
               mode === "prefix-suffix"
-                ? "bg-primary text-primary-foreground shadow-xs"
-                : "bg-muted/40 text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+                ? "bg-card text-foreground font-semibold shadow-xs"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
             }`}
           >
             Prefix &amp; Suffix
@@ -165,10 +165,10 @@ export function BatchRenameModal() {
           <button
             type="button"
             onClick={() => setMode("numbering")}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer ${
+            className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-120 cursor-pointer ${
               mode === "numbering"
-                ? "bg-primary text-primary-foreground shadow-xs"
-                : "bg-muted/40 text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+                ? "bg-card text-foreground font-semibold shadow-xs"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
             }`}
           >
             Sequential Numbering
@@ -176,7 +176,7 @@ export function BatchRenameModal() {
         </div>
 
         {/* Input Parameters based on Mode */}
-        <div className="py-2.5 space-y-3 shrink-0">
+        <div className="py-2 space-y-3 shrink-0">
           {mode === "find-replace" && (
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -188,7 +188,7 @@ export function BatchRenameModal() {
                   value={find}
                   onChange={(e) => setFind(e.target.value)}
                   placeholder="Text to match"
-                  className="w-full h-8 rounded-md bg-background border border-input px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                  className="w-full h-9 rounded-xl bg-background/80 border border-input/80 px-3 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                   autoFocus
                 />
               </div>
@@ -201,7 +201,7 @@ export function BatchRenameModal() {
                   value={replace}
                   onChange={(e) => setReplace(e.target.value)}
                   placeholder="Replacement text"
-                  className="w-full h-8 rounded-md bg-background border border-input px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                  className="w-full h-9 rounded-xl bg-background/80 border border-input/80 px-3 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                 />
               </div>
               <div className="col-span-2 flex items-center gap-2">
@@ -210,9 +210,9 @@ export function BatchRenameModal() {
                   id="caseSensitive"
                   checked={caseSensitive}
                   onChange={(e) => setCaseSensitive(e.target.checked)}
-                  className="size-3.5 rounded border-input cursor-pointer"
+                  className="size-3.5 rounded border-input cursor-pointer accent-primary"
                 />
-                <label htmlFor="caseSensitive" className="text-xs text-muted-foreground cursor-pointer">
+                <label htmlFor="caseSensitive" className="text-xs text-muted-foreground cursor-pointer select-none">
                   Match case
                 </label>
               </div>
@@ -230,7 +230,7 @@ export function BatchRenameModal() {
                   value={prefix}
                   onChange={(e) => setPrefix(e.target.value)}
                   placeholder="e.g. new_"
-                  className="w-full h-8 rounded-md bg-background border border-input px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                  className="w-full h-9 rounded-xl bg-background/80 border border-input/80 px-3 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                   autoFocus
                 />
               </div>
@@ -243,7 +243,7 @@ export function BatchRenameModal() {
                   value={suffix}
                   onChange={(e) => setSuffix(e.target.value)}
                   placeholder="e.g. _v2"
-                  className="w-full h-8 rounded-md bg-background border border-input px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                  className="w-full h-9 rounded-xl bg-background/80 border border-input/80 px-3 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                 />
               </div>
             </div>
@@ -260,7 +260,7 @@ export function BatchRenameModal() {
                   value={numberingPattern}
                   onChange={(e) => setNumberingPattern(e.target.value)}
                   placeholder="{name}_{n}"
-                  className="w-full h-8 rounded-md bg-background border border-input px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring font-mono"
+                  className="w-full h-9 rounded-xl bg-background/80 border border-input/80 px-3 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono transition-all"
                   autoFocus
                 />
                 <span className="text-[10px] text-muted-foreground mt-0.5 block">
@@ -276,7 +276,7 @@ export function BatchRenameModal() {
                   min={0}
                   value={startNumber}
                   onChange={(e) => setStartNumber(parseInt(e.target.value) || 0)}
-                  className="w-full h-8 rounded-md bg-background border border-input px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                  className="w-full h-9 rounded-xl bg-background/80 border border-input/80 px-3 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                 />
               </div>
               <div>
@@ -289,7 +289,7 @@ export function BatchRenameModal() {
                   max={6}
                   value={padZeros}
                   onChange={(e) => setPadZeros(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="w-full h-8 rounded-md bg-background border border-input px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                  className="w-full h-9 rounded-xl bg-background/80 border border-input/80 px-3 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                 />
               </div>
             </div>
@@ -302,9 +302,9 @@ export function BatchRenameModal() {
               id="preserveExt"
               checked={preserveExtension}
               onChange={(e) => setPreserveExtension(e.target.checked)}
-              className="size-3.5 rounded border-input cursor-pointer"
+              className="size-3.5 rounded border-input cursor-pointer accent-primary"
             />
-            <label htmlFor="preserveExt" className="text-xs text-muted-foreground cursor-pointer">
+            <label htmlFor="preserveExt" className="text-xs text-muted-foreground cursor-pointer select-none">
               Preserve file extensions
             </label>
           </div>
@@ -312,27 +312,27 @@ export function BatchRenameModal() {
 
         {/* Error message */}
         {errorMsg && (
-          <div className="mb-2 p-2 rounded bg-destructive/10 text-destructive text-xs flex items-center gap-1.5 shrink-0">
+          <div className="mb-2 p-2.5 rounded-xl bg-destructive/10 text-destructive text-xs flex items-center gap-2 shrink-0 border border-destructive/20">
             <AlertCircle className="size-4 shrink-0" />
             <span>{errorMsg}</span>
           </div>
         )}
 
         {/* Live Preview List */}
-        <div className="flex-1 min-h-[160px] overflow-hidden flex flex-col rounded-lg border border-border/60 bg-muted/20 my-2">
-          <div className="grid grid-cols-[1fr_24px_1fr_90px] gap-2 px-3 py-1.5 bg-muted/40 border-b border-border/60 text-[11px] font-semibold text-muted-foreground shrink-0">
+        <div className="flex-1 min-h-[160px] overflow-hidden flex flex-col rounded-xl border border-border/60 bg-muted/20 my-2">
+          <div className="grid grid-cols-[1fr_24px_1fr_95px] gap-2 px-3.5 py-2 bg-muted/40 border-b border-border/60 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider shrink-0 select-none">
             <span>Original</span>
             <span />
             <span>New Name</span>
             <span className="text-right">Status</span>
           </div>
-          <div className="flex-1 overflow-y-auto divide-y divide-border/30 text-xs">
+          <div className="flex-1 overflow-y-auto divide-y divide-border/20 text-xs">
             {previewItems.map((item) => {
               const isChanged = item.originalName !== item.newName;
               return (
                 <div
                   key={item.node.path}
-                  className={`grid grid-cols-[1fr_24px_1fr_90px] gap-2 px-3 py-1.5 items-center transition-colors ${
+                  className={`grid grid-cols-[1fr_24px_1fr_95px] gap-2 px-3.5 py-2 items-center hover:bg-muted/30 transition-colors ${
                     item.hasConflict ? "bg-destructive/10" : ""
                   }`}
                 >
@@ -340,7 +340,7 @@ export function BatchRenameModal() {
                     {item.originalName}
                   </span>
                   <ArrowRight
-                    className="size-3 text-muted-foreground shrink-0"
+                    className="size-3 text-muted-foreground shrink-0 opacity-70"
                   />
                   <span
                     className={`truncate font-mono text-[11px] ${
@@ -357,14 +357,14 @@ export function BatchRenameModal() {
                   <div className="text-right">
                     {item.hasConflict ? (
                       <span
-                        className="inline-flex items-center gap-1 text-[10px] text-destructive bg-destructive/15 px-1.5 py-0.5 rounded font-medium"
+                        className="inline-flex items-center gap-1 text-[10px] text-destructive bg-destructive/15 px-2 py-0.5 rounded-full font-medium"
                         title={item.conflictReason}
                       >
                         <AlertCircle className="size-3" />
                         Conflict
                       </span>
                     ) : isChanged ? (
-                      <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded font-medium">
+                      <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full font-medium">
                         <CheckCircle2 className="size-3" />
                         Rename
                       </span>
@@ -379,15 +379,15 @@ export function BatchRenameModal() {
         </div>
 
         {/* Footer Summary & Actions */}
-        <div className="pt-2 flex items-center justify-between border-t border-border/60 shrink-0">
+        <div className="pt-3 flex items-center justify-between border-t border-border/60 shrink-0">
           <div className="text-xs text-muted-foreground">
             {hasConflicts ? (
-              <span className="text-destructive font-medium flex items-center gap-1">
+              <span className="text-destructive font-medium flex items-center gap-1.5">
                 <AlertCircle className="size-3.5" />
                 {conflicts.length} conflict{conflicts.length > 1 ? "s" : ""} detected. Resolve before applying.
               </span>
             ) : changesCount > 0 ? (
-              <span className="text-foreground">
+              <span className="text-foreground font-medium">
                 {changesCount} of {candidates.length} item{candidates.length > 1 ? "s" : ""} will be renamed
               </span>
             ) : (
@@ -402,7 +402,7 @@ export function BatchRenameModal() {
               size="sm"
               onClick={closeBatchRename}
               disabled={isApplying}
-              className="cursor-pointer"
+              className="rounded-xl cursor-pointer"
             >
               Cancel
             </Button>
@@ -411,7 +411,7 @@ export function BatchRenameModal() {
               size="sm"
               onClick={handleApply}
               disabled={hasConflicts || changesCount === 0 || isApplying}
-              className="cursor-pointer"
+              className="rounded-xl cursor-pointer shadow-xs font-medium"
             >
               {isApplying ? "Renaming..." : `Apply (${changesCount})`}
             </Button>

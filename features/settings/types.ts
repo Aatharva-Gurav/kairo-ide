@@ -3,17 +3,19 @@
  * Covers Appearance, Editor, Files, Explorer, Search, and Keyboard settings.
  */
 
-export type ThemePreference =
-  | "dark"
-  | "light"
-  | "system"
-  | "vs-dark"
-  | "vs-light"
-  | "one-dark-pro"
-  | "dracula"
-  | "tokyo-night"
-  | "github-dark"
-  | "monokai";
+import type {
+  ThemePreference,
+  ThemeId,
+  DarkThemeId,
+  LightThemeId,
+} from "../theme/types";
+
+export type {
+  ThemePreference,
+  ThemeId,
+  DarkThemeId,
+  LightThemeId,
+};
 export type WordWrapPreference = "on" | "off" | "wordWrapColumn" | "bounded";
 export type LineNumbersPreference = "on" | "off" | "relative";
 export type CursorStylePreference = "line" | "block" | "underline" | "line-thin" | "block-outline" | "underline-thin";

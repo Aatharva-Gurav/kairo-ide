@@ -10,6 +10,7 @@ import { EditorEmptyState } from "./editor-empty-state";
 import { BinaryFileView } from "./binary-file-view";
 import { CloseConfirmModal } from "./close-confirm-modal";
 import { GoToLineModal } from "./go-to-line-modal";
+import { FloatingCreationFeature } from "./floating-creation";
 
 // Early client-side environment stub to prevent any loader or worker ErrorEvent
 if (typeof window !== "undefined") {
@@ -129,7 +130,7 @@ export function EditorWorkspace() {
   }, [isDraggingDivider, splitDirection, setSplitRatio]);
 
   return (
-    <div className="flex flex-1 flex-col h-full w-full overflow-hidden bg-background">
+    <div className="flex flex-1 flex-col h-full w-full overflow-hidden bg-background relative">
       {/* Editor Tabs (Hidden when no file is open) */}
       {documents.length > 0 && <EditorTabs />}
 
@@ -258,6 +259,9 @@ export function EditorWorkspace() {
       {focusedDocument && (
         <EditorStatusBar document={focusedDocument} cursorPosition={focusedCursorPos} />
       )}
+
+      {/* Floating File & Folder Creation Feature */}
+      <FloatingCreationFeature hasStatusBar={Boolean(focusedDocument)} />
 
       {/* Global Modals */}
       <CloseConfirmModal />
