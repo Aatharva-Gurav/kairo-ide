@@ -1,0 +1,1014 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  /* Level 1: Application Canvas */
+  --background: oklch(0.99 0.002 260);
+  --foreground: oklch(0.18 0.01 260);
+
+  /* Level 2: Structural Surfaces */
+  --sidebar: oklch(0.965 0.003 260);
+  --sidebar-foreground: oklch(0.22 0.01 260);
+  --sidebar-primary: oklch(0.55 0.22 260);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.93 0.005 260);
+  --sidebar-accent-foreground: oklch(0.18 0.01 260);
+  --sidebar-border: oklch(0.90 0.005 260);
+  --sidebar-ring: oklch(0.55 0.22 260);
+
+  /* Level 3: Interactive Surfaces */
+  --secondary: oklch(0.95 0.004 260);
+  --secondary-foreground: oklch(0.20 0.01 260);
+  --muted: oklch(0.95 0.004 260);
+  --muted-foreground: oklch(0.52 0.01 260);
+  --accent: oklch(0.94 0.005 260);
+  --accent-foreground: oklch(0.20 0.01 260);
+  --input: oklch(0.90 0.004 260);
+  --border: oklch(0.89 0.004 260);
+
+  /* Level 4: Elevated Surfaces */
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.18 0.01 260);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.18 0.01 260);
+
+  /* Level 5: Strategic Accent */
+  --primary: oklch(0.52 0.22 260);
+  --primary-foreground: oklch(0.99 0 0);
+  --ring: oklch(0.52 0.22 260);
+
+  /* Semantics */
+  --success: oklch(0.60 0.18 145);
+  --success-foreground: oklch(0.99 0 0);
+  --warning: oklch(0.68 0.17 75);
+  --warning-foreground: oklch(0.18 0.01 260);
+  --destructive: oklch(0.58 0.22 25);
+  --destructive-foreground: oklch(0.99 0 0);
+  --info: oklch(0.58 0.18 230);
+  --info-foreground: oklch(0.99 0 0);
+
+  /* Charts */
+  --chart-1: oklch(0.65 0.18 260);
+  --chart-2: oklch(0.60 0.16 150);
+  --chart-3: oklch(0.68 0.17 75);
+  --chart-4: oklch(0.58 0.22 25);
+  --chart-5: oklch(0.62 0.15 310);
+
+  /* Radii */
+  --radius: 0.375rem;
+
+  /* Motion Design Tokens */
+  --motion-instant: 50ms;
+  --motion-micro: 110ms;
+  --motion-standard: 150ms;
+  --motion-surface: 200ms;
+  --delay-subtle: 30ms;
+  --delay-micro: 50ms;
+  --ease-standard: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --ease-spring-subtle: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-in-out-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Desktop Elevation Shadows */
+  --shadow-elevation-low: 0 1px 2px 0 oklch(0 0 0 / 6%);
+  --shadow-elevation-medium: 0 4px 12px -2px oklch(0 0 0 / 12%), 0 2px 4px -1px oklch(0 0 0 / 8%);
+  --shadow-elevation-high: 0 16px 32px -4px oklch(0 0 0 / 18%), 0 6px 12px -2px oklch(0 0 0 / 10%);
+}
+
+.dark {
+  /* Level 1: Application Canvas */
+  --background: oklch(0.145 0.005 260);
+  --foreground: oklch(0.95 0.005 260);
+
+  /* Level 2: Structural Surfaces */
+  --sidebar: oklch(0.13 0.005 260);
+  --sidebar-foreground: oklch(0.91 0.005 260);
+  --sidebar-primary: oklch(0.68 0.19 260);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(1 0 0 / 6.5%);
+  --sidebar-accent-foreground: oklch(0.98 0 0);
+  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-ring: oklch(0.68 0.19 260);
+
+  /* Level 3: Interactive Surfaces */
+  --secondary: oklch(0.20 0.006 260);
+  --secondary-foreground: oklch(0.95 0 0);
+  --muted: oklch(0.19 0.006 260);
+  --muted-foreground: oklch(0.62 0.01 260);
+  --accent: oklch(1 0 0 / 6%);
+  --accent-foreground: oklch(0.98 0 0);
+  --input: oklch(1 0 0 / 7%);
+  --border: oklch(1 0 0 / 8.5%);
+
+  /* Level 4: Elevated Surfaces */
+  --card: oklch(0.175 0.005 260);
+  --card-foreground: oklch(0.95 0.005 260);
+  --popover: oklch(0.18 0.006 260);
+  --popover-foreground: oklch(0.95 0.005 260);
+
+  /* Level 5: Strategic Accent */
+  --primary: oklch(0.68 0.19 260);
+  --primary-foreground: oklch(0.99 0 0);
+  --ring: oklch(0.68 0.19 260);
+
+  /* Semantics */
+  --success: oklch(0.68 0.17 145);
+  --success-foreground: oklch(0.99 0 0);
+  --warning: oklch(0.74 0.16 75);
+  --warning-foreground: oklch(0.14 0 0);
+  --destructive: oklch(0.66 0.22 25);
+  --destructive-foreground: oklch(0.99 0 0);
+  --info: oklch(0.68 0.17 230);
+  --info-foreground: oklch(0.99 0 0);
+
+  /* Charts */
+  --chart-1: oklch(0.68 0.19 260);
+  --chart-2: oklch(0.68 0.17 145);
+  --chart-3: oklch(0.74 0.16 75);
+  --chart-4: oklch(0.66 0.22 25);
+  --chart-5: oklch(0.70 0.18 310);
+
+  /* Dark Elevation Shadows */
+  --shadow-elevation-low: 0 1px 3px 0 oklch(0 0 0 / 30%);
+  --shadow-elevation-medium: 0 4px 16px -2px oklch(0 0 0 / 45%), 0 2px 6px -1px oklch(0 0 0 / 30%);
+  --shadow-elevation-high: 0 18px 40px -4px oklch(0 0 0 / 60%), 0 8px 18px -2px oklch(0 0 0 / 40%);
+}
+
+/* ─── THEME PRESETS ────────────────────────────────────────────────────────── */
+
+/* ─── DARK THEMES (7) ─────────────────────────────────────────────────────── */
+
+[data-theme="dark-modern"],
+[data-theme="dark"],
+[data-theme="github-dark"] {
+  --background: #181818;
+  --foreground: #cccccc;
+  --card: #202020;
+  --card-foreground: #cccccc;
+  --popover: #222222;
+  --popover-foreground: #ffffff;
+  --primary: #0078d4;
+  --primary-foreground: #ffffff;
+  --secondary: #2a2a2a;
+  --secondary-foreground: #ffffff;
+  --muted: #2a2a2a;
+  --muted-foreground: #9d9d9d;
+  --accent: #2a2a2a;
+  --accent-foreground: #ffffff;
+  --border: #2b2b2b;
+  --input: #313131;
+  --ring: #0078d4;
+  --success: #2ea043;
+  --warning: #bb8009;
+  --destructive: #f85149;
+  --info: #4daafc;
+  --sidebar: #181818;
+  --sidebar-foreground: #cccccc;
+  --sidebar-primary: #0078d4;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #2a2a2a;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #2b2b2b;
+  --sidebar-ring: #0078d4;
+}
+
+[data-theme="dark-plus"] {
+  --background: #1e1e1e;
+  --foreground: #d4d4d4;
+  --card: #252526;
+  --card-foreground: #d4d4d4;
+  --popover: #252526;
+  --popover-foreground: #d4d4d4;
+  --primary: #007acc;
+  --primary-foreground: #ffffff;
+  --secondary: #2d2d2d;
+  --secondary-foreground: #d4d4d4;
+  --muted: #2d2d2d;
+  --muted-foreground: #858585;
+  --accent: #2d2d2d;
+  --accent-foreground: #ffffff;
+  --border: #3e3e42;
+  --input: #3c3c3c;
+  --ring: #007acc;
+  --success: #89d185;
+  --warning: #cca700;
+  --destructive: #f44747;
+  --info: #3794ff;
+  --sidebar: #252526;
+  --sidebar-foreground: #d4d4d4;
+  --sidebar-primary: #007acc;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #37373d;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #3e3e42;
+  --sidebar-ring: #007acc;
+}
+
+[data-theme="vs-dark"] {
+  --background: #1e1e1e;
+  --foreground: #cccccc;
+  --card: #252526;
+  --card-foreground: #cccccc;
+  --popover: #252526;
+  --popover-foreground: #cccccc;
+  --primary: #0078d4;
+  --primary-foreground: #ffffff;
+  --secondary: #2d2d2d;
+  --secondary-foreground: #ffffff;
+  --muted: #2d2d2d;
+  --muted-foreground: #a6a6a6;
+  --accent: #37373d;
+  --accent-foreground: #ffffff;
+  --border: #454545;
+  --input: #3c3c3c;
+  --ring: #0078d4;
+  --success: #369432;
+  --warning: #cca700;
+  --destructive: #f48771;
+  --info: #007acc;
+  --sidebar: #252526;
+  --sidebar-foreground: #cccccc;
+  --sidebar-primary: #0078d4;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #37373d;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #454545;
+  --sidebar-ring: #0078d4;
+}
+
+[data-theme="hc-dark"] {
+  --background: #000000;
+  --foreground: #ffffff;
+  --card: #000000;
+  --card-foreground: #ffffff;
+  --popover: #000000;
+  --popover-foreground: #ffffff;
+  --primary: #1aebff;
+  --primary-foreground: #000000;
+  --secondary: #121212;
+  --secondary-foreground: #ffffff;
+  --muted: #121212;
+  --muted-foreground: #cccccc;
+  --accent: #1aebff;
+  --accent-foreground: #000000;
+  --border: #ffffff;
+  --input: #000000;
+  --ring: #1aebff;
+  --success: #00ff00;
+  --warning: #ffff00;
+  --destructive: #ff6b6b;
+  --info: #1aebff;
+  --sidebar: #000000;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #1aebff;
+  --sidebar-primary-foreground: #000000;
+  --sidebar-accent: #1a1a1a;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #ffffff;
+  --sidebar-ring: #1aebff;
+}
+
+[data-theme="midnight-blue"],
+[data-theme="dracula"],
+[data-theme="tokyo-night"] {
+  --background: #0b1120;
+  --foreground: #d6e2f0;
+  --card: #0f172a;
+  --card-foreground: #d6e2f0;
+  --popover: #162033;
+  --popover-foreground: #f8fafc;
+  --primary: #4fc1ff;
+  --primary-foreground: #0b1120;
+  --secondary: #1e293b;
+  --secondary-foreground: #f8fafc;
+  --muted: #162033;
+  --muted-foreground: #94a3b8;
+  --accent: #1e293b;
+  --accent-foreground: #38bdf8;
+  --border: #26344a;
+  --input: #172033;
+  --ring: #4fc1ff;
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --destructive: #f87171;
+  --info: #60a5fa;
+  --sidebar: #0b1120;
+  --sidebar-foreground: #d6e2f0;
+  --sidebar-primary: #4fc1ff;
+  --sidebar-primary-foreground: #0b1120;
+  --sidebar-accent: #1e293b;
+  --sidebar-accent-foreground: #f8fafc;
+  --sidebar-border: #26344a;
+  --sidebar-ring: #4fc1ff;
+}
+
+[data-theme="graphite"],
+[data-theme="one-dark-pro"] {
+  --background: #141414;
+  --foreground: #d4d4d4;
+  --card: #1c1c1c;
+  --card-foreground: #d4d4d4;
+  --popover: #222222;
+  --popover-foreground: #f5f5f5;
+  --primary: #8ab4f8;
+  --primary-foreground: #141414;
+  --secondary: #2a2a2a;
+  --secondary-foreground: #f5f5f5;
+  --muted: #222222;
+  --muted-foreground: #a3a3a3;
+  --accent: #2a2a2a;
+  --accent-foreground: #f5f5f5;
+  --border: #303030;
+  --input: #242424;
+  --ring: #8ab4f8;
+  --success: #81c995;
+  --warning: #f9c74f;
+  --destructive: #f28b82;
+  --info: #8ab4f8;
+  --sidebar: #151515;
+  --sidebar-foreground: #d4d4d4;
+  --sidebar-primary: #8ab4f8;
+  --sidebar-primary-foreground: #141414;
+  --sidebar-accent: #2a2a2a;
+  --sidebar-accent-foreground: #f5f5f5;
+  --sidebar-border: #303030;
+  --sidebar-ring: #8ab4f8;
+}
+
+[data-theme="forest-dark"],
+[data-theme="monokai"] {
+  --background: #101613;
+  --foreground: #d6e4db;
+  --card: #17201b;
+  --card-foreground: #d6e4db;
+  --popover: #1d2922;
+  --popover-foreground: #f2f8f4;
+  --primary: #6ccb8e;
+  --primary-foreground: #101613;
+  --secondary: #26352c;
+  --secondary-foreground: #f2f8f4;
+  --muted: #1d2922;
+  --muted-foreground: #9caf9f;
+  --accent: #26352c;
+  --accent-foreground: #86d9a2;
+  --border: #304238;
+  --input: #202b25;
+  --ring: #6ccb8e;
+  --success: #6ccb8e;
+  --warning: #e5c07b;
+  --destructive: #e06c75;
+  --info: #6cb6ff;
+  --sidebar: #101613;
+  --sidebar-foreground: #d6e4db;
+  --sidebar-primary: #6ccb8e;
+  --sidebar-primary-foreground: #101613;
+  --sidebar-accent: #26352c;
+  --sidebar-accent-foreground: #f2f8f4;
+  --sidebar-border: #304238;
+  --sidebar-ring: #6ccb8e;
+}
+
+/* ─── LIGHT THEMES (7) ────────────────────────────────────────────────────── */
+
+[data-theme="light-modern"],
+[data-theme="light"] {
+  --background: #f8f8f8;
+  --foreground: #3b3b3b;
+  --card: #ffffff;
+  --card-foreground: #3b3b3b;
+  --popover: #ffffff;
+  --popover-foreground: #1f1f1f;
+  --primary: #005fb8;
+  --primary-foreground: #ffffff;
+  --secondary: #f2f2f2;
+  --secondary-foreground: #1f1f1f;
+  --muted: #f2f2f2;
+  --muted-foreground: #616161;
+  --accent: #f2f2f2;
+  --accent-foreground: #1f1f1f;
+  --border: #e5e5e5;
+  --input: #ffffff;
+  --ring: #005fb8;
+  --success: #2ea043;
+  --warning: #bb8009;
+  --destructive: #f85149;
+  --info: #005fb8;
+  --sidebar: #f8f8f8;
+  --sidebar-foreground: #3b3b3b;
+  --sidebar-primary: #005fb8;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #eaeaea;
+  --sidebar-accent-foreground: #1f1f1f;
+  --sidebar-border: #e5e5e5;
+  --sidebar-ring: #005fb8;
+}
+
+[data-theme="light-plus"] {
+  --background: #ffffff;
+  --foreground: #000000;
+  --card: #ffffff;
+  --card-foreground: #000000;
+  --popover: #ffffff;
+  --popover-foreground: #000000;
+  --primary: #007acc;
+  --primary-foreground: #ffffff;
+  --secondary: #ececec;
+  --secondary-foreground: #000000;
+  --muted: #f3f3f3;
+  --muted-foreground: #717171;
+  --accent: #e8e8e8;
+  --accent-foreground: #000000;
+  --border: #e7e7e7;
+  --input: #ffffff;
+  --ring: #007acc;
+  --success: #008000;
+  --warning: #a31515;
+  --destructive: #cd3131;
+  --info: #006ab1;
+  --sidebar: #f3f3f3;
+  --sidebar-foreground: #000000;
+  --sidebar-primary: #007acc;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e5e5e5;
+  --sidebar-accent-foreground: #000000;
+  --sidebar-border: #e7e7e7;
+  --sidebar-ring: #007acc;
+}
+
+[data-theme="vs-light"] {
+  --background: #f8f8f8;
+  --foreground: #3b3b3b;
+  --card: #f8f8f8;
+  --card-foreground: #3b3b3b;
+  --popover: #ffffff;
+  --popover-foreground: #1e1e1e;
+  --primary: #005fb8;
+  --primary-foreground: #ffffff;
+  --secondary: #f2f2f2;
+  --secondary-foreground: #1f1f1f;
+  --muted: #f0f0f0;
+  --muted-foreground: #868686;
+  --accent: #f2f2f2;
+  --accent-foreground: #1f1f1f;
+  --border: #e5e5e5;
+  --input: #ffffff;
+  --ring: #005fb8;
+  --success: #2ea043;
+  --warning: #bb8009;
+  --destructive: #f85149;
+  --info: #0288d1;
+  --sidebar: #f3f3f3;
+  --sidebar-foreground: #3b3b3b;
+  --sidebar-primary: #005fb8;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e5e5e5;
+  --sidebar-accent-foreground: #1e1e1e;
+  --sidebar-border: #e5e5e5;
+  --sidebar-ring: #005fb8;
+}
+
+[data-theme="hc-light"] {
+  --background: #ffffff;
+  --foreground: #000000;
+  --card: #ffffff;
+  --card-foreground: #000000;
+  --popover: #ffffff;
+  --popover-foreground: #000000;
+  --primary: #005fb8;
+  --primary-foreground: #ffffff;
+  --secondary: #eeeeee;
+  --secondary-foreground: #000000;
+  --muted: #eeeeee;
+  --muted-foreground: #333333;
+  --accent: #add6ff;
+  --accent-foreground: #000000;
+  --border: #000000;
+  --input: #ffffff;
+  --ring: #005fb8;
+  --success: #008000;
+  --warning: #795e00;
+  --destructive: #cd3131;
+  --info: #005fb8;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #000000;
+  --sidebar-primary: #005fb8;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #eeeeee;
+  --sidebar-accent-foreground: #000000;
+  --sidebar-border: #000000;
+  --sidebar-ring: #005fb8;
+}
+
+[data-theme="arctic-blue"] {
+  --background: #f4f7fb;
+  --foreground: #243447;
+  --card: #ffffff;
+  --card-foreground: #243447;
+  --popover: #f8fafd;
+  --popover-foreground: #152536;
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --secondary: #eaf0f7;
+  --secondary-foreground: #152536;
+  --muted: #eaf0f7;
+  --muted-foreground: #6b7c93;
+  --accent: #eaf0f7;
+  --accent-foreground: #152536;
+  --border: #d8e1ec;
+  --input: #ffffff;
+  --ring: #2563eb;
+  --success: #15803d;
+  --warning: #b45309;
+  --destructive: #dc2626;
+  --info: #2563eb;
+  --sidebar: #f4f7fb;
+  --sidebar-foreground: #243447;
+  --sidebar-primary: #2563eb;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #eaf0f7;
+  --sidebar-accent-foreground: #152536;
+  --sidebar-border: #d8e1ec;
+  --sidebar-ring: #2563eb;
+}
+
+[data-theme="warm-sand"] {
+  --background: #f7f3ec;
+  --foreground: #3f3a34;
+  --card: #fffcf7;
+  --card-foreground: #3f3a34;
+  --popover: #fffcf7;
+  --popover-foreground: #29251f;
+  --primary: #b45309;
+  --primary-foreground: #ffffff;
+  --secondary: #eee7da;
+  --secondary-foreground: #29251f;
+  --muted: #eee7da;
+  --muted-foreground: #7a7166;
+  --accent: #eee7da;
+  --accent-foreground: #29251f;
+  --border: #ded4c5;
+  --input: #fffdf9;
+  --ring: #b45309;
+  --success: #15803d;
+  --warning: #b45309;
+  --destructive: #dc2626;
+  --info: #2563eb;
+  --sidebar: #f4efe6;
+  --sidebar-foreground: #3f3a34;
+  --sidebar-primary: #b45309;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #eee7da;
+  --sidebar-accent-foreground: #29251f;
+  --sidebar-border: #ded4c5;
+  --sidebar-ring: #b45309;
+}
+
+[data-theme="mint-light"] {
+  --background: #f2f8f6;
+  --foreground: #243832;
+  --card: #ffffff;
+  --card-foreground: #243832;
+  --popover: #f7fbfa;
+  --popover-foreground: #172a24;
+  --primary: #0f766e;
+  --primary-foreground: #ffffff;
+  --secondary: #e5f2ee;
+  --secondary-foreground: #172a24;
+  --muted: #e5f2ee;
+  --muted-foreground: #6b7f77;
+  --accent: #e5f2ee;
+  --accent-foreground: #172a24;
+  --border: #d5e4df;
+  --input: #ffffff;
+  --ring: #0f766e;
+  --success: #15803d;
+  --warning: #b45309;
+  --destructive: #dc2626;
+  --info: #2563eb;
+  --sidebar: #f2f8f6;
+  --sidebar-foreground: #243832;
+  --sidebar-primary: #0f766e;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e5f2ee;
+  --sidebar-accent-foreground: #172a24;
+  --sidebar-border: #d5e4df;
+  --sidebar-ring: #0f766e;
+}
+
+/* ─── BASE STYLES ──────────────────────────────────────────────────────────── */
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased selection:bg-primary/25 selection:text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+/* ─── ANIMATIONS & TRANSITIONS ─────────────────────────────────────────────── */
+
+@keyframes kairo-pop {
+  0% { transform: scale(0.92); opacity: 0.7; }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes kairo-spin-bounce {
+  0% { transform: rotate(0deg); }
+  80% { transform: rotate(385deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes kairo-pulse-subtle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.88); }
+}
+
+@keyframes kairo-logo-float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-3px); }
+}
+
+@keyframes kairo-fade-slide-up {
+  0% { opacity: 0; transform: translateY(5px) scale(0.985); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes kairo-tab-enter {
+  0% { opacity: 0; transform: translateY(2px) scale(0.985); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.interactive-press {
+  transition: transform 100ms var(--ease-spring-subtle), opacity 100ms ease;
+}
+.interactive-press:active {
+  transform: scale(0.97);
+}
+
+.interactive-hover {
+  transition: background-color 140ms ease, border-color 140ms ease, opacity 140ms ease, box-shadow 140ms ease, transform 140ms var(--ease-spring-subtle);
+  transition-delay: var(--delay-subtle);
+}
+.interactive-hover:hover {
+  transform: translateY(-1px);
+  opacity: 0.96;
+}
+.interactive-hover:active {
+  transform: scale(0.98);
+  transition-delay: 0ms;
+}
+
+.kbd-shortcut {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1;
+  padding: 2.5px 5.5px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background-color: color-mix(in oklch, var(--muted) 45%, transparent);
+  color: var(--muted-foreground);
+  box-shadow: 0 1px 0 0 color-mix(in oklch, var(--border) 70%, transparent);
+  user-select: none;
+  letter-spacing: -0.01em;
+}
+
+.delay-subtle {
+  --tw-animation-delay: var(--delay-subtle);
+  --tw-animation-fill-mode: both;
+  animation-delay: var(--delay-subtle);
+  animation-fill-mode: both;
+  transition-delay: var(--delay-subtle);
+}
+
+.delay-micro {
+  --tw-animation-delay: var(--delay-micro);
+  --tw-animation-fill-mode: both;
+  animation-delay: var(--delay-micro);
+  animation-fill-mode: both;
+  transition-delay: var(--delay-micro);
+}
+
+.animate-kairo-pop {
+  animation: kairo-pop 200ms var(--ease-spring-bounce) var(--delay-subtle) forwards;
+}
+
+.animate-kairo-spin {
+  animation: kairo-spin-bounce 600ms var(--ease-spring-subtle) var(--delay-subtle) forwards;
+}
+
+.animate-kairo-pulse {
+  animation: kairo-pulse-subtle 2s ease-in-out infinite;
+}
+
+.animate-kairo-float {
+  animation: kairo-logo-float 4s ease-in-out infinite;
+}
+
+.animate-kairo-slide-up {
+  animation: kairo-fade-slide-up 150ms var(--ease-spring-subtle) var(--delay-subtle) forwards;
+}
+
+.animate-tab-enter {
+  animation: kairo-tab-enter 160ms var(--ease-spring-subtle) var(--delay-subtle) forwards;
+}
+
+/* ─── SCROLLBARS ───────────────────────────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: color-mix(in oklch, var(--foreground) 16%, transparent);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklch, var(--foreground) 28%, transparent);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ─── REDUCED MOTION ───────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ─── VS CODE STYLE SUGGESTION WIDGET & CONTAINMENT ───────────────────────── */
+
+/* 1. Main Suggest Widget Box */
+.monaco-editor .suggest-widget {
+  border-radius: 8px !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.45), 0 4px 12px -2px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  background: color-mix(in oklch, var(--popover) 96%, transparent) !important;
+  overflow: hidden !important;
+  max-width: min(520px, calc(100% - 16px)) !important;
+  z-index: 15 !important;
+  font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+  letter-spacing: -0.01em !important;
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+}
+
+.monaco-editor .suggest-widget .tree,
+.monaco-editor .suggest-widget .monaco-list {
+  background: transparent !important;
+  border-radius: 0 !important;
+}
+
+.monaco-editor .suggest-widget .monaco-list-rows {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* 2. Suggest Item Rows */
+.monaco-editor .suggest-widget .monaco-list .monaco-list-row {
+  margin: 0 !important;
+  padding: 0 10px 0 6px !important;
+  border-left: 2px solid transparent !important;
+  box-sizing: border-box !important;
+  height: 24px !important;
+  line-height: 24px !important;
+  cursor: pointer !important;
+  transition: background-color 80ms ease, color 80ms ease, border-color 80ms ease !important;
+}
+
+.monaco-editor .suggest-widget .monaco-list .monaco-list-row.focused {
+  background-color: color-mix(in oklch, var(--primary) 22%, transparent) !important;
+  color: var(--foreground) !important;
+  border-left-color: var(--primary) !important;
+}
+
+.monaco-editor .suggest-widget .monaco-list .monaco-list-row:hover:not(.focused) {
+  background-color: color-mix(in oklch, var(--foreground) 6%, transparent) !important;
+}
+
+/* 3. Text & Typography matching VS Code */
+.monaco-editor .suggest-widget .monaco-highlighted-label {
+  font-size: 12px !important;
+  font-weight: 450 !important;
+  color: var(--foreground) !important;
+  line-height: 24px !important;
+}
+
+.monaco-editor .suggest-widget .monaco-highlighted-label .highlight {
+  color: var(--primary) !important;
+  font-weight: 600 !important;
+  text-decoration: none !important;
+}
+
+.monaco-editor .suggest-widget .details-label {
+  font-size: 11px !important;
+  color: var(--muted-foreground) !important;
+  font-family: var(--font-mono), monospace !important;
+  opacity: 0.8 !important;
+  margin-left: 8px !important;
+}
+
+.monaco-editor .suggest-widget .readMore {
+  color: var(--primary) !important;
+  font-size: 11px !important;
+}
+
+/* 4. Suggest Status Bar */
+.monaco-editor .suggest-widget .suggest-status-bar {
+  border-top: 1px solid color-mix(in oklch, var(--border) 60%, transparent) !important;
+  background: color-mix(in oklch, var(--popover) 98%, transparent) !important;
+  padding: 0 8px !important;
+  height: 24px !important;
+  line-height: 24px !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+  font-size: 10.5px !important;
+  color: var(--muted-foreground) !important;
+  font-family: var(--font-sans) !important;
+}
+
+/* 5. Suggest Details / Documentation Flyout */
+.monaco-editor .suggest-details,
+.monaco-editor .suggest-details-container,
+.monaco-editor .suggest-widget .details {
+  border-radius: 8px !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  background: color-mix(in oklch, var(--popover) 96%, transparent) !important;
+  max-width: min(440px, calc(100% - 16px)) !important;
+  overflow: hidden !important;
+  z-index: 16 !important;
+  font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+}
+
+.monaco-editor .suggest-details .body {
+  padding: 8px 12px !important;
+  font-size: 12px !important;
+  line-height: 1.5 !important;
+}
+
+.monaco-editor .suggest-details .header {
+  font-family: var(--font-mono), monospace !important;
+  font-size: 11px !important;
+  color: var(--primary) !important;
+  border-bottom: 1px solid color-mix(in oklch, var(--border) 60%, transparent) !important;
+  padding-bottom: 4px !important;
+  margin-bottom: 6px !important;
+}
+
+/* 6. VS Code Style Symbol Icon Colors */
+.monaco-editor .suggest-widget .codicon {
+  font-size: 14px !important;
+  margin-right: 6px !important;
+  vertical-align: middle !important;
+}
+
+.monaco-editor .suggest-widget .codicon-symbol-method,
+.monaco-editor .suggest-widget .codicon-symbol-function {
+  color: #b180f0 !important;
+}
+
+.monaco-editor .suggest-widget .codicon-symbol-variable,
+.monaco-editor .suggest-widget .codicon-symbol-field,
+.monaco-editor .suggest-widget .codicon-symbol-property {
+  color: #75beff !important;
+}
+
+.monaco-editor .suggest-widget .codicon-symbol-class,
+.monaco-editor .suggest-widget .codicon-symbol-struct {
+  color: #ee9d28 !important;
+}
+
+.monaco-editor .suggest-widget .codicon-symbol-interface {
+  color: #75beff !important;
+}
+
+.monaco-editor .suggest-widget .codicon-symbol-keyword {
+  color: #c586c0 !important;
+}
+
+.monaco-editor .suggest-widget .codicon-symbol-snippet {
+  color: #e8a838 !important;
+}
+
+.monaco-editor .suggest-widget .codicon-symbol-module,
+.monaco-editor .suggest-widget .codicon-symbol-namespace {
+  color: #4ec9b0 !important;
+}
+
+.monaco-editor .suggest-widget .codicon-symbol-file,
+.monaco-editor .suggest-widget .codicon-symbol-text {
+  color: #a1a1aa !important;
+}
+
+/* ─── KAIRO EDITOR FIND & REPLACE HIGHLIGHTS ────────────────────────────── */
+.kairo-find-match {
+  background-color: rgba(234, 179, 8, 0.28) !important;
+  border-radius: 2px !important;
+}
+
+.kairo-find-match-current {
+  background-color: rgba(245, 158, 11, 0.55) !important;
+  outline: 1.5px solid rgba(245, 158, 11, 0.95) !important;
+  border-radius: 2px !important;
+}
+
+/* Hide raw default unstyled Monaco find widget in favor of custom Kairo Find & Replace */
+.monaco-editor .find-widget {
+  display: none !important;
+}
+
+/* ─── DESKTOP VIEWPORT STRETCH ─────────────────────────────────────────── */
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+
+
