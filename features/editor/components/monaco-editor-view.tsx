@@ -12,7 +12,6 @@ import { EditorDocument } from "../types";
 import { ideEvents } from "@/lib/events";
 import { THEME_DEFINITIONS, migrateLegacyTheme } from "@/features/theme";
 import { EditorFindReplace } from "./editor-find-replace";
-import { EditorContextMenu } from "./editor-context-menu";
 
 // Ensure Monaco runs completely offline from bundled npm module with offline Web Worker stub
 if (typeof window !== "undefined") {
@@ -143,11 +142,6 @@ export function MonacoEditorView({ document, onCursorChange }: MonacoEditorViewP
 
   const [isFindOpen, setIsFindOpen] = useState(false);
   const [isReplaceMode, setIsReplaceMode] = useState(false);
-  const [contextMenu, setContextMenu] = useState<{
-    isOpen: boolean;
-    x: number;
-    y: number;
-  }>({ isOpen: false, x: 0, y: 0 });
 
   // Listen to menubar or global find and replace triggers
   useEffect(() => {
@@ -274,6 +268,32 @@ export function MonacoEditorView({ document, onCursorChange }: MonacoEditorViewP
       minimap: { enabled: minimapEnabled },
     });
   }, [minimapEnabled]);
+
+  // Hardware-accelerated layout observer for instant, zero-glitch window & pane resizing
+  useEffect(() => {
+    const container = containerRef.current;
+    const editor = localEditorRef.current;
+    if (!container || !editor) return;
+
+    let rafId: number | null = null;
+    const ro = new ResizeObserver(() => {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        try {
+          editor.layout();
+        } catch {
+          // Guard against unmounted/disposed editor
+        }
+      });
+    });
+
+    ro.observe(container);
+
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      ro.disconnect();
+    };
+  }, [editorInstance]);
 
   // Intercept Ctrl/Cmd + Plus/Minus/Zero keyboard shortcuts inside editor container
   // to zoom the editor only, preventing whole-browser scaling
@@ -419,22 +439,10 @@ export function MonacoEditorView({ document, onCursorChange }: MonacoEditorViewP
       setIsReplaceMode(true);
     });
 
-    // Custom right-click context menu (showing ONLY Cut, Copy, and Paste in editor component only)
+    // Disable right-click context menu in the editor
     editor.onContextMenu((e: any) => {
       e.event?.preventDefault?.();
       e.event?.stopPropagation?.();
-      const browserEvent = e.event?.browserEvent as MouseEvent;
-      const container = containerRef.current;
-      if (browserEvent && container) {
-        const rect = container.getBoundingClientRect();
-        const relX = browserEvent.clientX - rect.left;
-        const relY = browserEvent.clientY - rect.top;
-        setContextMenu({
-          isOpen: true,
-          x: relX,
-          y: relY,
-        });
-      }
     });
 
     // Keyboard navigation actions (F12 / Alt+F12) without polluting context menu
@@ -540,16 +548,6 @@ export function MonacoEditorView({ document, onCursorChange }: MonacoEditorViewP
         onToggleReplaceMode={(mode) =>
           setIsReplaceMode((prev) => (mode !== undefined ? mode : !prev))
         }
-        containerRef={containerRef}
-      />
-
-      {/* Editor Context Menu showing ONLY Cut, Copy, and Paste */}
-      <EditorContextMenu
-        editor={editorInstance || localEditorRef.current}
-        isOpen={contextMenu.isOpen}
-        x={contextMenu.x}
-        y={contextMenu.y}
-        onClose={() => setContextMenu((prev) => ({ ...prev, isOpen: false }))}
         containerRef={containerRef}
       />
     </div>

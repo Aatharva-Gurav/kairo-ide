@@ -36,7 +36,7 @@ function PageContent() {
   };
 
   return (
-    <SidebarInset className="h-full flex-1 overflow-hidden flex flex-col p-0 m-0 border-0">
+    <SidebarInset className="h-full flex-1 min-w-0 min-h-0 overflow-hidden flex flex-col p-0 m-0 border-0">
       {activeWorkspace || documents.length > 0 ? (
         <EditorWorkspace />
       ) : (
@@ -90,7 +90,7 @@ export default function Page() {
                 <CommandProvider>
                   <div className="flex flex-col h-full w-full min-h-0 overflow-hidden">
                     <AppTitleBar />
-                    <div className="flex flex-1 overflow-hidden relative w-full h-[calc(100%-30px)] min-h-0">
+                    <div className="flex flex-1 overflow-hidden relative w-full h-[calc(100%-30px)] min-h-0 min-w-0">
                       <PageContent />
                       <AppSidebar />
                     </div>

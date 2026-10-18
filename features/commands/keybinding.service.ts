@@ -45,7 +45,7 @@ export class KeybindingService {
   }
 
   /**
-   * Detects if the current host environment is macOS.
+   * Detects if the current host workstation is macOS.
    */
   static isMacOS(): boolean {
     if (typeof navigator === "undefined") return false;
@@ -54,7 +54,42 @@ export class KeybindingService {
     if (userAgentData?.platform) {
       return /mac/i.test(userAgentData.platform);
     }
-    return /mac|iphone|ipad|ipod/i.test(navigator.platform || navigator.userAgent || "");
+    return /mac|darwin/i.test(navigator.platform || navigator.userAgent || "");
+  }
+
+  /**
+   * Detects if the current host workstation is Windows.
+   */
+  static isWindows(): boolean {
+    if (typeof navigator === "undefined") return false;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const userAgentData = (navigator as any).userAgentData;
+    if (userAgentData?.platform) {
+      return /win/i.test(userAgentData.platform);
+    }
+    return /win/i.test(navigator.platform || navigator.userAgent || "");
+  }
+
+  /**
+   * Detects if the current host workstation is Linux.
+   */
+  static isLinux(): boolean {
+    if (typeof navigator === "undefined") return false;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const userAgentData = (navigator as any).userAgentData;
+    if (userAgentData?.platform) {
+      return /linux/i.test(userAgentData.platform);
+    }
+    return /linux|x11/i.test(navigator.platform || navigator.userAgent || "");
+  }
+
+  /**
+   * Returns the current workstation desktop OS: 'macos' | 'windows' | 'linux'.
+   */
+  static getDesktopOS(): "macos" | "windows" | "linux" {
+    if (this.isMacOS()) return "macos";
+    if (this.isLinux()) return "linux";
+    return "windows";
   }
 
   /**

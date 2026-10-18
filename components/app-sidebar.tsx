@@ -72,7 +72,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </div>
       </button>
 
-      <Sidebar side="right" variant="floating" className="top-[30px] h-[calc(100svh-30px)]" {...props}>
+      <Sidebar side="right" variant="floating" className="top-[30px] h-[calc(100vh-30px)]" {...props}>
         {activeWorkspace ? (
           <SidebarHeader className="h-10 justify-center pr-2.5 pl-11 border-b border-sidebar-border/80">
             <div className="relative flex items-center p-0.5 rounded-lg bg-sidebar-accent/40 border border-sidebar-border/60 min-w-0 shadow-2xs">

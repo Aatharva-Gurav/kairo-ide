@@ -6,7 +6,6 @@ use commands::workspace::*;
 use menu::*;
 use tauri::Manager;
 
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
     .setup(|app| {
@@ -20,6 +19,11 @@ pub fn run() {
 
       let menus = menu::init_menus(app.handle())?;
       app.manage(std::sync::Mutex::new(Some(menus)));
+
+      // Default to maximized window on launch
+      if let Some(window) = app.get_webview_window("main") {
+        let _ = window.maximize();
+      }
 
       Ok(())
     })

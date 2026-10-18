@@ -68,7 +68,7 @@ export function AppTitleBar() {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
-  const [isMaximized, setIsMaximized] = useState(false);
+  const [isMaximized, setIsMaximized] = useState(true);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
@@ -84,6 +84,8 @@ export function AppTitleBar() {
     if (!isTauri) return;
 
     let isMounted = true;
+    let resizeTimer: ReturnType<typeof setTimeout> | null = null;
+
     const checkMaximized = async () => {
       try {
         const max = await invokeCommand<boolean>("window_is_maximized");
@@ -96,10 +98,19 @@ export function AppTitleBar() {
     };
 
     checkMaximized();
-    window.addEventListener("resize", checkMaximized);
+
+    const handleResize = () => {
+      if (resizeTimer) clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        checkMaximized();
+      }, 50);
+    };
+
+    window.addEventListener("resize", handleResize);
     return () => {
       isMounted = false;
-      window.removeEventListener("resize", checkMaximized);
+      if (resizeTimer) clearTimeout(resizeTimer);
+      window.removeEventListener("resize", handleResize);
     };
   }, [isTauri]);
 
@@ -285,6 +296,9 @@ export function AppTitleBar() {
     }, 900);
   }, []);
 
+  // Determine if the user is currently on the welcome screen
+  const isWelcomeScreen = !activeWorkspace && documents.length === 0;
+
   // Menu structure definition
   const menuDefinitions: Record<string, MenuItemDef[]> = {
     file: [
@@ -292,7 +306,9 @@ export function AppTitleBar() {
         id: "file.new",
         label: "New Text File",
         shortcut: "Ctrl+N",
+        disabled: isWelcomeScreen,
         action: async () => {
+          if (isWelcomeScreen) return;
           if (activeWorkspace) {
             startCreateFile();
           } else {
@@ -739,6 +755,18 @@ export function AppTitleBar() {
   return (
     <header
       ref={menuBarRef}
+      onDoubleClick={(e) => {
+        const target = e.target as HTMLElement;
+        if (
+          target.closest("button") ||
+          target.closest("input") ||
+          target.closest("[role='menuitem']") ||
+          target.closest("nav")
+        ) {
+          return;
+        }
+        handleToggleMaximize();
+      }}
       className="relative h-[30px] w-full bg-sidebar border-b border-sidebar-border/80 flex items-center justify-between select-none z-50 shrink-0 text-xs shadow-xs"
       data-tauri-drag-region
     >

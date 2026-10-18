@@ -603,6 +603,9 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
 
         switch (id) {
           case "file.new": {
+            if (!workspaceRef.current.activeWorkspace && editorRef.current.documents.length === 0) {
+              break;
+            }
             if (workspaceRef.current.activeWorkspace) {
               explorerRef.current.startCreateFile();
             } else {

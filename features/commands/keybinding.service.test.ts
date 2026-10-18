@@ -101,5 +101,50 @@ describe("KeybindingService", () => {
     expect(KeybindingService.formatDisplay("shift+alt+f")).toBe("Shift+Alt+F");
     expect(KeybindingService.formatDisplay(null)).toBe("");
   });
+
+  it("detects desktop workstation OS correctly and ignores iOS/mobile", () => {
+    // Test Windows platform
+    const originalNavigator = global.navigator;
+    Object.defineProperty(global, "navigator", {
+      value: { platform: "Win32", userAgent: "Windows NT 10.0; Win64; x64" },
+      configurable: true,
+    });
+    expect(KeybindingService.isWindows()).toBe(true);
+    expect(KeybindingService.isMacOS()).toBe(false);
+    expect(KeybindingService.isLinux()).toBe(false);
+    expect(KeybindingService.getDesktopOS()).toBe("windows");
+
+    // Test macOS platform
+    Object.defineProperty(global, "navigator", {
+      value: { platform: "MacIntel", userAgent: "Macintosh; Intel Mac OS X 10_15_7" },
+      configurable: true,
+    });
+    expect(KeybindingService.isMacOS()).toBe(true);
+    expect(KeybindingService.isWindows()).toBe(false);
+    expect(KeybindingService.isLinux()).toBe(false);
+    expect(KeybindingService.getDesktopOS()).toBe("macos");
+
+    // Test Linux platform
+    Object.defineProperty(global, "navigator", {
+      value: { platform: "Linux x86_64", userAgent: "X11; Ubuntu; Linux x86_64" },
+      configurable: true,
+    });
+    expect(KeybindingService.isLinux()).toBe(true);
+    expect(KeybindingService.isMacOS()).toBe(false);
+    expect(KeybindingService.isWindows()).toBe(false);
+    expect(KeybindingService.getDesktopOS()).toBe("linux");
+
+    // Test that iOS is NOT detected as macOS
+    Object.defineProperty(global, "navigator", {
+      value: { platform: "iPhone", userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)" },
+      configurable: true,
+    });
+    expect(KeybindingService.isMacOS()).toBe(false);
+
+    Object.defineProperty(global, "navigator", {
+      value: originalNavigator,
+      configurable: true,
+    });
+  });
 });
 

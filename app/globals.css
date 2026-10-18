@@ -1000,7 +1000,7 @@
   display: none !important;
 }
 
-/* ─── DESKTOP VIEWPORT STRETCH ─────────────────────────────────────────── */
+/* ─── DESKTOP VIEWPORT & WORKSTATION OPTIMIZATIONS ─────────────────────── */
 html,
 body {
   width: 100%;
@@ -1008,6 +1008,44 @@ body {
   margin: 0;
   padding: 0;
   overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+/* Allow text selection in editor, inputs, and code content */
+input,
+textarea,
+[contenteditable="true"],
+.monaco-editor,
+.selectable-text {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+/* Desktop scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--sidebar-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 
