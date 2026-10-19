@@ -130,9 +130,10 @@ export class FileExplorerService {
     nodes: FileSystemNode[],
     query: string
   ): { filteredNodes: FileSystemNode[]; matchingCount: number } {
-    const cleanQuery = query.trim().toLowerCase();
+    const safeNodes = Array.isArray(nodes) ? nodes : [];
+    const cleanQuery = query ? query.trim().toLowerCase() : "";
     if (!cleanQuery) {
-      return { filteredNodes: nodes, matchingCount: nodes.length };
+      return { filteredNodes: safeNodes, matchingCount: safeNodes.length };
     }
 
     let count = 0;
@@ -178,7 +179,7 @@ export class FileExplorerService {
       return null;
     }
 
-    const filteredNodes = nodes.map(filterNode).filter(Boolean) as FileSystemNode[];
+    const filteredNodes = safeNodes.map(filterNode).filter(Boolean) as FileSystemNode[];
     return { filteredNodes, matchingCount: count };
   }
 
@@ -569,8 +570,8 @@ export class FileExplorerService {
     previews: BatchRenamePreviewItem[],
     recordHistory = true
   ): Promise<Array<{ oldPath: string; newPath: string }>> {
-    const toRename = previews.filter(
-      (p) => !p.hasConflict && p.newName !== p.originalName
+    const toRename = (previews || []).filter(
+      (p) => p && !p.hasConflict && p.newName !== p.originalName
     );
 
     if (toRename.length === 0) return [];
@@ -682,21 +683,28 @@ export class FileExplorerService {
     if (items && items.length > 0) {
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const itemWithWebkit = item as unknown as {
+          webkitGetAsEntry?: () => {
+            isDirectory?: boolean;
+            isFile?: boolean;
+            fullPath?: string;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            file?: (resolve: (f: File) => void, reject: (err: any) => void) => void;
+          } | null;
+        };
         const entry =
-          typeof (item as any).webkitGetAsEntry === "function"
-            ? (item as any).webkitGetAsEntry()
+          typeof itemWithWebkit.webkitGetAsEntry === "function"
+            ? itemWithWebkit.webkitGetAsEntry()
             : null;
         if (entry) {
           hasWebkitEntries = true;
           if (entry.isDirectory) {
             await processDirectoryEntry(entry, normDestDir);
-          } else if (entry.isFile) {
+          } else if (entry.isFile && entry.file) {
             const file: File = await new Promise((resolve, reject) =>
-              entry.file(resolve, reject)
+              entry.file!(resolve, reject)
             );
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const nativePath = (file as any).path;
+            const nativePath = (file as unknown as { path?: string }).path;
             if (nativePath) {
               const copied = await this.copy(nativePath, normDestDir);
               importedPaths.push(copied);

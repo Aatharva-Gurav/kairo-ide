@@ -24,7 +24,10 @@ function NumberSettingInput({
 
   // Sync with external value changes (e.g. reset to default or scope change)
   React.useEffect(() => {
-    setLocalText(String(currentNum));
+    const timer = setTimeout(() => {
+      setLocalText(String(currentNum));
+    }, 0);
+    return () => clearTimeout(timer);
   }, [currentNum]);
 
   const commitValue = () => {

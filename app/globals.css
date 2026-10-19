@@ -826,7 +826,8 @@
   background: color-mix(in oklch, var(--popover) 96%, transparent) !important;
   overflow: hidden !important;
   max-width: min(520px, calc(100% - 16px)) !important;
-  z-index: 15 !important;
+  max-height: min(320px, calc(100% - 16px)) !important;
+  z-index: 40 !important;
   font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
   letter-spacing: -0.01em !important;
   -webkit-font-smoothing: antialiased !important;
@@ -918,9 +919,20 @@
   backdrop-filter: blur(20px) saturate(180%) !important;
   background: color-mix(in oklch, var(--popover) 96%, transparent) !important;
   max-width: min(440px, calc(100% - 16px)) !important;
+  max-height: min(280px, calc(100% - 16px)) !important;
   overflow: hidden !important;
-  z-index: 16 !important;
+  z-index: 45 !important;
   font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+}
+
+.monaco-editor .monaco-hover {
+  z-index: 40 !important;
+  max-width: min(520px, calc(100% - 16px)) !important;
+  border-radius: 8px !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.4) !important;
+  background: color-mix(in oklch, var(--popover) 96%, transparent) !important;
+  backdrop-filter: blur(16px) !important;
 }
 
 .monaco-editor .suggest-details .body {

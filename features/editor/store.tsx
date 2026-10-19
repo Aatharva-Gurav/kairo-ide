@@ -280,11 +280,14 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
           await FormatterService.formatMonacoDocument(monacoEditorRef.current);
         }
 
-        let contentToSave = doc.content;
+        // Always prioritize the active Monaco model's live content if available
+        const activeModel = ModelService.getModel(targetId);
+        let contentToSave = activeModel ? activeModel.getValue() : doc.content;
+
         if (filesSettingsRef.current.trimTrailingWhitespace) {
           contentToSave = contentToSave
             .split("\n")
-            .map((line) => line.replace(/\s+$/, ""))
+            .map((line: string) => line.replace(/\s+$/, ""))
             .join("\n");
         }
         if (filesSettingsRef.current.insertFinalNewline && !contentToSave.endsWith("\n")) {
@@ -293,12 +296,21 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
 
         await EditorService.saveDocument(doc.path, contentToSave);
 
+        // Update both state and ref immediately
+        const updatedDoc = {
+          ...doc,
+          content: contentToSave,
+          savedContent: contentToSave,
+          isDirty: false,
+          error: null,
+        };
+
+        documentsRef.current = documentsRef.current.map((d) =>
+          d.id === targetId ? updatedDoc : d
+        );
+
         setDocuments((prev) =>
-          prev.map((d) =>
-            d.id === targetId
-              ? { ...d, content: contentToSave, savedContent: contentToSave, isDirty: false, error: null }
-              : d
-          )
+          prev.map((d) => (d.id === targetId ? updatedDoc : d))
         );
 
         ideEvents.emit("editor:document-saved", { path: targetId });
@@ -341,6 +353,48 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     ideEvents.emit("editor:active-changed", { path: norm });
   }, []);
 
+  const updateContent = useCallback((filePath: string, newContent: string) => {
+    const norm = normalizePath(filePath);
+
+    documentsRef.current = documentsRef.current.map((doc) => {
+      if (doc.id === norm) {
+        const isDirty = newContent !== doc.savedContent;
+        return { ...doc, content: newContent, isDirty };
+      }
+      return doc;
+    });
+
+    setDocuments((prev) =>
+      prev.map((doc) => {
+        if (doc.id === norm) {
+          const isDirty = newContent !== doc.savedContent;
+          if (doc.isDirty !== isDirty) {
+            ideEvents.emit("editor:document-changed", { path: norm, isDirty });
+          }
+          return { ...doc, content: newContent, isDirty };
+        }
+        return doc;
+      })
+    );
+
+    // Auto-save: afterDelay
+    if (filesSettingsRef.current.autoSave === "afterDelay") {
+      const existingTimer = autoSaveTimersRef.current.get(norm);
+      if (existingTimer) {
+        clearTimeout(existingTimer);
+      }
+      const delay = Math.max(200, filesSettingsRef.current.autoSaveDelay || 1000);
+      const timer = setTimeout(() => {
+        autoSaveTimersRef.current.delete(norm);
+        const currentDoc = documentsRef.current.find((d) => d.id === norm);
+        if (currentDoc && currentDoc.isDirty && saveDocumentRef.current) {
+          saveDocumentRef.current(norm);
+        }
+      }, delay);
+      autoSaveTimersRef.current.set(norm, timer);
+    }
+  }, []);
+
   const openDocument = useCallback(
     async (filePath: string, initialContent?: string): Promise<EditorDocument> => {
       const norm = normalizePath(filePath);
@@ -348,6 +402,10 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
       // Check if file is already open
       const existing = documentsRef.current.find((doc) => doc.id === norm);
       if (existing) {
+        if (initialContent !== undefined && initialContent !== existing.content) {
+          updateContent(norm, initialContent);
+          ModelService.updateContent(norm, initialContent);
+        }
         setActiveDocumentId(norm);
         return existing;
       }
@@ -355,16 +413,23 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
       // Load document from disk
       const doc = await EditorService.loadDocument(norm, initialContent);
 
+      documentsRef.current = documentsRef.current.some((d) => d.id === norm)
+        ? documentsRef.current
+        : [...documentsRef.current, doc];
+
       setDocuments((prev) => {
         if (prev.some((d) => d.id === norm)) return prev;
         return [...prev, doc];
       });
 
+      // Synchronize model content if existing model was loaded
+      ModelService.updateContent(norm, doc.content);
+
       setActiveDocumentId(norm);
       ideEvents.emit("editor:document-opened", { path: norm });
       return doc;
     },
-    [setActiveDocumentId]
+    [setActiveDocumentId, updateContent]
   );
 
   const openFileDialog = useCallback(async (): Promise<EditorDocument | null> => {
@@ -410,9 +475,24 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
       const doc = documentsRef.current.find((d) => d.id === norm);
       if (!doc) return true;
 
-      if (doc.isDirty && !force) {
-        setDirtyCloseCandidate(doc);
-        return false;
+      const activeModel = ModelService.getModel(norm);
+      const isActuallyDirty =
+        doc.isDirty ||
+        (activeModel && !activeModel.isDisposed() && activeModel.getValue() !== doc.savedContent);
+
+      if (isActuallyDirty && !force) {
+        const autoSaveMode = filesSettingsRef.current.autoSave;
+        if (autoSaveMode !== "off" && saveDocumentRef.current) {
+          await saveDocumentRef.current(norm);
+        } else {
+          setDirtyCloseCandidate({
+            ...doc,
+            content:
+              activeModel && !activeModel.isDisposed() ? activeModel.getValue() : doc.content,
+            isDirty: true,
+          });
+          return false;
+        }
       }
 
       // Clear pending auto-save timer
@@ -425,9 +505,10 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
       ModelService.disposeModel(norm);
 
       // Find index of document before mutating documentsRef
-      const closedIdx = documentsRef.current.findIndex((d) => d.id === norm);
+      const currentDocs = documentsRef.current || [];
+      const closedIdx = currentDocs.findIndex((d) => d.id === norm);
 
-      const remaining = documentsRef.current.filter((d) => d.id !== norm);
+      const remaining = currentDocs.filter((d) => d.id !== norm);
       documentsRef.current = remaining;
       setDocuments(remaining);
 
@@ -450,7 +531,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
 
       // If closed split document, reassign or close split
       if (splitDocumentIdRef.current === norm) {
-        const remainingForSplit = remaining.filter((d) => d.id !== norm);
+        const remainingForSplit = (remaining || []).filter((d) => d.id !== norm);
         if (remainingForSplit.length > 0) {
           setSplitDocumentIdState(remainingForSplit[0].id);
         } else {
@@ -486,8 +567,18 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
         return false;
       };
 
-      const docsToClose = documentsRef.current.filter((d) => isTarget(d.id));
+      const currentDocs = documentsRef.current || [];
+      const docsToClose = currentDocs.filter((d) => isTarget(d.id));
       if (docsToClose.length === 0) return true;
+
+      if (!force) {
+        const dirtyDocs = (docsToClose || []).filter((d) => d.isDirty);
+        if (dirtyDocs.length > 0 && filesSettingsRef.current.autoSave !== "off" && saveDocumentRef.current) {
+          for (const doc of dirtyDocs) {
+            await saveDocumentRef.current(doc.id);
+          }
+        }
+      }
 
       // Dispose models and clear timers
       for (const doc of docsToClose) {
@@ -502,7 +593,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
       }
 
       const closedIds = new Set(docsToClose.map((d) => d.id));
-      const remaining = documentsRef.current.filter((d) => !closedIds.has(d.id));
+      const remaining = currentDocs.filter((d) => !closedIds.has(d.id));
       documentsRef.current = remaining;
       setDocuments(remaining);
 
@@ -518,7 +609,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
 
       // If split document was closed
       if (splitDocumentIdRef.current && closedIds.has(splitDocumentIdRef.current)) {
-        const remainingForSplit = remaining.filter((d) => d.id !== activeDocumentIdRef.current);
+        const remainingForSplit = (remaining || []).filter((d) => d.id !== activeDocumentIdRef.current);
         if (remainingForSplit.length > 0) {
           setSplitDocumentIdState(remainingForSplit[0].id);
         } else {
@@ -534,16 +625,24 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
   );
 
   const closeAllDocuments = useCallback(async (): Promise<boolean> => {
-    const dirtyDocs = documentsRef.current.filter((d) => d.isDirty);
+    const currentDocs = documentsRef.current || [];
+    const dirtyDocs = currentDocs.filter((d) => d.isDirty);
     if (dirtyDocs.length > 0) {
-      setDirtyCloseCandidate(dirtyDocs[0]);
-      return false;
+      if (filesSettingsRef.current.autoSave !== "off" && saveDocumentRef.current) {
+        for (const doc of dirtyDocs) {
+          await saveDocumentRef.current(doc.id);
+        }
+      } else {
+        setDirtyCloseCandidate(dirtyDocs[0]);
+        return false;
+      }
     }
 
     autoSaveTimersRef.current.forEach((t) => clearTimeout(t));
     autoSaveTimersRef.current.clear();
 
     ModelService.disposeAll();
+    documentsRef.current = [];
     setDocuments([]);
     setActiveDocumentIdState(null);
     closeSplitView();
@@ -554,12 +653,19 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
   const closeOtherDocuments = useCallback(
     async (filePath: string): Promise<boolean> => {
       const norm = normalizePath(filePath);
-      const others = documentsRef.current.filter((d) => d.id !== norm);
-      const dirtyOther = others.find((d) => d.isDirty);
+      const currentDocs = documentsRef.current || [];
+      const others = currentDocs.filter((d) => d.id !== norm);
+      const dirtyOthers = (others || []).filter((d) => d.isDirty);
 
-      if (dirtyOther) {
-        setDirtyCloseCandidate(dirtyOther);
-        return false;
+      if (dirtyOthers.length > 0) {
+        if (filesSettingsRef.current.autoSave !== "off" && saveDocumentRef.current) {
+          for (const doc of dirtyOthers) {
+            await saveDocumentRef.current(doc.id);
+          }
+        } else {
+          setDirtyCloseCandidate(dirtyOthers[0]);
+          return false;
+        }
       }
 
       others.forEach((d) => {
@@ -571,7 +677,9 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
         ModelService.disposeModel(d.id);
       });
 
-      setDocuments(documentsRef.current.filter((d) => d.id === norm));
+      const remaining = currentDocs.filter((d) => d.id === norm);
+      documentsRef.current = remaining;
+      setDocuments(remaining);
       setActiveDocumentId(norm);
       if (splitDocumentIdRef.current && splitDocumentIdRef.current !== norm) {
         closeSplitView();
@@ -580,40 +688,6 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     },
     [setActiveDocumentId, closeSplitView]
   );
-
-  const updateContent = useCallback((filePath: string, newContent: string) => {
-    const norm = normalizePath(filePath);
-
-    setDocuments((prev) =>
-      prev.map((doc) => {
-        if (doc.id === norm) {
-          const isDirty = newContent !== doc.savedContent;
-          if (doc.isDirty !== isDirty) {
-            ideEvents.emit("editor:document-changed", { path: norm, isDirty });
-          }
-          return { ...doc, content: newContent, isDirty };
-        }
-        return doc;
-      })
-    );
-
-    // Auto-save: afterDelay
-    if (filesSettingsRef.current.autoSave === "afterDelay") {
-      const existingTimer = autoSaveTimersRef.current.get(norm);
-      if (existingTimer) {
-        clearTimeout(existingTimer);
-      }
-      const delay = Math.max(200, filesSettingsRef.current.autoSaveDelay || 1000);
-      const timer = setTimeout(() => {
-        autoSaveTimersRef.current.delete(norm);
-        const currentDoc = documentsRef.current.find((d) => d.id === norm);
-        if (currentDoc && currentDoc.isDirty && saveDocumentRef.current) {
-          saveDocumentRef.current(norm);
-        }
-      }, delay);
-      autoSaveTimersRef.current.set(norm, timer);
-    }
-  }, []);
 
   const saveAllDocuments = useCallback(async (): Promise<boolean> => {
     const { saved, failed } = await EditorService.saveAllDocuments(documentsRef.current);
@@ -805,7 +879,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     const handleBlur = () => {
       const mode = filesSettingsRef.current.autoSave;
       if (mode === "onFocusChange" || mode === "onWindowChange" || mode === "afterDelay") {
-        const dirtyDocs = documentsRef.current.filter((d) => d.isDirty);
+        const dirtyDocs = (documentsRef.current || []).filter((d) => d && d.isDirty);
         for (const doc of dirtyDocs) {
           if (saveDocumentRef.current) {
             saveDocumentRef.current(doc.id);
@@ -868,9 +942,14 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
           // Clean reload from disk
           try {
             const reloaded = await EditorService.loadDocument(normPath);
+            documentsRef.current = documentsRef.current.map((d) =>
+              d.id === normPath ? { ...d, ...reloaded } : d
+            );
             setDocuments((prev) =>
               prev.map((d) => (d.id === normPath ? { ...d, ...reloaded } : d))
             );
+            ModelService.updateContent(normPath, reloaded.content);
+            ideEvents.emit("editor:document-changed", { path: normPath, isDirty: false });
           } catch {
             // Ignore
           }
@@ -975,6 +1054,9 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
       confirmDirtyClose,
       updateSettings,
       revealInExplorer,
+      setQuickOpenVisible,
+      setGoToLineVisible,
+      monacoEditorRef,
     ]
   );
 

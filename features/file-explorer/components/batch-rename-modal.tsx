@@ -75,11 +75,11 @@ export function BatchRenameModal() {
   ]);
 
   const conflicts = useMemo(
-    () => previewItems.filter((i) => i.hasConflict),
+    () => (previewItems || []).filter((i) => i && i.hasConflict),
     [previewItems]
   );
   const changesCount = useMemo(
-    () => previewItems.filter((i) => i.originalName !== i.newName).length,
+    () => (previewItems || []).filter((i) => i && i.originalName !== i.newName).length,
     [previewItems]
   );
   const hasConflicts = conflicts.length > 0;

@@ -1,5 +1,5 @@
 import { FileExplorerService } from "./service";
-import { normalizePath, dirname, basename } from "@/lib/tauri-ipc";
+import { dirname, basename } from "@/lib/tauri-ipc";
 import { ideEvents } from "@/lib/events";
 
 export type HistoryOperationType =

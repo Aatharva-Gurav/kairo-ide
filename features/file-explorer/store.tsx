@@ -27,7 +27,6 @@ import {
   normalizePath,
   relativePath,
   getFileExtension,
-  basename,
   copyToClipboard,
 } from "@/lib/tauri-ipc";
 import { fsWatcher } from "@/lib/watcher";
@@ -249,7 +248,7 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
   const [bulkDeleteCandidate, setBulkDeleteCandidate] = useState<FileSystemNode[] | null>(null);
   const [batchRenameCandidates, setBatchRenameCandidates] = useState<FileSystemNode[] | null>(null);
   const [moveCandidates, setMoveCandidates] = useState<FileSystemNode[] | null>(null);
-  const [historyVersion, setHistoryVersion] = useState(0);
+  const [, setHistoryVersion] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showHidden, setShowHiddenState] = useState<boolean>(() => {
@@ -946,7 +945,7 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
         return false;
       }
     },
-    [inlineAction, refresh]
+    [inlineAction, refresh, openFile]
   );
 
   const promptDelete = useCallback(
@@ -1663,7 +1662,6 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
       copyRelativePath,
       copySelectedPaths,
       revealInFileManager,
-      historyVersion,
       undo,
       redo,
       batchRenameCandidates,

@@ -23,7 +23,13 @@ if (typeof window !== "undefined") {
     globalObj.MonacoEnvironment = {
       getWorker: function () {
         const workerBlob = new Blob(
-          [`self.onmessage = function () {};`],
+          [
+            `self.onmessage = function (e) {
+              if (e && e.data && typeof e.data === 'object' && e.data.type === 0) {
+                self.postMessage({ vsWorker: e.data.vsWorker, seq: e.data.req, type: 1, res: null });
+              }
+            };`
+          ],
           { type: "application/javascript" }
         );
         return new Worker(URL.createObjectURL(workerBlob));

@@ -36,7 +36,6 @@ export function EmptyWorkspaceView() {
     openWorkspacePath,
     recentWorkspaces,
     removeRecent,
-    clearRecent,
     error,
     clearError,
   } = useWorkspace();
@@ -44,13 +43,15 @@ export function EmptyWorkspaceView() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredRecents = useMemo(() => {
-    if (!searchQuery.trim()) return recentWorkspaces;
+    const list = Array.isArray(recentWorkspaces) ? recentWorkspaces : [];
+    if (!searchQuery.trim()) return list;
     const q = searchQuery.toLowerCase();
-    return recentWorkspaces.filter(
+    return list.filter(
       (p) =>
-        p.name.toLowerCase().includes(q) ||
-        p.rootPath.toLowerCase().includes(q) ||
-        (p.projectTypes && p.projectTypes.some((t) => t.toLowerCase().includes(q)))
+        p &&
+        (p.name?.toLowerCase().includes(q) ||
+          p.rootPath?.toLowerCase().includes(q) ||
+          (p.projectTypes && p.projectTypes.some((t) => t && t.toLowerCase().includes(q))))
     );
   }, [recentWorkspaces, searchQuery]);
 

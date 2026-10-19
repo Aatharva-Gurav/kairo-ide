@@ -24,13 +24,56 @@ if (typeof window !== "undefined") {
 
   // 1. Configure MonacoEnvironment to provide inline web workers
   // This satisfies Monaco's web worker requirement completely offline in Next.js Turbopack
-  // and prevents worker 404s from raising [object ErrorEvent]
+  // and safely returns valid defaults for all worker queries
   globalObj.MonacoEnvironment = {
     getWorker: function () {
       const workerBlob = new Blob(
         [
-          `self.onmessage = function () {
-            // Offline stub worker
+          `self.onmessage = function (e) {
+            if (e && e.data && typeof e.data === 'object' && e.data.type === 0) {
+              var method = e.data.method;
+              var args = e.data.args;
+              if (method === '$fmr' && Array.isArray(args) && typeof args[0] === 'string') {
+                method = args[0];
+                args = args[1];
+              }
+
+              var res = null;
+              if (method === 'getRenameInfo') {
+                res = { canRename: false, localizedErrorMessage: 'Rename is not supported.' };
+              } else if (method === 'computeDiff') {
+                res = { changes: [], identical: true, quitEarly: false };
+              } else if (
+                method === 'getSyntacticDiagnostics' ||
+                method === 'getSemanticDiagnostics' ||
+                method === 'getSuggestionDiagnostics' ||
+                method === 'getCompilerOptionsDiagnostics' ||
+                method === 'provideInlayHints' ||
+                method === 'getCodeFixesAtPosition' ||
+                method === 'findRenameLocations' ||
+                method === 'getDefinitionAtPosition' ||
+                method === 'getReferencesAtPosition' ||
+                method === 'getDocumentHighlights' ||
+                method === 'getFormattingEditsForRange' ||
+                method === 'getFormattingEditsForDocument' ||
+                method === 'getFormattingEditsAfterKeystroke' ||
+                method === 'doValidation' ||
+                method === 'findDocumentSymbols' ||
+                method === 'findDocumentColors' ||
+                method === 'getColorPresentations' ||
+                method === 'getFoldingRanges' ||
+                method === 'getSelectionRanges' ||
+                method === 'findDocumentHighlights' ||
+                method === 'findDefinition' ||
+                method === 'findReferences' ||
+                method === 'findDocumentLinks'
+              ) {
+                res = [];
+              } else {
+                res = null;
+              }
+              self.postMessage({ vsWorker: e.data.vsWorker, seq: e.data.req, type: 1, res: res });
+            }
           };`
         ],
         { type: "application/javascript" }
@@ -114,6 +157,9 @@ if (typeof window !== "undefined") {
   } catch {
     // Themes already registered
   }
+
+  // 5. Initialize Monaco language defaults and disable internal worker adapters
+  IntelliSenseService.init(monaco);
 }
 
 interface MonacoEditorViewProps {
@@ -127,7 +173,17 @@ interface MonacoEditorViewProps {
 }
 
 export function MonacoEditorView({ document, onCursorChange }: MonacoEditorViewProps) {
-  const { settings, updateContent, monacoEditorRef, isSplit } = useEditor();
+  const {
+    settings,
+    updateContent,
+    saveDocument,
+    closeDocument,
+    formatActiveDocument,
+    monacoEditorRef,
+    isSplit,
+    setGoToLineVisible,
+    setQuickOpenVisible,
+  } = useEditor();
   const minimapEnabled = !isSplit && (settings.minimap ?? true);
   const { settings: ideSettings } = useSettings();
   const suggestions = ideSettings.suggestions;
@@ -364,9 +420,8 @@ export function MonacoEditorView({ document, onCursorChange }: MonacoEditorViewP
       }
       ModelService.saveViewState(editor, document.path);
     };
-    // Only re-bind model when document identity or language changes, not on content keystrokes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [document.path, document.language, updateContent]);
+    // Re-bind when document identity, language, content, or editor instance changes
+  }, [document.path, document.language, document.content, updateContent, editorInstance]);
 
   // Synchronize external content changes (e.g. workspace replace in files) lively
   useEffect(() => {
@@ -401,6 +456,15 @@ export function MonacoEditorView({ document, onCursorChange }: MonacoEditorViewP
     if (model) {
       editor.setModel(model);
       ModelService.restoreViewState(editor, document.path);
+
+      // Bind content changes immediately on mount
+      if (contentListenerRef.current) {
+        contentListenerRef.current.dispose();
+      }
+      contentListenerRef.current = model.onDidChangeContent(() => {
+        const val = model.getValue();
+        updateContent(document.path, val);
+      });
     }
 
     // Cursor position listener for bottom status bar
@@ -428,6 +492,31 @@ export function MonacoEditorView({ document, onCursorChange }: MonacoEditorViewP
     // Emit initial position immediately upon mount
     emitCursorPosition(editor);
 
+    // Command: Ctrl/Cmd+S Save Document
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+      saveDocument(document.path);
+    });
+
+    // Command: Ctrl/Cmd+W Close Active Document Tab
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyW, () => {
+      closeDocument(document.path);
+    });
+
+    // Command: Ctrl/Cmd+P Quick Open File Modal
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyP, () => {
+      setQuickOpenVisible(true);
+    });
+
+    // Command: Ctrl/Cmd+G Go To Line Modal
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyG, () => {
+      setGoToLineVisible(true);
+    });
+
+    // Command: Shift+Alt+F Format Active Document
+    editor.addCommand(monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.KeyF, () => {
+      formatActiveDocument();
+    });
+
     // Intercept Ctrl/Cmd+F and Ctrl/Cmd+H inside Monaco editor to trigger custom Find & Replace
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyF, () => {
       setIsFindOpen(true);
@@ -439,13 +528,7 @@ export function MonacoEditorView({ document, onCursorChange }: MonacoEditorViewP
       setIsReplaceMode(true);
     });
 
-    // Disable right-click context menu in the editor
-    editor.onContextMenu((e: any) => {
-      e.event?.preventDefault?.();
-      e.event?.stopPropagation?.();
-    });
-
-    // Keyboard navigation actions (F12 / Alt+F12) without polluting context menu
+    // Keyboard navigation actions (F12 / Alt+F12)
     editor.addAction({
       id: "kairo.goToDefinition",
       label: "Go to Definition",
@@ -460,11 +543,25 @@ export function MonacoEditorView({ document, onCursorChange }: MonacoEditorViewP
       run: (ed: unknown) => NavigationService.peekDefinition(ed),
     });
 
+    // Disable and cancel editor context menu
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    editor.onContextMenu((e: any) => {
+      e.event?.preventDefault?.();
+      e.event?.stopPropagation?.();
+    });
+
     editor.focus();
   };
 
   return (
-    <div ref={containerRef} className="relative flex-1 w-full h-full overflow-hidden bg-background isolate z-0">
+    <div
+      ref={containerRef}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+      className="relative flex-1 w-full h-full overflow-hidden bg-background z-0 isolate"
+    >
       <Editor
         height="100%"
         width="100%"
@@ -478,27 +575,32 @@ export function MonacoEditorView({ document, onCursorChange }: MonacoEditorViewP
           wordWrap: settings.wordWrap,
           minimap: { enabled: minimapEnabled },
           lineNumbers: settings.lineNumbers,
-          cursorBlinking: settings.cursorBlinking,
+          cursorBlinking: settings.cursorBlinking || "smooth",
+          cursorSmoothCaretAnimation: "on",
+          renderLineHighlight: "all",
+          renderLineHighlightOnlyWhenFocus: false,
+          folding: true,
+          foldingHighlight: true,
+          showFoldingControls: "always",
           renderWhitespace: settings.renderWhitespace,
           automaticLayout: true,
           smoothScrolling: true,
           mouseWheelZoom: true,
           bracketPairColorization: { enabled: true },
-          guides: { bracketPairs: true, indentation: true },
+          guides: { bracketPairs: true, indentation: true, bracketPairsHorizontal: true },
           formatOnPaste: false,
           formatOnType: false,
           scrollBeyondLastLine: false,
           fixedOverflowWidgets: false,
           padding: { top: 8, bottom: 8 },
+          inlayHints: {
+            enabled: "off",
+          },
           suggestFontSize: suggestions?.fontSize ?? 12,
           suggestLineHeight: Math.round((suggestions?.fontSize ?? 12) * 2),
-          quickSuggestions:
-            suggestions?.enabled !== false && (suggestions?.quickSuggestions ?? true)
-              ? { other: true, comments: true, strings: true }
-              : false,
+          quickSuggestions: { other: true, comments: true, strings: true },
           quickSuggestionsDelay: 10,
-          suggestOnTriggerCharacters:
-            suggestions?.enabled !== false && (suggestions?.suggestOnTriggerCharacters ?? true),
+          suggestOnTriggerCharacters: true,
           acceptSuggestionOnEnter: suggestions?.acceptSuggestionOnEnter ?? "on",
           tabCompletion: (suggestions?.tabCompletion ?? "on") as "on" | "off" | "onlySnippets",
           snippetSuggestions: (suggestions?.snippetSuggestions ?? "inline") as "top" | "inline" | "bottom" | "none",
@@ -541,7 +643,8 @@ export function MonacoEditorView({ document, onCursorChange }: MonacoEditorViewP
 
       {/* Sleek Draggable Editor Find & Replace Component */}
       <EditorFindReplace
-        editor={editorInstance || localEditorRef.current}
+        editor={editorInstance}
+        documentPath={document.path}
         isOpen={isFindOpen}
         isReplaceMode={isReplaceMode}
         onClose={() => setIsFindOpen(false)}

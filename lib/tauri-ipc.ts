@@ -90,6 +90,14 @@ export function normalizePath(pathStr: string): string {
   if (!pathStr) return "";
   // Convert Windows backslashes to standard forward slashes for internal consistency
   let normalized = pathStr.replace(/\\+/g, "/");
+  // Strip URI schema file:// if present
+  if (normalized.startsWith("file://")) {
+    normalized = normalized.slice(7);
+  }
+  // Strip leading slash before Windows drive letter, e.g. /C:/ -> C:/
+  if (/^\/[a-zA-Z]:\//.test(normalized)) {
+    normalized = normalized.slice(1);
+  }
   // Normalize Windows drive letter to uppercase (e.g. c:/ -> C:/)
   if (/^[a-z]:\//.test(normalized)) {
     normalized = normalized.charAt(0).toUpperCase() + normalized.slice(1);
@@ -161,7 +169,7 @@ export function isDescendant(parentPath: string, childPath: string): boolean {
  * when an ancestor item is already present in the selection.
  */
 export function normalizeSelection<T extends { path: string }>(items: T[]): T[] {
-  if (items.length <= 1) return items;
+  if (!items || !Array.isArray(items) || items.length <= 1) return items || [];
   return items.filter((item) => {
     const itemNorm = normalizePath(item.path);
     return !items.some((other) => {
@@ -193,6 +201,32 @@ export function getFileExtension(pathOrName: string): string {
   return base.slice(lastDot + 1).toLowerCase();
 }
 
+export const ALL_IMAGE_EXTENSIONS = [
+  "png",
+  "jpg",
+  "jpeg",
+  "gif",
+  "webp",
+  "bmp",
+  "svg",
+  "ico",
+  "tiff",
+  "tif",
+  "avif",
+  "apng",
+  "heic",
+  "heif",
+  "jfif",
+  "pjpeg",
+  "pjp",
+  "cur",
+];
+
+export function isImageFile(pathOrName: string): boolean {
+  const ext = getFileExtension(pathOrName).toLowerCase();
+  return ALL_IMAGE_EXTENSIONS.includes(ext);
+}
+
 /**
  * Validates a filename against OS-illegal characters and reserved names.
  */
@@ -215,15 +249,349 @@ export function validateFileName(name: string): { valid: boolean; error?: string
   return { valid: true };
 }
 
+// In-browser virtual filesystem for web/dev environments
+const VFS_STORAGE_KEY = "kairo:vfs_files";
+let memoryVfs: Map<string, { content: string; modifiedAt: number }> | null = null;
+
+function getVfs(): Map<string, { content: string; modifiedAt: number }> {
+  if (!memoryVfs) {
+    memoryVfs = new Map<string, { content: string; modifiedAt: number }>();
+    if (typeof window !== "undefined" && window.localStorage) {
+      try {
+        const raw = window.localStorage.getItem(VFS_STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          for (const [k, v] of Object.entries(parsed)) {
+            memoryVfs.set(normalizePath(k), v as { content: string; modifiedAt: number });
+          }
+        }
+      } catch {
+        // ignore storage errors
+      }
+    }
+  }
+  return memoryVfs;
+}
+
+function persistVfs(): void {
+  if (typeof window !== "undefined" && window.localStorage && memoryVfs) {
+    try {
+      const obj: Record<string, { content: string; modifiedAt: number }> = {};
+      memoryVfs.forEach((v, k) => {
+        obj[k] = v;
+      });
+      window.localStorage.setItem(VFS_STORAGE_KEY, JSON.stringify(obj));
+    } catch {
+      // ignore storage quota errors
+    }
+  }
+}
+
+async function handleBrowserVfsCommand<T>(command: string, args?: Record<string, unknown>): Promise<T> {
+  const vfs = getVfs();
+
+  switch (command) {
+    case "fs_read_file": {
+      const p = normalizePath(String(args?.path || ""));
+      const entry = vfs.get(p);
+      if (entry) {
+        return {
+          content: entry.content,
+          isBinary: false,
+          size: entry.content.length,
+          readonly: false,
+        } as T;
+      }
+      return {
+        content: "",
+        isBinary: false,
+        size: 0,
+        readonly: false,
+      } as T;
+    }
+
+    case "fs_write_file": {
+      const p = normalizePath(String(args?.path || ""));
+      const content = String(args?.content ?? "");
+      vfs.set(p, { content, modifiedAt: Date.now() });
+      persistVfs();
+      return undefined as T;
+    }
+
+    case "fs_exists": {
+      const p = normalizePath(String(args?.path || ""));
+      if (vfs.has(p)) return true as T;
+      const prefix = p.endsWith("/") ? p : p + "/";
+      for (const k of vfs.keys()) {
+        if (k.startsWith(prefix)) return true as T;
+      }
+      return false as T;
+    }
+
+    case "fs_read_directory": {
+      const dirPath = normalizePath(String(args?.path || ""));
+      const prefix = dirPath.endsWith("/") ? dirPath : dirPath + "/";
+      const entries: Array<{
+        name: string;
+        path: string;
+        isDirectory: boolean;
+        size?: number;
+        modifiedAt?: number;
+      }> = [];
+      const seenDirs = new Set<string>();
+
+      for (const [filePath, fileData] of vfs.entries()) {
+        if (filePath.startsWith(prefix)) {
+          const rel = filePath.slice(prefix.length);
+          const parts = rel.split("/");
+          if (parts.length === 1) {
+            // Direct file child
+            entries.push({
+              name: parts[0],
+              path: filePath,
+              isDirectory: false,
+              size: fileData.content.length,
+              modifiedAt: fileData.modifiedAt,
+            });
+          } else {
+            // Subdirectory
+            const dirName = parts[0];
+            const subDirPath = prefix + dirName;
+            if (!seenDirs.has(subDirPath)) {
+              seenDirs.add(subDirPath);
+              entries.push({
+                name: dirName,
+                path: subDirPath,
+                isDirectory: true,
+              });
+            }
+          }
+        }
+      }
+      return entries as T;
+    }
+
+    case "fs_create_file": {
+      const p = normalizePath(String(args?.path || ""));
+      if (!vfs.has(p)) {
+        vfs.set(p, { content: "", modifiedAt: Date.now() });
+        persistVfs();
+      }
+      return undefined as T;
+    }
+
+    case "fs_create_directory": {
+      // Directories are implicit in VFS
+      return undefined as T;
+    }
+
+    case "fs_rename": {
+      const oldPath = normalizePath(String(args?.old_path || ""));
+      const newPath = normalizePath(String(args?.new_path || ""));
+      const oldVal = vfs.get(oldPath);
+      if (oldVal) {
+        vfs.delete(oldPath);
+        vfs.set(newPath, oldVal);
+      }
+      const prefix = oldPath.endsWith("/") ? oldPath : oldPath + "/";
+      const newPrefix = newPath.endsWith("/") ? newPath : newPath + "/";
+      for (const [k, v] of Array.from(vfs.entries())) {
+        if (k.startsWith(prefix)) {
+          vfs.delete(k);
+          vfs.set(newPrefix + k.slice(prefix.length), v);
+        }
+      }
+      persistVfs();
+      return undefined as T;
+    }
+
+    case "fs_delete": {
+      const p = normalizePath(String(args?.path || ""));
+      vfs.delete(p);
+      const prefix = p.endsWith("/") ? p : p + "/";
+      for (const k of Array.from(vfs.keys())) {
+        if (k.startsWith(prefix)) {
+          vfs.delete(k);
+        }
+      }
+      persistVfs();
+      return undefined as T;
+    }
+
+    case "fs_copy": {
+      const src = normalizePath(String(args?.src_path || ""));
+      const dest = normalizePath(String(args?.dest_path || ""));
+      const srcVal = vfs.get(src);
+      if (srcVal) {
+        vfs.set(dest, { content: srcVal.content, modifiedAt: Date.now() });
+      }
+      persistVfs();
+      return undefined as T;
+    }
+
+    case "fs_move": {
+      const src = normalizePath(String(args?.src_path || ""));
+      const dest = normalizePath(String(args?.dest_path || ""));
+      const srcVal = vfs.get(src);
+      if (srcVal) {
+        vfs.delete(src);
+        vfs.set(dest, { content: srcVal.content, modifiedAt: Date.now() });
+      }
+      persistVfs();
+      return undefined as T;
+    }
+
+    case "fs_duplicate": {
+      const src = normalizePath(String(args?.src_path || ""));
+      const srcVal = vfs.get(src);
+      const dest = src + " copy";
+      if (srcVal) {
+        vfs.set(dest, { content: srcVal.content, modifiedAt: Date.now() });
+      }
+      persistVfs();
+      return dest as T;
+    }
+
+    case "fs_get_metadata": {
+      const p = normalizePath(String(args?.path || ""));
+      const fileData = vfs.get(p);
+      return {
+        name: basename(p),
+        path: p,
+        isDirectory: !fileData,
+        size: fileData?.content.length || 0,
+        fileCount: 1,
+        folderCount: 0,
+        isReadonly: false,
+        modifiedAt: fileData?.modifiedAt || Date.now(),
+      } as T;
+    }
+
+    case "fs_list_workspace_files": {
+      const root = normalizePath(String(args?.rootPath || ""));
+      const prefix = root.endsWith("/") ? root : root + "/";
+      const files: string[] = [];
+      for (const k of vfs.keys()) {
+        if (k.startsWith(prefix)) {
+          files.push(k);
+        }
+      }
+      return files as T;
+    }
+
+    case "fs_search_workspace": {
+      const root = normalizePath(String(args?.rootPath || ""));
+      const query = String(args?.query || "").toLowerCase();
+      const prefix = root.endsWith("/") ? root : root + "/";
+      const matches: Array<{
+        filePath: string;
+        lineNumber: number;
+        column: number;
+        matchLength: number;
+        lineContent: string;
+      }> = [];
+
+      for (const [k, v] of vfs.entries()) {
+        if (k.startsWith(prefix) && query) {
+          const lines = v.content.split("\n");
+          lines.forEach((line, lineIdx) => {
+            let col = line.toLowerCase().indexOf(query);
+            while (col !== -1) {
+              matches.push({
+                filePath: k,
+                lineNumber: lineIdx + 1,
+                column: col + 1,
+                matchLength: query.length,
+                lineContent: line,
+              });
+              col = line.toLowerCase().indexOf(query, col + 1);
+            }
+          });
+        }
+      }
+      return matches as T;
+    }
+
+    case "fs_replace_in_files": {
+      const replacements = (args?.replacements || []) as Array<{
+        filePath: string;
+        lineNumber: number;
+        column: number;
+        matchLength: number;
+        replacement: string;
+      }>;
+      const modifiedFiles = new Set<string>();
+      let occurrences = 0;
+
+      for (const r of replacements) {
+        const p = normalizePath(r.filePath);
+        const entry = vfs.get(p);
+        if (entry) {
+          const lines = entry.content.split("\n");
+          if (r.lineNumber <= lines.length) {
+            const line = lines[r.lineNumber - 1];
+            const before = line.slice(0, r.column - 1);
+            const after = line.slice(r.column - 1 + r.matchLength);
+            lines[r.lineNumber - 1] = before + r.replacement + after;
+            entry.content = lines.join("\n");
+            entry.modifiedAt = Date.now();
+            modifiedFiles.add(p);
+            occurrences++;
+          }
+        }
+      }
+      persistVfs();
+      return {
+        filesModified: modifiedFiles.size,
+        occurrencesReplaced: occurrences,
+      } as T;
+    }
+
+    case "workspace_validate_path":
+      return true as T;
+
+    case "workspace_detect_project":
+      return ["typescript", "web"] as T;
+
+    case "workspace_pick_folder":
+    case "workspace_pick_file":
+    case "workspace_save_file_as":
+      return null as T;
+
+    case "fs_reveal":
+    case "menu_popup":
+    case "menu_sync_recent_workspaces":
+    case "window_minimize":
+    case "window_toggle_maximize":
+    case "window_close":
+    case "window_set_theme":
+      return undefined as T;
+
+    case "window_is_maximized":
+      return false as T;
+
+    default:
+      return undefined as T;
+  }
+}
+
 /**
- * Invoke a Tauri backend command safely
+ * Invoke a Tauri backend command safely with automatic web/browser virtual FS fallback.
  */
 export async function invokeCommand<T>(command: string, args?: Record<string, unknown>): Promise<T> {
-  try {
-    return await invoke<T>(command, args);
-  } catch (error) {
-    throw new Error(formatFsError(error));
+  if (isTauriEnvironment()) {
+    try {
+      return await invoke<T>(command, args);
+    } catch (error) {
+      const errStr = String(error || "");
+      if (errStr.includes("__TAURI_INTERNALS__") || errStr.includes("not found")) {
+        return handleBrowserVfsCommand<T>(command, args);
+      }
+      throw new Error(formatFsError(error));
+    }
   }
+
+  return handleBrowserVfsCommand<T>(command, args);
 }
 
 /**

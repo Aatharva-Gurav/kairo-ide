@@ -572,6 +572,131 @@ export const LANGUAGE_KEYWORDS: Record<string, { keywords: string[]; functions: 
     ],
     functions: ["as", "alpine", "latest", "node", "python", "golang", "rust", "ubuntu"],
   },
+  typescript: {
+    keywords: [
+      "const", "let", "var", "function", "return", "if", "else", "for", "while", "do",
+      "switch", "case", "default", "break", "continue", "import", "export", "from", "as",
+      "default", "class", "extends", "implements", "interface", "type", "enum", "namespace",
+      "module", "declare", "abstract", "public", "private", "protected", "readonly", "static",
+      "override", "async", "await", "yield", "try", "catch", "finally", "throw", "new",
+      "this", "super", "typeof", "instanceof", "in", "of", "void", "null", "undefined",
+      "true", "false", "any", "unknown", "never", "boolean", "number", "string", "symbol",
+      "bigint", "keyof", "is", "asserts", "infer", "extends",
+    ],
+    functions: [
+      "console.log", "console.error", "console.warn", "console.info", "console.table",
+      "Promise", "Promise.all", "Promise.resolve", "Promise.reject", "Promise.race",
+      "setTimeout", "clearTimeout", "setInterval", "clearInterval",
+      "JSON.stringify", "JSON.parse", "Object.keys", "Object.values", "Object.entries",
+      "Object.assign", "Array.isArray", "Math.max", "Math.min", "Math.floor", "Math.ceil",
+      "Math.round", "Math.random", "document.getElementById", "document.querySelector",
+      "document.querySelectorAll", "document.createElement", "window.addEventListener",
+      "fetch", "encodeURIComponent", "decodeURIComponent", "parseInt", "parseFloat",
+      "String", "Number", "Boolean", "Array", "Object", "Map", "Set", "WeakMap", "WeakSet",
+      "RegExp", "Error", "Date", "Record", "Partial", "Required", "Readonly", "Pick", "Omit",
+    ],
+  },
+  javascript: {
+    keywords: [
+      "const", "let", "var", "function", "return", "if", "else", "for", "while", "do",
+      "switch", "case", "default", "break", "continue", "import", "export", "from", "as",
+      "default", "class", "extends", "async", "await", "yield", "try", "catch", "finally",
+      "throw", "new", "this", "super", "typeof", "instanceof", "in", "of", "void", "null",
+      "undefined", "true", "false", "delete", "debugger",
+    ],
+    functions: [
+      "console.log", "console.error", "console.warn", "console.info",
+      "Promise", "Promise.all", "Promise.resolve", "setTimeout", "clearTimeout",
+      "setInterval", "clearInterval", "JSON.stringify", "JSON.parse", "Object.keys",
+      "Object.values", "Object.entries", "Object.assign", "Array.isArray", "Math.max",
+      "Math.min", "Math.floor", "Math.ceil", "Math.round", "Math.random", "document.querySelector",
+      "document.getElementById", "document.createElement", "window.addEventListener", "fetch",
+      "parseInt", "parseFloat", "String", "Number", "Boolean", "Array", "Object", "Map", "Set",
+    ],
+  },
+  json: {
+    keywords: ["true", "false", "null"],
+    functions: [],
+  },
+  markdown: {
+    keywords: ["#", "##", "###", "####", "#####", "######", "---", "***"],
+    functions: ["[link](url)", "![image](url)", "`code`", "```codeblock```"],
+  },
+  yaml: {
+    keywords: ["true", "false", "yes", "no", "null", "~"],
+    functions: [],
+  },
+  toml: {
+    keywords: ["true", "false"],
+    functions: [],
+  },
+  scss: {
+    keywords: [
+      "@import", "@include", "@mixin", "@extend", "@function", "@return", "@if", "@else",
+      "@for", "@each", "@while", "@use", "@forward", "display", "flex", "grid", "position",
+      "width", "height", "margin", "padding", "color", "background",
+    ],
+    functions: ["lighten", "darken", "rgba", "mix", "percentage", "round", "ceil", "floor"],
+  },
+  php: {
+    keywords: [
+      "<?php", "function", "class", "public", "private", "protected", "static", "return",
+      "if", "else", "elseif", "foreach", "for", "while", "switch", "case", "try", "catch",
+      "finally", "throw", "new", "namespace", "use", "echo", "print", "null", "true", "false",
+    ],
+    functions: [
+      "var_dump", "print_r", "count", "strlen", "strpos", "substr", "in_array", "array_merge",
+      "json_encode", "json_decode", "isset", "empty", "header", "die", "exit",
+    ],
+  },
+  dart: {
+    keywords: [
+      "class", "void", "var", "final", "const", "late", "import", "library", "part",
+      "extends", "with", "implements", "async", "await", "return", "if", "else", "for",
+      "in", "while", "switch", "case", "default", "try", "catch", "finally", "throw",
+      "new", "this", "super", "null", "true", "false",
+    ],
+    functions: [
+      "print", "setState", "Widget", "StatelessWidget", "StatefulWidget", "BuildContext",
+      "Container", "Text", "Row", "Column", "Scaffold", "AppBar", "Center", "Padding",
+    ],
+  },
+  lua: {
+    keywords: [
+      "function", "local", "return", "if", "then", "else", "elseif", "end", "for", "in",
+      "do", "while", "repeat", "until", "break", "true", "false", "nil", "and", "or", "not",
+    ],
+    functions: [
+      "print", "pairs", "ipairs", "type", "tostring", "tonumber", "table.insert", "table.remove",
+      "string.format", "string.sub", "string.find", "math.floor", "math.max", "math.min",
+    ],
+  },
+  ruby: {
+    keywords: [
+      "def", "class", "module", "end", "if", "elsif", "else", "unless", "while", "until",
+      "for", "in", "do", "begin", "rescue", "ensure", "raise", "return", "yield", "self",
+      "nil", "true", "false", "attr_accessor", "attr_reader", "include", "extend",
+    ],
+    functions: ["puts", "print", "p", "require", "require_relative", "lambda", "proc"],
+  },
+  swift: {
+    keywords: [
+      "var", "let", "func", "class", "struct", "enum", "protocol", "extension", "init",
+      "import", "public", "private", "fileprivate", "internal", "open", "static", "override",
+      "mutating", "async", "await", "return", "if", "else", "guard", "switch", "case",
+      "default", "for", "in", "while", "try", "catch", "throw", "self", "nil", "true", "false",
+    ],
+    functions: ["print", "fatalError", "precondition", "assert", "String", "Int", "Double", "Array"],
+  },
+  kotlin: {
+    keywords: [
+      "val", "var", "fun", "class", "interface", "object", "enum", "sealed", "data",
+      "import", "package", "public", "private", "protected", "internal", "override",
+      "suspend", "return", "if", "else", "when", "for", "in", "while", "try", "catch",
+      "finally", "throw", "this", "super", "null", "true", "false",
+    ],
+    functions: ["println", "print", "listOf", "mapOf", "setOf", "mutableListOf", "requireNotNull"],
+  },
   shell: {
     keywords: [
       "if", "then", "elif", "else", "fi", "for", "in", "do", "done", "while", "until",
@@ -602,7 +727,7 @@ export class IntelliSenseService {
 
     if (!this.isConfigured) {
       this.isConfigured = true;
-      this.configureTypeScriptDefaults(monaco);
+      this.configureDefaults(monaco);
     }
 
     // Register completions for all supported languages
@@ -612,37 +737,120 @@ export class IntelliSenseService {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private static configureTypeScriptDefaults(monaco: any) {
-    if (!monaco.languages?.typescript) return;
+  static configureDefaults(monaco: any) {
+    if (!monaco?.languages) return;
 
-    const { typescriptDefaults, javascriptDefaults, ModuleResolutionKind, JsxEmit } =
-      monaco.languages.typescript;
+    // 1. TypeScript & JavaScript defaults
+    const ts = monaco.languages.typescript;
+    if (ts) {
+      const { typescriptDefaults, javascriptDefaults, ModuleResolutionKind, JsxEmit } = ts;
 
-    const compilerOptions = {
-      target: monaco.languages.typescript.ScriptTarget?.ES2022 ?? 99,
-      allowNonTextExtensions: true,
-      allowJs: true,
-      noEmit: true,
-      moduleResolution: ModuleResolutionKind?.NodeJs ?? 2,
-      module: monaco.languages.typescript.ModuleKind?.CommonJS ?? 1,
-      typeRoots: ["node_modules/@types"],
-      jsx: JsxEmit?.ReactJSX ?? 4,
-      allowSyntheticDefaultImports: true,
-      esModuleInterop: true,
-    };
+      const compilerOptions = {
+        target: ts.ScriptTarget?.ES2022 ?? 99,
+        allowNonTextExtensions: true,
+        allowJs: true,
+        noEmit: true,
+        moduleResolution: ModuleResolutionKind?.NodeJs ?? 2,
+        module: ts.ModuleKind?.CommonJS ?? 1,
+        typeRoots: ["node_modules/@types"],
+        jsx: JsxEmit?.ReactJSX ?? 4,
+        allowSyntheticDefaultImports: true,
+        esModuleInterop: true,
+      };
 
-    typescriptDefaults?.setCompilerOptions(compilerOptions);
-    javascriptDefaults?.setCompilerOptions(compilerOptions);
+      typescriptDefaults?.setCompilerOptions?.(compilerOptions);
+      javascriptDefaults?.setCompilerOptions?.(compilerOptions);
 
-    typescriptDefaults?.setDiagnosticsOptions({
-      noSemanticValidation: true,
-      noSyntaxValidation: false,
-    });
+      const diagOptions = {
+        noSemanticValidation: true,
+        noSyntaxValidation: true,
+        noSuggestionDiagnostics: true,
+      };
 
-    javascriptDefaults?.setDiagnosticsOptions({
-      noSemanticValidation: true,
-      noSyntaxValidation: false,
-    });
+      typescriptDefaults?.setDiagnosticsOptions?.(diagOptions);
+      javascriptDefaults?.setDiagnosticsOptions?.(diagOptions);
+
+      const modeConfig = {
+        completionItems: false,
+        hovers: false,
+        documentSymbols: false,
+        definitions: false,
+        references: false,
+        documentHighlights: false,
+        rename: false,
+        diagnostics: false,
+        documentRangeFormattingEdits: false,
+        signatureHelp: false,
+        onTypeFormattingEdits: false,
+        codeActions: false,
+        inlayHints: false,
+      };
+
+      typescriptDefaults?.setModeConfiguration?.(modeConfig);
+      javascriptDefaults?.setModeConfiguration?.(modeConfig);
+    }
+
+    // 2. JSON defaults
+    if (monaco.languages.json?.jsonDefaults) {
+      monaco.languages.json.jsonDefaults.setDiagnosticsOptions?.({
+        validate: false,
+      });
+      monaco.languages.json.jsonDefaults.setModeConfiguration?.({
+        documentFormattingEdits: false,
+        documentRangeFormattingEdits: false,
+        completionItems: false,
+        hovers: false,
+        documentSymbols: false,
+        tokens: false,
+        colors: false,
+        foldingRanges: false,
+        diagnostics: false,
+        selectionRanges: false,
+      });
+    }
+
+    // 3. CSS / SCSS / LESS defaults
+    const cssLang = monaco.languages.css;
+    if (cssLang) {
+      const cssModes = [cssLang.cssDefaults, cssLang.scssDefaults, cssLang.lessDefaults];
+      for (const mode of cssModes) {
+        mode?.setOptions?.({ validate: false });
+        mode?.setModeConfiguration?.({
+          completionItems: false,
+          hovers: false,
+          documentSymbols: false,
+          definitions: false,
+          references: false,
+          documentHighlights: false,
+          rename: false,
+          colors: false,
+          foldingRanges: false,
+          diagnostics: false,
+          selectionRanges: false,
+          documentFormattingEdits: false,
+          documentRangeFormattingEdits: false,
+        });
+      }
+    }
+
+    // 4. HTML defaults
+    if (monaco.languages.html?.htmlDefaults) {
+      monaco.languages.html.htmlDefaults.setOptions?.({ suggest: {} });
+      monaco.languages.html.htmlDefaults.setModeConfiguration?.({
+        completionItems: false,
+        hovers: false,
+        documentSymbols: false,
+        links: false,
+        documentHighlights: false,
+        rename: false,
+        colors: false,
+        foldingRanges: false,
+        diagnostics: false,
+        selectionRanges: false,
+        documentFormattingEdits: false,
+        documentRangeFormattingEdits: false,
+      });
+    }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -651,7 +859,14 @@ export class IntelliSenseService {
     if (this.registeredLanguages.has(language)) return;
     this.registeredLanguages.add(language);
 
-    const triggerCharacters = [".", ":", '"', "'", "/", "<", "@", "$", "#", "-", ">", "*", "~", "`", "_"];
+    // Trigger on all common coding punctuation and every alphabet letter for instant suggestions
+    const triggerCharacters = [
+      ".", ":", '"', "'", "/", "<", "@", "$", "#", "-", ">", "*", "~", "`", "_", "(", "{", "[",
+      "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m",
+      "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z",
+      "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M",
+      "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"
+    ];
 
     monaco.languages.registerCompletionItemProvider(language, {
       triggerCharacters,
@@ -665,14 +880,13 @@ export class IntelliSenseService {
           endColumn: word.endColumn,
         };
 
-        const currentWord = word.word.toLowerCase();
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const suggestions: any[] = [];
         const seenLabels = new Set<string>();
 
         // 1. Language Snippets
-        const matchingSnippets = this.registeredSnippets.filter(
-          (s) => s.languages.includes(language) || s.languages.includes("*")
+        const matchingSnippets = (this.registeredSnippets || []).filter(
+          (s) => s && s.languages && (s.languages.includes(language) || s.languages.includes("*"))
         );
 
         for (const snippet of matchingSnippets) {
@@ -687,6 +901,7 @@ export class IntelliSenseService {
               insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
               range,
               sortText: "0_" + snippet.label,
+              filterText: snippet.label,
             });
           }
         }
@@ -702,10 +917,11 @@ export class IntelliSenseService {
                   label: kw,
                   kind: monaco.languages.CompletionItemKind.Keyword,
                   detail: "(keyword)",
-                  documentation: `Language keyword \`${kw}\``,
+                  documentation: `${language} language keyword \`${kw}\``,
                   insertText: kw,
                   range,
                   sortText: "1_" + kw,
+                  filterText: kw,
                 });
               }
             }
@@ -723,6 +939,7 @@ export class IntelliSenseService {
                   insertText: fn,
                   range,
                   sortText: "2_" + fn,
+                  filterText: fn,
                 });
               }
             }
@@ -731,9 +948,9 @@ export class IntelliSenseService {
 
         // 3. Document Words & Symbol Extractor
         // Collect identifiers already present in the active document for contextual autocomplete
-        const docWords = this.extractDocumentSymbols(model, position.lineNumber);
+        const docWords = this.extractDocumentSymbols(model);
         for (const docSymbol of docWords) {
-          if (!seenLabels.has(docSymbol.word) && docSymbol.word.toLowerCase() !== currentWord) {
+          if (!seenLabels.has(docSymbol.word)) {
             seenLabels.add(docSymbol.word);
             suggestions.push({
               label: docSymbol.word,
@@ -747,21 +964,24 @@ export class IntelliSenseService {
               insertText: docSymbol.word,
               range,
               sortText: "3_" + docSymbol.word,
+              filterText: docSymbol.word,
             });
           }
         }
 
-        return { suggestions };
+        return { suggestions, incomplete: true };
       },
     });
   }
 
+
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private static extractDocumentSymbols(model: any, currentLine: number): Array<{ word: string; kind: string }> {
+  private static extractDocumentSymbols(model: any): Array<{ word: string; kind: string }> {
     const symbols: Array<{ word: string; kind: string }> = [];
     try {
-      const lineCount = Math.min(model.getLineCount(), 1000); // Guard for extreme file sizes
-      const idRegex = /\b[A-Za-z_$][A-Za-z0-9_$]{2,}\b/g;
+      const lineCount = Math.min(model.getLineCount(), 1500); // Guard for extreme file sizes
+      const idRegex = /\b[A-Za-z_$][A-Za-z0-9_$]*\b/g;
       const seen = new Set<string>();
 
       for (let i = 1; i <= lineCount; i++) {
@@ -770,7 +990,7 @@ export class IntelliSenseService {
 
         while ((match = idRegex.exec(lineContent)) !== null) {
           const w = match[0];
-          if (!seen.has(w)) {
+          if (w.length >= 1 && !seen.has(w)) {
             seen.add(w);
             let kind = "variable";
 

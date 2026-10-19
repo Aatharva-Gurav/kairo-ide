@@ -26,7 +26,6 @@ import { FileExplorerService } from "@/features/file-explorer/service";
 import { ideEvents } from "@/lib/events";
 import { FileIcon } from "@/features/icon-theme";
 import {
-  normalizePath,
   joinPath,
   relativePath,
   pathExists,
@@ -65,18 +64,21 @@ export function WorkspaceDestinationPicker({
 
   // Reset type when initialType changes
   useEffect(() => {
-    setCreationType(initialType);
+    const timer = setTimeout(() => {
+      setCreationType(initialType);
+    }, 0);
+    return () => clearTimeout(timer);
   }, [initialType]);
 
   // Reset form and focus on open
   useEffect(() => {
     if (isOpen) {
-      setItemName("");
-      setSubmissionError(null);
-      setDuplicateWarning(null);
       const timer = setTimeout(() => {
+        setItemName("");
+        setSubmissionError(null);
+        setDuplicateWarning(null);
         inputRef.current?.focus();
-      }, 50);
+      }, 0);
       return () => clearTimeout(timer);
     }
   }, [isOpen]);
@@ -112,15 +114,15 @@ export function WorkspaceDestinationPicker({
   // Debounced duplicate check
   useEffect(() => {
     const trimmed = itemName.trim();
-    if (!trimmed || !validation.valid || !workspaceRoot || !selectedPath) {
-      setDuplicateWarning(null);
-      return;
-    }
-
     let isCancelled = false;
-    const targetPath = joinPath(selectedPath, trimmed);
+    const targetPath = joinPath(selectedPath || "", trimmed);
 
     const timer = setTimeout(async () => {
+      if (!trimmed || !validation.valid || !workspaceRoot || !selectedPath) {
+        setDuplicateWarning(null);
+        return;
+      }
+
       try {
         if (isTauriEnvironment()) {
           const exists = await pathExists(targetPath);

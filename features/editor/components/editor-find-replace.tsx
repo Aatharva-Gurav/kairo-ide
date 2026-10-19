@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import * as monaco from "monaco-editor";
 import {
-  Search,
   Replace as ReplaceIcon,
   ChevronDown,
   ChevronUp,
@@ -16,6 +15,9 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { normalizePath } from "@/lib/tauri-ipc";
+
+import { useEditor } from "../store";
 
 interface EditorFindReplaceProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -26,6 +28,7 @@ interface EditorFindReplaceProps {
   onToggleReplaceMode: (mode?: boolean) => void;
   containerRef: React.RefObject<HTMLDivElement | null>;
   initialQuery?: string;
+  documentPath?: string;
 }
 
 const STORAGE_KEY = "kairo:editor_find_replace_pos";
@@ -38,7 +41,9 @@ export function EditorFindReplace({
   onToggleReplaceMode,
   containerRef,
   initialQuery = "",
+  documentPath,
 }: EditorFindReplaceProps) {
+  const { updateContent, saveDocument, filesSettings } = useEditor();
   const [findText, setFindText] = useState(initialQuery);
   const [replaceText, setReplaceText] = useState("");
   const [matchCase, setMatchCase] = useState(false);
@@ -83,7 +88,7 @@ export function EditorFindReplace({
       let targetX = maxX - 20; // default top-right
       let targetY = 12;
 
-      const saved = localStorage.getItem(STORAGE_KEY);
+      const saved = typeof window !== "undefined" ? window.localStorage.getItem(STORAGE_KEY) : null;
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
@@ -137,11 +142,16 @@ export function EditorFindReplace({
   useEffect(() => {
     if (!isOpen || !editor) return;
 
+    let cancel = false;
     const selection = editor.getSelection();
     if (selection && !selection.isEmpty()) {
       const selText = editor.getModel()?.getValueInRange(selection);
       if (selText && selText.length < 300 && !selText.includes("\n")) {
-        setFindText(selText);
+        setTimeout(() => {
+          if (!cancel) {
+            setFindText(selText);
+          }
+        }, 0);
       }
     }
 
@@ -155,7 +165,10 @@ export function EditorFindReplace({
       }
     }, 40);
 
-    return () => clearTimeout(timer);
+    return () => {
+      cancel = true;
+      clearTimeout(timer);
+    };
   }, [isOpen, isReplaceMode, editor]);
 
   // Core search and decoration logic
@@ -223,17 +236,36 @@ export function EditorFindReplace({
       return;
     }
 
-    performSearch();
+    let isDisposed = false;
+    const searchTimer = setTimeout(() => {
+      if (!isDisposed) {
+        performSearch();
+      }
+    }, 0);
 
-    if (!editor) return;
+    if (!editor) {
+      return () => {
+        isDisposed = true;
+        clearTimeout(searchTimer);
+      };
+    }
     const model = editor.getModel();
-    if (!model) return;
+    if (!model) {
+      return () => {
+        isDisposed = true;
+        clearTimeout(searchTimer);
+      };
+    }
 
     const disposable = model.onDidChangeContent(() => {
       performSearch();
     });
 
-    return () => disposable.dispose();
+    return () => {
+      isDisposed = true;
+      clearTimeout(searchTimer);
+      disposable.dispose();
+    };
   }, [isOpen, performSearch, editor]);
 
   // Update decorations and navigate to active match
@@ -302,11 +334,25 @@ export function EditorFindReplace({
       lineNumber: current.range.startLineNumber,
       column: current.range.startColumn + replaceText.length,
     });
+
+    const model = editor.getModel();
+    if (model) {
+      const val = model.getValue();
+      const rawPath = documentPath || model.uri?.fsPath || model.uri?.path || "";
+      if (rawPath) {
+        const norm = normalizePath(rawPath);
+        updateContent(norm, val);
+        if (filesSettings.autoSave !== "off") {
+          saveDocument(norm);
+        }
+      }
+    }
+
     // Refresh search matches and decorations immediately
     requestAnimationFrame(() => {
       performSearch();
     });
-  }, [editor, matches, activeIndex, replaceText, performSearch]);
+  }, [editor, matches, activeIndex, replaceText, performSearch, updateContent, documentPath, filesSettings.autoSave, saveDocument]);
 
   const handleReplaceAll = useCallback(() => {
     if (!editor || matches.length === 0) return;
@@ -318,11 +364,25 @@ export function EditorFindReplace({
         forceMoveMarkers: true,
       }))
     );
+
+    const model = editor.getModel();
+    if (model) {
+      const val = model.getValue();
+      const rawPath = documentPath || model.uri?.fsPath || model.uri?.path || "";
+      if (rawPath) {
+        const norm = normalizePath(rawPath);
+        updateContent(norm, val);
+        if (filesSettings.autoSave !== "off") {
+          saveDocument(norm);
+        }
+      }
+    }
+
     // Refresh search matches and decorations immediately
     requestAnimationFrame(() => {
       performSearch();
     });
-  }, [editor, matches, replaceText, performSearch]);
+  }, [editor, matches, replaceText, performSearch, updateContent, documentPath, filesSettings.autoSave, saveDocument]);
 
   // Dragging handlers (constrained strictly within the code editor container)
   const handleDragStart = (e: React.MouseEvent) => {
@@ -364,7 +424,9 @@ export function EditorFindReplace({
       setIsDragging(false);
       setPosition((current) => {
         try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
+          if (typeof window !== "undefined") {
+            window.localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
+          }
         } catch {
           // ignore storage error
         }

@@ -34,8 +34,6 @@ export function ExplorerToolbar() {
     setShowHidden,
     sortConfig,
     setSortMode,
-    selectedPaths,
-    clearSelection,
   } = useFileExplorer();
 
   const { activeWorkspace, closeWorkspace } = useWorkspace();

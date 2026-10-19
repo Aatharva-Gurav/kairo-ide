@@ -7,7 +7,6 @@ import {
   ChevronRight,
   Loader2,
   HardDrive,
-  FolderTree as FolderTreeIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { normalizePath } from "@/lib/tauri-ipc";

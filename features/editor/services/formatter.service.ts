@@ -42,7 +42,7 @@ export class FormatterService {
   static registerProvider(provider: FormatterProvider): () => void {
     this.providers.push(provider);
     return () => {
-      this.providers = this.providers.filter((p) => p.id !== provider.id);
+      this.providers = (this.providers || []).filter((p) => p && p.id !== provider.id);
     };
   }
 
@@ -50,7 +50,7 @@ export class FormatterService {
    * Returns all providers capable of formatting the given language.
    */
   static getProvidersForLanguage(language: string): FormatterProvider[] {
-    return this.providers.filter((p) => p.canFormat(language));
+    return (this.providers || []).filter((p) => p && p.canFormat(language));
   }
 
   /**

@@ -1,4 +1,5 @@
 import { invokeCommand, basename, normalizePath } from "@/lib/tauri-ipc";
+import { getSafeLocalStorage } from "@/lib/storage";
 import { Workspace, RecentWorkspace, PersistedWorkspaceExplorerState } from "./types";
 
 export const STORAGE_KEYS = {
@@ -10,13 +11,7 @@ export const STORAGE_KEYS = {
 export const MAX_RECENT_PROJECTS = 20;
 
 function getStorage(): Storage | null {
-  if (typeof window !== "undefined" && window.localStorage) {
-    return window.localStorage;
-  }
-  if (typeof localStorage !== "undefined") {
-    return localStorage;
-  }
-  return null;
+  return getSafeLocalStorage();
 }
 
 export class WorkspaceService {
@@ -97,8 +92,8 @@ export class WorkspaceService {
     try {
       const raw = storage.getItem(STORAGE_KEYS.RECENT_WORKSPACES);
       if (!raw) return [];
-      const parsed: RecentWorkspace[] = JSON.parse(raw);
-      return parsed;
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
     } catch (e) {
       console.error("[WorkspaceService] Error reading recent workspaces:", e);
       return [];
@@ -112,7 +107,7 @@ export class WorkspaceService {
     const storage = getStorage();
     if (!storage) return;
     try {
-      storage.setItem(STORAGE_KEYS.RECENT_WORKSPACES, JSON.stringify(list));
+      storage.setItem(STORAGE_KEYS.RECENT_WORKSPACES, JSON.stringify(Array.isArray(list) ? list : []));
     } catch (e) {
       console.error("[WorkspaceService] Error saving recent workspaces:", e);
     }
@@ -134,8 +129,8 @@ export class WorkspaceService {
     const existing = this.getRecentWorkspaces();
     const normPath = normalizePath(workspace.rootPath).toLowerCase();
 
-    const filtered = existing.filter(
-      (item) => normalizePath(item.rootPath).toLowerCase() !== normPath
+    const filtered = (existing || []).filter(
+      (item) => item && normalizePath(item.rootPath).toLowerCase() !== normPath
     );
 
     const newRecent: RecentWorkspace = {
@@ -159,8 +154,8 @@ export class WorkspaceService {
   static removeRecentWorkspace(rootPath: string): RecentWorkspace[] {
     const existing = this.getRecentWorkspaces();
     const normTarget = normalizePath(rootPath).toLowerCase();
-    const updated = existing.filter(
-      (item) => normalizePath(item.rootPath).toLowerCase() !== normTarget
+    const updated = (existing || []).filter(
+      (item) => item && normalizePath(item.rootPath).toLowerCase() !== normTarget
     );
     this.saveRecentWorkspaces(updated);
     return updated;

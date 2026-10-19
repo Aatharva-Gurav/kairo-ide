@@ -60,7 +60,7 @@ export function OnboardingWizard() {
 
   const [step, setStep] = useState<number>(() => {
     if (typeof window !== "undefined") {
-      const savedStep = localStorage.getItem(stepStorageKey);
+      const savedStep = window.localStorage.getItem(stepStorageKey);
       if (savedStep) {
         const parsed = parseInt(savedStep, 10);
         if (parsed >= 1 && parsed <= 4) {
@@ -95,7 +95,7 @@ export function OnboardingWizard() {
   const handleStepChange = (newStep: number) => {
     setStep(newStep);
     if (typeof window !== "undefined") {
-      localStorage.setItem(stepStorageKey, String(newStep));
+      window.localStorage.setItem(stepStorageKey, String(newStep));
     }
   };
 
@@ -127,7 +127,7 @@ export function OnboardingWizard() {
       });
 
       if (typeof window !== "undefined") {
-        localStorage.removeItem(stepStorageKey);
+        window.localStorage.removeItem(stepStorageKey);
       }
 
       router.push("/");

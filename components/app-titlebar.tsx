@@ -188,10 +188,7 @@ export function AppTitleBar() {
     }
   }, [isTauri]);
 
-  // Zen Mode toggle
-  const toggleZenMode = useCallback(() => {
-    toggleSidebar();
-  }, [toggleSidebar]);
+
 
   // Save As handler
   const handleSaveAs = useCallback(async () => {
@@ -255,16 +252,7 @@ export function AppTitleBar() {
     [monacoEditorRef]
   );
 
-  const runEditorAction = useCallback(
-    (actionId: string) => {
-      const ed = monacoEditorRef.current;
-      if (ed) {
-        ed.focus();
-        ed.getAction(actionId)?.run();
-      }
-    },
-    [monacoEditorRef]
-  );
+
 
   const handlePaste = useCallback(async () => {
     const ed = monacoEditorRef.current;

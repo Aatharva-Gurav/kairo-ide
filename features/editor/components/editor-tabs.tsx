@@ -58,12 +58,12 @@ export function EditorTabs() {
   }, [isSplitMenuOpen]);
 
   return (
-    <div className="relative z-30 shrink-0 flex h-[35px] w-full items-center justify-between border-b border-border/80 bg-sidebar/50 dark:bg-[#18181b]/80 select-none backdrop-blur-xs">
+    <div className="relative z-30 shrink-0 flex h-[36px] w-full items-center justify-between border-b border-border/70 bg-muted/20 dark:bg-[#18181b]/90 px-1 select-none backdrop-blur-xs">
       {/* Scrollable Tab List */}
       <div
         ref={scrollContainerRef}
         onWheel={handleWheel}
-        className="flex flex-1 h-full items-center overflow-x-auto no-scrollbar"
+        className="flex flex-1 h-full items-center overflow-x-auto no-scrollbar gap-0.5 py-1"
       >
         {documents.map((doc) => (
           <EditorTab
@@ -79,7 +79,7 @@ export function EditorTabs() {
       {/* Tab Toolbar Actions */}
       <div
         className={cn(
-          "relative flex items-center gap-1 px-2 shrink-0 border-l border-border/60 bg-sidebar/30 h-full transition-[margin] duration-150 ease-out",
+          "relative flex items-center gap-1 px-1.5 shrink-0 border-l border-border/50 bg-background/30 h-full transition-[margin] duration-150 ease-out",
           !open && "mr-11"
         )}
       >

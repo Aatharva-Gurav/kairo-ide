@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useWorkspace } from "@/features/workspace/store";
-import { useEditor } from "@/features/editor/store";
 import { FloatingCreationButton } from "./floating-creation-button";
 import { CreationOptionsPopup } from "./creation-options-popup";
 import { WorkspaceDestinationPicker } from "./workspace-destination-picker";
@@ -29,21 +28,30 @@ export function FloatingCreationFeature({
 
   // Prevent flash on initial render before client mount
   useEffect(() => {
-    setMounted(true);
+    const timer = setTimeout(() => {
+      setMounted(true);
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   // When sidebar opens, smoothly close any open menus and hide the button
   useEffect(() => {
     if (isSidebarOpen) {
-      setIsOptionsOpen(false);
-      setIsPickerOpen(false);
+      const timer = setTimeout(() => {
+        setIsOptionsOpen(false);
+        setIsPickerOpen(false);
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [isSidebarOpen]);
 
   // When active workspace changes or closes, reset menus
   useEffect(() => {
-    setIsOptionsOpen(false);
-    setIsPickerOpen(false);
+    const timer = setTimeout(() => {
+      setIsOptionsOpen(false);
+      setIsPickerOpen(false);
+    }, 0);
+    return () => clearTimeout(timer);
   }, [activeWorkspace?.rootPath]);
 
   // Handle FAB click

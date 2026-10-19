@@ -32,11 +32,7 @@ export class ModelService {
     const uri = monaco.Uri.file(norm);
 
     let existingModel = monaco.editor.getModel(uri);
-    if (existingModel) {
-      // Update content if model content changed externally and is not dirty
-      if (existingModel.getValue() !== content) {
-        existingModel.setValue(content);
-      }
+    if (existingModel && !existingModel.isDisposed()) {
       activeModels.set(norm, existingModel);
       return existingModel;
     }
@@ -48,7 +44,7 @@ export class ModelService {
     } catch {
       // Fallback if model already registered under different internal key
       existingModel = monaco.editor.getModel(uri);
-      if (existingModel) {
+      if (existingModel && !existingModel.isDisposed()) {
         activeModels.set(norm, existingModel);
         return existingModel;
       }
@@ -135,18 +131,20 @@ export class ModelService {
   static renamePath(oldPath: string, newPath: string, monaco?: any): void {
     const normOld = normalizePath(oldPath);
     const normNew = normalizePath(newPath);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const monacoInstance = monaco || (typeof window !== "undefined" ? (window as any).monaco : null);
 
     // Exact file match
     if (activeModels.has(normOld)) {
       const oldModel = activeModels.get(normOld);
       activeModels.delete(normOld);
-      if (oldModel && monaco?.editor && monaco?.Uri) {
+      if (oldModel && monacoInstance?.editor && monacoInstance?.Uri) {
         try {
           const content = oldModel.getValue();
           const language = oldModel.getLanguageId();
           oldModel.dispose();
-          const newUri = monaco.Uri.file(normNew);
-          const newModel = monaco.editor.createModel(content, language, newUri);
+          const newUri = monacoInstance.Uri.file(normNew);
+          const newModel = monacoInstance.editor.createModel(content, language, newUri);
           activeModels.set(normNew, newModel);
         } catch {
           // Fallback
@@ -165,13 +163,13 @@ export class ModelService {
         const sub = p.slice(normOld.length);
         const updated = normNew + sub;
         activeModels.delete(p);
-        if (model && monaco?.editor && monaco?.Uri) {
+        if (model && monacoInstance?.editor && monacoInstance?.Uri) {
           try {
             const content = model.getValue();
             const language = model.getLanguageId();
             model.dispose();
-            const newUri = monaco.Uri.file(updated);
-            const newModel = monaco.editor.createModel(content, language, newUri);
+            const newUri = monacoInstance.Uri.file(updated);
+            const newModel = monacoInstance.editor.createModel(content, language, newUri);
             activeModels.set(updated, newModel);
           } catch {
             // Fallback

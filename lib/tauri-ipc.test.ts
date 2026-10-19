@@ -17,6 +17,9 @@ describe("Tauri IPC & Path Utilities", () => {
     expect(normalizePath("C:\\Users\\User\\Project\\")).toBe("C:/Users/User/Project");
     expect(normalizePath("/home/user/project/")).toBe("/home/user/project");
     expect(normalizePath("C:/")).toBe("C:/");
+    expect(normalizePath("/C:/Users/User/Project")).toBe("C:/Users/User/Project");
+    expect(normalizePath("file:///C:/Users/User/Project")).toBe("C:/Users/User/Project");
+    expect(normalizePath("c:/users/user/project")).toBe("C:/users/user/project");
   });
 
   it("extracts basename correctly", () => {
@@ -81,6 +84,13 @@ describe("Tauri IPC & Path Utilities", () => {
     expect(formatFsError("Access is denied")).toContain("Access denied");
     expect(formatFsError("Cannot copy a directory into itself")).toContain("Cannot copy or move");
     expect(formatFsError("Path does not exist: /foo/bar")).toContain("could not be found");
+  });
+
+  it("formats bytes into human-readable string units", () => {
+    expect(formatBytes(0)).toBe("0 Bytes");
+    expect(formatBytes(1024)).toBe("1 KB");
+    expect(formatBytes(1048576)).toBe("1 MB");
+    expect(formatBytes(1073741824)).toBe("1 GB");
   });
 });
 

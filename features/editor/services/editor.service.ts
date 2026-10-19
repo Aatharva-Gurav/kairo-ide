@@ -4,6 +4,7 @@ import {
   normalizePath,
   basename,
   FileContentResult,
+  isImageFile,
 } from "@/lib/tauri-ipc";
 import { EditorDocument } from "../types";
 import { LanguageService } from "./language.service";
@@ -33,15 +34,16 @@ export class EditorService {
 
     try {
       const fileData: FileContentResult = await readFileContent(normPath);
+      const isImg = isImageFile(normPath);
 
-      if (fileData.isBinary) {
+      if (fileData.isBinary || isImg) {
         return {
           id: normPath,
           path: normPath,
           title,
           language,
-          content: "",
-          savedContent: "",
+          content: fileData.content || "",
+          savedContent: fileData.content || "",
           isDirty: false,
           isBinary: true,
           readonly: fileData.readonly,
@@ -91,7 +93,7 @@ export class EditorService {
   static async saveAllDocuments(
     documents: EditorDocument[]
   ): Promise<{ saved: string[]; failed: Array<{ path: string; error: string }> }> {
-    const dirtyDocs = documents.filter((doc) => doc.isDirty && !doc.isBinary && !doc.readonly);
+    const dirtyDocs = (documents || []).filter((doc) => doc && doc.isDirty && !doc.isBinary && !doc.readonly);
     const saved: string[] = [];
     const failed: Array<{ path: string; error: string }> = [];
 

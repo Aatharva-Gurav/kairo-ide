@@ -54,8 +54,8 @@ function DirectoryPickerNode({
   const isLoading = loadingPaths.has(nodeNorm);
 
   const cachedSubDirs = subDirMap.get(nodeNorm);
-  const nodeChildrenDirs = (node.children || []).filter((c) => c.type === "directory");
-  const memCached = (directoryCache.get(nodeNorm) || []).filter((c) => c.type === "directory");
+  const nodeChildrenDirs = (node?.children || []).filter((c) => c && c.type === "directory");
+  const memCached = (directoryCache.get(nodeNorm) || []).filter((c) => c && c.type === "directory");
 
   const subDirectories =
     cachedSubDirs !== undefined
@@ -79,7 +79,7 @@ function DirectoryPickerNode({
           (c.name.toLowerCase().includes(q) ||
             hasMatchingDescendant(
               subDirMap.get(normalizePath(c.path)) ||
-                (c.children || []).filter((ch) => ch.type === "directory")
+                (c?.children || []).filter((ch) => ch && ch.type === "directory")
             ))
       );
     if (!matchesSelf && !hasMatchingDescendant(subDirectories)) {
@@ -200,11 +200,19 @@ export function MoveItemsModal() {
 
   const subDirMapRef = useRef(subDirMap);
   const loadingPathsRef = useRef(loadingPaths);
-  subDirMapRef.current = subDirMap;
-  loadingPathsRef.current = loadingPaths;
-
   const showHiddenRef = useRef(showHidden);
-  showHiddenRef.current = showHidden;
+
+  useEffect(() => {
+    subDirMapRef.current = subDirMap;
+  }, [subDirMap]);
+
+  useEffect(() => {
+    loadingPathsRef.current = loadingPaths;
+  }, [loadingPaths]);
+
+  useEffect(() => {
+    showHiddenRef.current = showHidden;
+  }, [showHidden]);
 
   const loadSubDirsFor = useCallback(
     async (dirPath: string) => {
@@ -215,7 +223,7 @@ export function MoveItemsModal() {
       setLoadingPaths(loadingPathsRef.current);
       try {
         const entries = await FileExplorerService.readDirectory(norm, showHiddenRef.current);
-        const dirs = entries.filter((e) => e.type === "directory");
+        const dirs = (entries || []).filter((e) => e && e.type === "directory");
         subDirMapRef.current = new Map(subDirMapRef.current).set(norm, dirs);
         setSubDirMap(subDirMapRef.current);
       } catch (err) {
@@ -244,8 +252,11 @@ export function MoveItemsModal() {
       }
     } else {
       prevOpenRef.current = false;
-      setFilterQuery("");
-      setErrorMsg(null);
+      const timer = setTimeout(() => {
+        setFilterQuery("");
+        setErrorMsg(null);
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [activeWorkspace, isOpen, loadSubDirsFor]);
 
@@ -303,7 +314,7 @@ export function MoveItemsModal() {
     [loadSubDirsFor]
   );
 
-  const handleConfirmMove = async () => {
+  const handleConfirmMove = useCallback(async () => {
     if (!selectedDir || !candidates || invalidPaths.has(selectedDir) || isMoving) return;
     setIsMoving(true);
     setErrorMsg(null);
@@ -320,7 +331,7 @@ export function MoveItemsModal() {
     } finally {
       setIsMoving(false);
     }
-  };
+  }, [selectedDir, candidates, invalidPaths, isMoving, moveSelectedTo, closeMove]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -337,7 +348,7 @@ export function MoveItemsModal() {
       window.addEventListener("keydown", handleKeyDown);
       return () => window.removeEventListener("keydown", handleKeyDown);
     }
-  }, [isOpen, closeMove, selectedDir, invalidPaths, isMoving]);
+  }, [isOpen, closeMove, selectedDir, invalidPaths, isMoving, handleConfirmMove]);
 
   if (!isOpen || !candidates || !activeWorkspace || typeof document === "undefined") {
     return null;
@@ -453,7 +464,7 @@ export function MoveItemsModal() {
           {/* Child Folders in Tree */}
           {expandedDirs.has(rootNorm) && (
             <div className="space-y-0.5 pt-0.5">
-              {(subDirMap.get(rootNorm) || nodes.filter((n) => n.type === "directory")).map((dirNode) => (
+              {((subDirMap.get(rootNorm) ?? (nodes || []).filter((n) => n && n.type === "directory")) || []).map((dirNode) => (
                 <DirectoryPickerNode
                   key={dirNode.path}
                   node={dirNode}

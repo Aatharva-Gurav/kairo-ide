@@ -114,10 +114,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 Recent Projects
               </span>
             </div>
-            {recentWorkspaces.length > 0 && (
+            {(recentWorkspaces?.length ?? 0) > 0 && (
               <div className="flex items-center gap-2 shrink-0">
                 <span className="text-[10px] text-muted-foreground font-mono">
-                  {recentWorkspaces.length}
+                  {recentWorkspaces?.length ?? 0}
                 </span>
                 <button
                   type="button"

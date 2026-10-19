@@ -87,5 +87,11 @@ describe("EditorService", () => {
     expect(result.failed[0].path).toBe("C:/fail.ts");
     expect(writeSpy).toHaveBeenCalledTimes(2);
   });
+
+  it("saves a single document correctly to disk", async () => {
+    const writeSpy = vi.spyOn(tauriIpc, "writeFileContent").mockResolvedValueOnce();
+    await EditorService.saveDocument("C:/projects/kairo/test.ts", "const x = 1;");
+    expect(writeSpy).toHaveBeenCalledWith("C:/projects/kairo/test.ts", "const x = 1;");
+  });
 });
 

@@ -3,7 +3,6 @@ import {
   IntelliSenseService,
   ALL_SUPPORTED_LANGUAGES,
   BUILTIN_SNIPPETS,
-  LANGUAGE_KEYWORDS,
 } from "./intellisense.service";
 
 describe("IntelliSenseService", () => {
@@ -173,5 +172,25 @@ describe("IntelliSenseService", () => {
     const customSnippet = result.suggestions.find((s: { label: string }) => s.label === "customtest");
     expect(customSnippet).toBeDefined();
     expect(customSnippet.insertText).toBe("custom_code_here()");
+  });
+
+  it("returns incomplete: true and filterText for immediate letter-by-letter auto-suggestions", () => {
+    IntelliSenseService.init(mockMonaco);
+    const tsProvider = registeredProviders["typescript"];
+    expect(tsProvider).toBeDefined();
+
+    const mockModel = {
+      getWordUntilPosition: () => ({ word: "c", startColumn: 1, endColumn: 2 }),
+      getLineCount: () => 1,
+      getLineContent: () => "c",
+    };
+
+    const result = tsProvider.provideCompletionItems(mockModel, { lineNumber: 1, column: 2 });
+    expect(result.incomplete).toBe(true);
+    expect(result.suggestions.length).toBeGreaterThan(0);
+
+    const first = result.suggestions[0];
+    expect(first.filterText).toBeDefined();
+    expect(first.filterText).toBe(first.label);
   });
 });

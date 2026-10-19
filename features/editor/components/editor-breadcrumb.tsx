@@ -18,12 +18,12 @@ export function EditorBreadcrumb({ document }: EditorBreadcrumbProps) {
   const { revealInExplorer, monacoEditorRef } = useEditor();
 
   const rawRel = activeWorkspace
-    ? relativePath(activeWorkspace.rootPath, document.path)
-    : document.path;
+    ? relativePath(activeWorkspace.rootPath, document?.path || "")
+    : (document?.path || "");
 
   // Normalize path separators for cross-platform (Windows \ vs UNIX /)
   const normalizedRel = rawRel ? rawRel.replace(/\\/g, "/") : "";
-  const parts = normalizedRel ? normalizedRel.split("/").filter(Boolean) : [document.title];
+  const parts = normalizedRel ? normalizedRel.split("/").filter(Boolean) : [document?.title || "Untitled"];
 
   const handleSegmentClick = (index: number) => {
     if (!activeWorkspace) return;

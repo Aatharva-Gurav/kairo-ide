@@ -7,6 +7,7 @@ import {
 import { DEFAULT_SETTINGS, SETTINGS_REGISTRY, getSettingDefinition } from "../registry";
 import { normalizePath } from "@/lib/tauri-ipc";
 import { migrateLegacyTheme, isDarkTheme } from "@/features/theme";
+import { getSafeLocalStorage } from "@/lib/storage";
 
 export const SETTINGS_STORAGE_KEYS = {
   USER_SETTINGS: "kairo:user_settings",
@@ -23,13 +24,7 @@ export type SettingsChangeListener = (
 ) => void;
 
 function getStorage(): Storage | null {
-  if (typeof window !== "undefined" && window.localStorage) {
-    return window.localStorage;
-  }
-  if (typeof localStorage !== "undefined") {
-    return localStorage;
-  }
-  return null;
+  return getSafeLocalStorage();
 }
 
 /**

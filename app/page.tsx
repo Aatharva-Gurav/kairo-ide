@@ -22,7 +22,6 @@ import { EditorWorkspace } from "@/features/editor/components/editor-workspace";
 import { IconThemeProvider } from "@/features/icon-theme";
 import { Folder, File } from "lucide-react";
 import { KairoBrandIcon } from "@/components/kairo-brand-icon";
-import { isTauriEnvironment, invokeCommand } from "@/lib/tauri-ipc";
 import { TauriDragDropListener } from "@/components/tauri-drag-drop-listener";
 
 import { AppTitleBar } from "@/components/app-titlebar";

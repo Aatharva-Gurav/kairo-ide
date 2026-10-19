@@ -1,5 +1,5 @@
 import { IconTheme } from "../types";
-import { simpleIconsTheme, simpleIconsDefinitions } from "./simple-icons";
+import { simpleIconsTheme } from "./simple-icons";
 
 export { simpleIconsTheme, simpleIconsDefinitions } from "./simple-icons";
 

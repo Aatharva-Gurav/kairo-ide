@@ -4,11 +4,11 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { DestinationFolder } from "./types";
 import { FileExplorerService } from "@/features/file-explorer/service";
 import { FileSystemNode } from "@/features/file-explorer/types";
-import { normalizePath, joinPath } from "@/lib/tauri-ipc";
+import { normalizePath } from "@/lib/tauri-ipc";
 
 interface UseDestinationTreeProps {
   workspaceRootPath: string;
-  workspaceName: string;
+  workspaceName?: string;
   explorerNodes: FileSystemNode[];
   isOpen: boolean;
 }
@@ -17,8 +17,9 @@ interface UseDestinationTreeProps {
  * Extracts directory nodes from FileSystemNode hierarchy
  */
 function extractDirectories(nodeList: FileSystemNode[], depth = 1): DestinationFolder[] {
+  if (!nodeList || !Array.isArray(nodeList)) return [];
   return nodeList
-    .filter((n) => n.type === "directory")
+    .filter((n) => n && n.type === "directory")
     .map((n) => {
       const norm = normalizePath(n.path);
       return {
@@ -58,7 +59,6 @@ function updateFolderInTree(
 
 export function useDestinationTree({
   workspaceRootPath,
-  workspaceName,
   explorerNodes,
   isOpen,
 }: UseDestinationTreeProps) {
@@ -71,7 +71,9 @@ export function useDestinationTree({
   const [folderTree, setFolderTree] = useState<DestinationFolder[]>([]);
 
   const activeRootRef = useRef(normRoot);
-  activeRootRef.current = normRoot;
+  useEffect(() => {
+    activeRootRef.current = normRoot;
+  }, [normRoot]);
 
   // Sync / initialize tree when workspace changes or menu opens
   useEffect(() => {
@@ -80,24 +82,37 @@ export function useDestinationTree({
     let isCancelled = false;
 
     // Reset selection to root when opened if current selection is invalid or empty
-    setSelectedPath((prev) => {
-      if (!prev || !prev.toLowerCase().startsWith(normRoot.toLowerCase())) {
-        return normRoot;
-      }
-      return prev;
-    });
+    const selectTimer = setTimeout(() => {
+      setSelectedPath((prev) => {
+        if (!prev || !prev.toLowerCase().startsWith(normRoot.toLowerCase())) {
+          return normRoot;
+        }
+        return prev;
+      });
+    }, 0);
 
     // Seed from explorerNodes if available
     const initialDirs = extractDirectories(explorerNodes, 1);
     if (initialDirs.length > 0) {
-      setFolderTree(initialDirs);
+      const seedTimer = setTimeout(() => {
+        if (!isCancelled) setFolderTree(initialDirs);
+      }, 0);
+      return () => {
+        clearTimeout(selectTimer);
+        clearTimeout(seedTimer);
+        isCancelled = true;
+      };
     } else {
       // Fetch root directory
       FileExplorerService.readDirectory(normRoot, false)
         .then((entries) => {
           if (isCancelled || activeRootRef.current !== normRoot) return;
+          if (!entries || !Array.isArray(entries)) {
+            setFolderTree([]);
+            return;
+          }
           const rootDirs: DestinationFolder[] = entries
-            .filter((e) => e.type === "directory")
+            .filter((e) => e && e.type === "directory")
             .map((e) => {
               const norm = normalizePath(e.path);
               return {
@@ -117,6 +132,7 @@ export function useDestinationTree({
     }
 
     return () => {
+      clearTimeout(selectTimer);
       isCancelled = true;
     };
   }, [normRoot, isOpen, explorerNodes]);
@@ -142,8 +158,9 @@ export function useDestinationTree({
       setLoadingPaths((prev) => new Set(prev).add(norm));
       try {
         const entries = await FileExplorerService.readDirectory(norm, false);
+        if (!entries || !Array.isArray(entries)) return;
         const childDirs: DestinationFolder[] = entries
-          .filter((e) => e.type === "directory")
+          .filter((e) => e && e.type === "directory")
           .map((e) => {
             const childNorm = normalizePath(e.path);
             return {
@@ -182,6 +199,7 @@ export function useDestinationTree({
     if (!q) return folderTree;
 
     function filterRecursive(folders: DestinationFolder[]): DestinationFolder[] {
+      if (!folders || !Array.isArray(folders)) return [];
       const result: DestinationFolder[] = [];
       for (const f of folders) {
         const matchesSelf = f.name.toLowerCase().includes(q);
@@ -207,7 +225,6 @@ export function useDestinationTree({
 
     function collectMatchingAncestors(folders: DestinationFolder[]) {
       for (const f of folders) {
-        const norm = normalizePath(f.path);
         if (f.name.toLowerCase().includes(q) && f.parentPath) {
           toExpand.add(normalizePath(f.parentPath));
         }
@@ -219,11 +236,14 @@ export function useDestinationTree({
 
     collectMatchingAncestors(folderTree);
     if (toExpand.size > 0) {
-      setExpandedPaths((prev) => {
-        const next = new Set(prev);
-        toExpand.forEach((p) => next.add(p));
-        return next;
-      });
+      const timer = setTimeout(() => {
+        setExpandedPaths((prev) => {
+          const next = new Set(prev);
+          toExpand.forEach((p) => next.add(p));
+          return next;
+        });
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [filterQuery, folderTree]);
 

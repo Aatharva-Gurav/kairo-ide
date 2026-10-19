@@ -24,15 +24,18 @@ export function KeyboardShortcutsSettings() {
   }, [refreshList]);
 
   const filtered = useMemo(() => {
+    const list = Array.isArray(keybindings) ? keybindings : [];
     const q = search.trim().toLowerCase();
-    if (!q) return keybindings;
+    if (!q) return list;
 
-    return keybindings.filter(
+    return list.filter(
       (item) =>
-        item.command.title.toLowerCase().includes(q) ||
-        item.command.id.toLowerCase().includes(q) ||
-        item.command.category.toLowerCase().includes(q) ||
-        item.keybinding.toLowerCase().includes(q)
+        item &&
+        item.command &&
+        (item.command.title?.toLowerCase().includes(q) ||
+          item.command.id?.toLowerCase().includes(q) ||
+          item.command.category?.toLowerCase().includes(q) ||
+          item.keybinding?.toLowerCase().includes(q))
     );
   }, [keybindings, search]);
 

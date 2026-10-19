@@ -73,9 +73,11 @@ export function SplitEditorPane({
     };
   }, [isDropdownOpen]);
 
+  const docPath = document?.path;
   const parts = useMemo(() => {
-    return document.path.replace(/\\/g, "/").split("/").filter(Boolean);
-  }, [document.path]);
+    if (!docPath) return [];
+    return docPath.replace(/\\/g, "/").split("/").filter(Boolean);
+  }, [docPath]);
 
   return (
     <div
@@ -136,7 +138,7 @@ export function SplitEditorPane({
               </div>
               {documents.map((doc) => {
                 const isCurrent = doc.id === document.id;
-                const docParts = doc.path.replace(/\\/g, "/").split("/").filter(Boolean);
+                const docParts = doc?.path ? doc.path.replace(/\\/g, "/").split("/").filter(Boolean) : [];
                 const parentDir = docParts.length > 1 ? docParts[docParts.length - 2] : "";
 
                 return (
