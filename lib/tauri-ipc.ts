@@ -53,9 +53,6 @@ export function parseFsErrorCode(rawError: unknown): FileSystemErrorCode {
  */
 export function formatFsError(rawError: unknown): string {
   const message = typeof rawError === "string" ? rawError : (rawError as Error)?.message || "Unknown error";
-
-  console.error("[TauriIPC Error]:", message, rawError);
-
   const lower = message.toLowerCase();
 
   if (lower.includes("already exists")) {
@@ -67,7 +64,12 @@ export function formatFsError(rawError: unknown): string {
   if (lower.includes("cannot copy a directory into itself") || lower.includes("cannot move a directory into itself")) {
     return "Cannot copy or move a directory into itself or one of its subdirectories.";
   }
-  if (lower.includes("path does not exist") || lower.includes("not found") || lower.includes("cannot find")) {
+  if (
+    lower.includes("path does not exist") ||
+    lower.includes("file does not exist") ||
+    lower.includes("not found") ||
+    lower.includes("cannot find")
+  ) {
     return "The requested file or directory could not be found.";
   }
   if (lower.includes("is not a directory")) {
@@ -90,6 +92,14 @@ export function normalizePath(pathStr: string): string {
   if (!pathStr) return "";
   // Convert Windows backslashes to standard forward slashes for internal consistency
   let normalized = pathStr.replace(/\\+/g, "/");
+  // Decode URI components if URL-encoded (e.g. %20 for spaces)
+  if (normalized.includes("%")) {
+    try {
+      normalized = decodeURIComponent(normalized);
+    } catch {
+      // ignore malformed URI encoding
+    }
+  }
   // Strip URI schema file:// if present
   if (normalized.startsWith("file://")) {
     normalized = normalized.slice(7);
@@ -386,8 +396,8 @@ async function handleBrowserVfsCommand<T>(command: string, args?: Record<string,
     }
 
     case "fs_rename": {
-      const oldPath = normalizePath(String(args?.old_path || ""));
-      const newPath = normalizePath(String(args?.new_path || ""));
+      const oldPath = normalizePath(String(args?.oldPath || args?.old_path || ""));
+      const newPath = normalizePath(String(args?.newPath || args?.new_path || ""));
       const oldVal = vfs.get(oldPath);
       if (oldVal) {
         vfs.delete(oldPath);
@@ -419,8 +429,8 @@ async function handleBrowserVfsCommand<T>(command: string, args?: Record<string,
     }
 
     case "fs_copy": {
-      const src = normalizePath(String(args?.src_path || ""));
-      const dest = normalizePath(String(args?.dest_path || ""));
+      const src = normalizePath(String(args?.srcPath || args?.src_path || ""));
+      const dest = normalizePath(String(args?.destPath || args?.dest_path || ""));
       const srcVal = vfs.get(src);
       if (srcVal) {
         vfs.set(dest, { content: srcVal.content, modifiedAt: Date.now() });
@@ -430,8 +440,8 @@ async function handleBrowserVfsCommand<T>(command: string, args?: Record<string,
     }
 
     case "fs_move": {
-      const src = normalizePath(String(args?.src_path || ""));
-      const dest = normalizePath(String(args?.dest_path || ""));
+      const src = normalizePath(String(args?.srcPath || args?.src_path || ""));
+      const dest = normalizePath(String(args?.destPath || args?.dest_path || ""));
       const srcVal = vfs.get(src);
       if (srcVal) {
         vfs.delete(src);
@@ -442,7 +452,7 @@ async function handleBrowserVfsCommand<T>(command: string, args?: Record<string,
     }
 
     case "fs_duplicate": {
-      const src = normalizePath(String(args?.src_path || ""));
+      const src = normalizePath(String(args?.srcPath || args?.src_path || ""));
       const srcVal = vfs.get(src);
       const dest = src + " copy";
       if (srcVal) {
@@ -584,7 +594,10 @@ export async function invokeCommand<T>(command: string, args?: Record<string, un
       return await invoke<T>(command, args);
     } catch (error) {
       const errStr = String(error || "");
-      if (errStr.includes("__TAURI_INTERNALS__") || errStr.includes("not found")) {
+      if (
+        errStr.includes("__TAURI_INTERNALS__") ||
+        (errStr.toLowerCase().includes("command") && errStr.toLowerCase().includes("not found"))
+      ) {
         return handleBrowserVfsCommand<T>(command, args);
       }
       throw new Error(formatFsError(error));

@@ -4,7 +4,6 @@ import {
   normalizePath,
   basename,
   FileContentResult,
-  isImageFile,
 } from "@/lib/tauri-ipc";
 import { EditorDocument } from "../types";
 import { LanguageService } from "./language.service";
@@ -34,9 +33,8 @@ export class EditorService {
 
     try {
       const fileData: FileContentResult = await readFileContent(normPath);
-      const isImg = isImageFile(normPath);
 
-      if (fileData.isBinary || isImg) {
+      if (fileData.isBinary) {
         return {
           id: normPath,
           path: normPath,

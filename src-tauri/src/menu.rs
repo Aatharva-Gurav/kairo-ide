@@ -1,8 +1,8 @@
 use std::sync::Mutex;
 use tauri::{
     menu::{
-        ContextMenu, Menu, MenuBuilder, MenuEvent, MenuItemBuilder, PredefinedMenuItem,
-        Submenu, SubmenuBuilder,
+        ContextMenu, Menu, MenuBuilder, MenuEvent, MenuItemBuilder, PredefinedMenuItem, Submenu,
+        SubmenuBuilder,
     },
     AppHandle, Emitter, LogicalPosition, Manager, Position, Runtime, State,
 };
@@ -38,12 +38,13 @@ pub fn init_menus<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<AppMenus<R>> 
         .build(app)?;
 
     // Open Recent Submenu
-    let open_recent_empty = MenuItemBuilder::with_id("file.openRecentEmpty", "(No Recent Workspaces)")
-        .enabled(false)
-        .build(app)?;
+    let open_recent_empty =
+        MenuItemBuilder::with_id("file.openRecentEmpty", "(No Recent Workspaces)")
+            .enabled(false)
+            .build(app)?;
 
-    let clear_recent = MenuItemBuilder::with_id("file.clearRecent", "Clear Recently Opened")
-        .build(app)?;
+    let clear_recent =
+        MenuItemBuilder::with_id("file.clearRecent", "Clear Recently Opened").build(app)?;
 
     let recent_submenu = SubmenuBuilder::with_id(app, "file.openRecent", "Open Recent")
         .item(&open_recent_empty)
@@ -68,7 +69,11 @@ pub fn init_menus<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<AppMenus<R>> 
         .build(app)?;
 
     let close_window = MenuItemBuilder::with_id("file.closeWindow", "Close Window")
-        .accelerator(if cfg!(target_os = "macos") { "Cmd+Shift+W" } else { "Alt+F4" })
+        .accelerator(if cfg!(target_os = "macos") {
+            "Cmd+Shift+W"
+        } else {
+            "Alt+F4"
+        })
         .build(app)?;
 
     let file_menu = MenuBuilder::new(app)
@@ -92,12 +97,13 @@ pub fn init_menus<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<AppMenus<R>> 
         .accelerator("CmdOrCtrl+Z")
         .build(app)?;
 
-    let redo = MenuItemBuilder::with_id(
-        "edit.redo",
-        "Redo",
-    )
-    .accelerator(if cfg!(target_os = "macos") { "CmdOrCtrl+Shift+Z" } else { "CmdOrCtrl+Y" })
-    .build(app)?;
+    let redo = MenuItemBuilder::with_id("edit.redo", "Redo")
+        .accelerator(if cfg!(target_os = "macos") {
+            "CmdOrCtrl+Shift+Z"
+        } else {
+            "CmdOrCtrl+Y"
+        })
+        .build(app)?;
 
     let cut = MenuItemBuilder::with_id("edit.cut", "Cut")
         .accelerator("CmdOrCtrl+X")
@@ -175,18 +181,20 @@ pub fn init_menus<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<AppMenus<R>> 
         .enabled(false)
         .build(app)?;
 
-    let toggle_menu_bar = MenuItemBuilder::with_id("view.appearance.toggleMenuBar", "Toggle Menu Bar")
-        .enabled(false)
-        .build(app)?;
+    let toggle_menu_bar =
+        MenuItemBuilder::with_id("view.appearance.toggleMenuBar", "Toggle Menu Bar")
+            .enabled(false)
+            .build(app)?;
 
     let appearance_menu = SubmenuBuilder::new(app, "Appearance")
         .item(&zen_mode)
         .item(&toggle_menu_bar)
         .build()?;
 
-    let split_right = MenuItemBuilder::with_id("view.editorLayout.splitRight", "Split Editor Right")
-        .accelerator("CmdOrCtrl+\\")
-        .build(app)?;
+    let split_right =
+        MenuItemBuilder::with_id("view.editorLayout.splitRight", "Split Editor Right")
+            .accelerator("CmdOrCtrl+\\")
+            .build(app)?;
 
     let editor_layout_menu = SubmenuBuilder::new(app, "Editor Layout")
         .item(&split_right)
@@ -236,9 +244,10 @@ pub fn init_menus<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<AppMenus<R>> 
         .enabled(false)
         .build(app)?;
 
-    let keyboard_shortcuts = MenuItemBuilder::with_id("help.keyboardShortcuts", "Keyboard Shortcuts")
-        .accelerator("CmdOrCtrl+K CmdOrCtrl+S")
-        .build(app)?;
+    let keyboard_shortcuts =
+        MenuItemBuilder::with_id("help.keyboardShortcuts", "Keyboard Shortcuts")
+            .accelerator("CmdOrCtrl+K CmdOrCtrl+S")
+            .build(app)?;
 
     let check_for_updates = MenuItemBuilder::with_id("help.checkForUpdates", "Check for Updates")
         .enabled(false)
@@ -395,7 +404,9 @@ pub fn menu_popup<R: Runtime>(
     y: f64,
 ) -> Result<(), String> {
     let guard = state.lock().map_err(|e| e.to_string())?;
-    let menus = guard.as_ref().ok_or_else(|| "Menus not initialized".to_string())?;
+    let menus = guard
+        .as_ref()
+        .ok_or_else(|| "Menus not initialized".to_string())?;
 
     let menu = match name.as_str() {
         "file" => &menus.file_menu,
@@ -406,11 +417,8 @@ pub fn menu_popup<R: Runtime>(
         _ => return Err(format!("Unknown menu: {}", name)),
     };
 
-    menu.popup_at(
-        window,
-        Position::Logical(LogicalPosition::new(x, y)),
-    )
-    .map_err(|e| e.to_string())?;
+    menu.popup_at(window, Position::Logical(LogicalPosition::new(x, y)))
+        .map_err(|e| e.to_string())?;
 
     Ok(())
 }
@@ -422,7 +430,9 @@ pub fn menu_sync_recent_workspaces<R: Runtime>(
     paths: Vec<String>,
 ) -> Result<(), String> {
     let guard = state.lock().map_err(|e| e.to_string())?;
-    let menus = guard.as_ref().ok_or_else(|| "Menus not initialized".to_string())?;
+    let menus = guard
+        .as_ref()
+        .ok_or_else(|| "Menus not initialized".to_string())?;
 
     // Clear existing items in recent submenu
     let items = menus.recent_submenu.items().map_err(|e| e.to_string())?;
@@ -496,4 +506,3 @@ pub fn window_set_theme<R: Runtime>(window: tauri::Window<R>, theme: String) -> 
     };
     window.set_theme(t).map_err(|e| e.to_string())
 }
-

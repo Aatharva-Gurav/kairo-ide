@@ -2,7 +2,7 @@
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "kairo-ide",
   "version": "0.1.0",
-  "identifier": "com.tauri.dev",
+  "identifier": "com.kairo.ide",
   "build": {
     "frontendDist": "../out",
     "devUrl": "http://localhost:3000",
@@ -24,7 +24,7 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: filesystem:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' http://localhost:3000 ws://localhost:3000;"
     }
   },
   "bundle": {

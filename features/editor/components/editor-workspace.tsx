@@ -11,32 +11,12 @@ import { BinaryFileView } from "./binary-file-view";
 import { CloseConfirmModal } from "./close-confirm-modal";
 import { GoToLineModal } from "./go-to-line-modal";
 import { FloatingCreationFeature } from "./floating-creation";
+import { installMonacoWorkerStub } from "@/lib/monaco-worker-stub";
 
-// Early client-side environment stub to prevent any loader or worker ErrorEvent
-if (typeof window !== "undefined") {
-  const globalObj = window as unknown as {
-    MonacoEnvironment?: {
-      getWorker: (moduleId: unknown, label: string) => Worker;
-    };
-  };
-  if (!globalObj.MonacoEnvironment) {
-    globalObj.MonacoEnvironment = {
-      getWorker: function () {
-        const workerBlob = new Blob(
-          [
-            `self.onmessage = function (e) {
-              if (e && e.data && typeof e.data === 'object' && e.data.type === 0) {
-                self.postMessage({ vsWorker: e.data.vsWorker, seq: e.data.req, type: 1, res: null });
-              }
-            };`
-          ],
-          { type: "application/javascript" }
-        );
-        return new Worker(URL.createObjectURL(workerBlob));
-      },
-    };
-  }
-}
+// Early client-side registration of the shared worker stub before the editor
+// module finishes loading, to prevent any loader or worker ErrorEvent.
+// Idempotent — see lib/monaco-worker-stub.ts for the full implementation.
+installMonacoWorkerStub();
 
 const MonacoEditorView = dynamic(
   () => import("./monaco-editor-view").then((mod) => mod.MonacoEditorView),

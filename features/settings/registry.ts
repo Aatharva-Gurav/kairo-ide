@@ -646,7 +646,7 @@ export const SETTINGS_REGISTRY: SettingDefinition<any>[] = [
     label: "Suggestion Preview (Ghost Text)",
     description: "Controls whether to show an inline preview of the selected suggestion before inserting.",
     type: "boolean",
-    defaultValue: true,
+    defaultValue: false,
     scope: "both",
     validate: (val) => typeof val === "boolean",
   },

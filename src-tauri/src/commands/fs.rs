@@ -91,9 +91,11 @@ fn copy_dir_all(src: &Path, dst: &Path) -> std::io::Result<()> {
     Ok(())
 }
 
-
 #[tauri::command]
-pub fn fs_read_directory(path: String, show_hidden: Option<bool>) -> Result<Vec<FileEntry>, String> {
+pub fn fs_read_directory(
+    path: String,
+    show_hidden: Option<bool>,
+) -> Result<Vec<FileEntry>, String> {
     let p = Path::new(&path);
     if !p.exists() {
         return Err(format!("Path does not exist: {}", path));
@@ -165,8 +167,7 @@ pub fn fs_create_file(path: String) -> Result<(), String> {
         }
     }
 
-    fs::File::create(p)
-        .map_err(|e| format!("Unable to create file: {}", e))?;
+    fs::File::create(p).map_err(|e| format!("Unable to create file: {}", e))?;
 
     Ok(())
 }
@@ -178,8 +179,7 @@ pub fn fs_create_directory(path: String) -> Result<(), String> {
         return Err("A file or directory already exists at this path.".to_string());
     }
 
-    fs::create_dir_all(p)
-        .map_err(|e| format!("Unable to create directory: {}", e))?;
+    fs::create_dir_all(p).map_err(|e| format!("Unable to create directory: {}", e))?;
 
     Ok(())
 }
@@ -192,12 +192,22 @@ pub fn fs_rename(old_path: String, new_path: String) -> Result<(), String> {
     if !src.exists() {
         return Err("The item to rename does not exist.".to_string());
     }
-    if dest.exists() {
+
+    let is_case_only_rename = normalize_path_for_compare(src) == normalize_path_for_compare(dest);
+
+    if dest.exists() && !is_case_only_rename {
         return Err("An item with the destination name already exists.".to_string());
     }
 
-    fs::rename(src, dest)
-        .map_err(|e| format!("Unable to rename item: {}", e))?;
+    if is_case_only_rename && src != dest {
+        let temp_name = format!("{}.kairo_rename_tmp", old_path);
+        let temp_path = Path::new(&temp_name);
+        fs::rename(src, temp_path).map_err(|e| format!("Unable to rename item: {}", e))?;
+        fs::rename(temp_path, dest).map_err(|e| format!("Unable to rename item: {}", e))?;
+        return Ok(());
+    }
+
+    fs::rename(src, dest).map_err(|e| format!("Unable to rename item: {}", e))?;
 
     Ok(())
 }
@@ -210,11 +220,9 @@ pub fn fs_delete(path: String, is_dir: bool) -> Result<(), String> {
     }
 
     if is_dir {
-        fs::remove_dir_all(p)
-            .map_err(|e| format!("Unable to delete directory: {}", e))?;
+        fs::remove_dir_all(p).map_err(|e| format!("Unable to delete directory: {}", e))?;
     } else {
-        fs::remove_file(p)
-            .map_err(|e| format!("Unable to delete file: {}", e))?;
+        fs::remove_file(p).map_err(|e| format!("Unable to delete file: {}", e))?;
     }
 
     Ok(())
@@ -231,18 +239,18 @@ pub fn fs_copy(src_path: String, dest_path: String) -> Result<(), String> {
 
     if src.is_dir() {
         if is_descendant(src, dest) {
-            return Err("Cannot copy a directory into itself or one of its subdirectories.".to_string());
+            return Err(
+                "Cannot copy a directory into itself or one of its subdirectories.".to_string(),
+            );
         }
-        copy_dir_all(src, dest)
-            .map_err(|e| format!("Unable to copy directory: {}", e))?;
+        copy_dir_all(src, dest).map_err(|e| format!("Unable to copy directory: {}", e))?;
     } else {
         if let Some(parent) = dest.parent() {
             if !parent.exists() {
                 let _ = fs::create_dir_all(parent);
             }
         }
-        fs::copy(src, dest)
-            .map_err(|e| format!("Unable to copy file: {}", e))?;
+        fs::copy(src, dest).map_err(|e| format!("Unable to copy file: {}", e))?;
     }
 
     Ok(())
@@ -265,12 +273,20 @@ pub fn fs_move(src_path: String, dest_path: String) -> Result<(), String> {
     }
 
     if src.is_dir() && is_descendant(src, dest) {
-        return Err("Cannot move a directory into itself or one of its subdirectories.".to_string());
+        return Err(
+            "Cannot move a directory into itself or one of its subdirectories.".to_string(),
+        );
     }
 
     if dest.exists() {
-        let name = dest.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
-        return Err(format!("An item named '{}' already exists at the destination.", name));
+        let name = dest
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_default();
+        return Err(format!(
+            "An item named '{}' already exists at the destination.",
+            name
+        ));
     }
 
     if let Some(parent) = dest.parent() {
@@ -284,7 +300,8 @@ pub fn fs_move(src_path: String, dest_path: String) -> Result<(), String> {
         // Fallback to copy and remove (e.g. across drives/mount points)
         if src.is_dir() {
             copy_dir_all(src, dest).map_err(|e| format!("Unable to move directory: {}", e))?;
-            fs::remove_dir_all(src).map_err(|e| format!("Failed to remove source directory: {}", e))?;
+            fs::remove_dir_all(src)
+                .map_err(|e| format!("Failed to remove source directory: {}", e))?;
         } else {
             fs::copy(src, dest).map_err(|e| format!("Unable to move file: {}", e))?;
             fs::remove_file(src).map_err(|e| format!("Failed to remove source file: {}", e))?;
@@ -301,7 +318,9 @@ pub fn fs_duplicate(src_path: String) -> Result<String, String> {
         return Err("File to duplicate does not exist.".to_string());
     }
 
-    let parent = src.parent().ok_or_else(|| "Cannot duplicate root path".to_string())?;
+    let parent = src
+        .parent()
+        .ok_or_else(|| "Cannot duplicate root path".to_string())?;
     let stem = src.file_stem().and_then(|s| s.to_str()).unwrap_or("file");
     let ext = src.extension().and_then(|e| e.to_str());
 
@@ -372,7 +391,11 @@ pub fn fs_reveal(path: String) -> Result<(), String> {
 
     #[cfg(target_os = "linux")]
     {
-        let target = if p.is_dir() { p } else { p.parent().unwrap_or(p) };
+        let target = if p.is_dir() {
+            p
+        } else {
+            p.parent().unwrap_or(p)
+        };
         std::process::Command::new("xdg-open")
             .arg(target)
             .spawn()
@@ -413,7 +436,10 @@ pub fn fs_get_metadata(path: String) -> Result<DetailedMetadata, String> {
     let is_readonly = metadata.permissions().readonly();
     let modified_at = get_modified_time(&metadata);
     let created_at = get_created_time(&metadata);
-    let name = p.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| path.clone());
+    let name = p
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_else(|| path.clone());
 
     if !is_dir {
         return Ok(DetailedMetadata {
@@ -448,7 +474,13 @@ pub fn fs_get_metadata(path: String) -> Result<DetailedMetadata, String> {
                 if let Ok(meta) = entry.metadata() {
                     if meta.is_dir() {
                         *folder_count += 1;
-                        count_dir_contents(&entry.path(), total_size, file_count, folder_count, depth_limit - 1);
+                        count_dir_contents(
+                            &entry.path(),
+                            total_size,
+                            file_count,
+                            folder_count,
+                            depth_limit - 1,
+                        );
                     } else {
                         *file_count += 1;
                         *total_size += meta.len();
@@ -486,12 +518,51 @@ fn is_binary_extension(ext: &str) -> bool {
     let lower = ext.to_lowercase();
     matches!(
         lower.as_str(),
-        "png" | "jpg" | "jpeg" | "gif" | "webp" | "bmp" | "ico" | "tiff"
-            | "pdf" | "zip" | "tar" | "gz" | "7z" | "rar" | "bz2" | "xz"
-            | "exe" | "dll" | "so" | "dylib" | "bin" | "iso" | "dmg"
-            | "woff" | "woff2" | "ttf" | "otf" | "eot"
-            | "mp3" | "mp4" | "wav" | "flac" | "ogg" | "avi" | "mov" | "webm" | "mkv"
-            | "wasm" | "class" | "pyc" | "o" | "obj" | "lib" | "a" | "pdb"
+        "png"
+            | "jpg"
+            | "jpeg"
+            | "gif"
+            | "webp"
+            | "bmp"
+            | "ico"
+            | "tiff"
+            | "pdf"
+            | "zip"
+            | "tar"
+            | "gz"
+            | "7z"
+            | "rar"
+            | "bz2"
+            | "xz"
+            | "exe"
+            | "dll"
+            | "so"
+            | "dylib"
+            | "bin"
+            | "iso"
+            | "dmg"
+            | "woff"
+            | "woff2"
+            | "ttf"
+            | "otf"
+            | "eot"
+            | "mp3"
+            | "mp4"
+            | "wav"
+            | "flac"
+            | "ogg"
+            | "avi"
+            | "mov"
+            | "webm"
+            | "mkv"
+            | "wasm"
+            | "class"
+            | "pyc"
+            | "o"
+            | "obj"
+            | "lib"
+            | "a"
+            | "pdb"
     )
 }
 
@@ -572,8 +643,7 @@ pub fn fs_write_file(path: String, content: String) -> Result<(), String> {
         }
     }
 
-    fs::write(p, content.as_bytes())
-        .map_err(|e| format!("Unable to write file: {}", e))?;
+    fs::write(p, content.as_bytes()).map_err(|e| format!("Unable to write file: {}", e))?;
 
     Ok(())
 }
@@ -646,8 +716,7 @@ fn matches_pattern(path: &str, pattern: &str) -> bool {
         return norm_path.ends_with(ext);
     }
 
-    if clean_pat.ends_with("/**") {
-        let prefix = &clean_pat[..clean_pat.len() - 3];
+    if let Some(prefix) = clean_pat.strip_suffix("/**") {
         return norm_path.starts_with(prefix) || norm_path.contains(&format!("/{}", prefix));
     }
 
@@ -720,11 +789,7 @@ fn find_matches_in_line(
     matches
 }
 
-fn walk_workspace_files(
-    dir: &Path,
-    files: &mut Vec<PathBuf>,
-    max_count: usize,
-) {
+fn walk_workspace_files(dir: &Path, files: &mut Vec<PathBuf>, max_count: usize) {
     if files.len() >= max_count {
         return;
     }
@@ -851,7 +916,10 @@ pub fn fs_replace_in_files(
 
     let mut file_replacements: HashMap<String, Vec<FileReplacementPayload>> = HashMap::new();
     for rep in replacements {
-        file_replacements.entry(rep.file_path.clone()).or_default().push(rep);
+        file_replacements
+            .entry(rep.file_path.clone())
+            .or_default()
+            .push(rep);
     }
 
     let mut files_modified = 0;
@@ -952,7 +1020,8 @@ mod tests {
         assert!(res_dup.is_err());
 
         // Read directory
-        let entries = fs_read_directory(temp_dir.to_string_lossy().to_string(), Some(false)).unwrap();
+        let entries =
+            fs_read_directory(temp_dir.to_string_lossy().to_string(), Some(false)).unwrap();
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].name, "test.txt");
         assert!(!entries[0].is_directory);
@@ -987,7 +1056,10 @@ mod tests {
         let child = parent.join("child");
         let _ = fs::create_dir_all(&child);
 
-        let res = fs_copy(parent.to_string_lossy().to_string(), child.join("sub").to_string_lossy().to_string());
+        let res = fs_copy(
+            parent.to_string_lossy().to_string(),
+            child.join("sub").to_string_lossy().to_string(),
+        );
         assert!(res.is_err());
 
         let _ = fs::remove_dir_all(&temp_dir);
@@ -1035,7 +1107,11 @@ mod tests {
         let file1 = src_dir.join("app.ts");
         let file2 = src_dir.join("util.ts");
 
-        fs::write(&file1, "const message = 'apple pie';\nconsole.log(message);").unwrap();
+        fs::write(
+            &file1,
+            "const message = 'apple pie';\nconsole.log(message);",
+        )
+        .unwrap();
         fs::write(&file2, "export const appleCount = 10;").unwrap();
 
         // Search for 'apple'
@@ -1125,4 +1201,3 @@ mod tests {
         let _ = fs::remove_dir_all(&temp_dir);
     }
 }
-

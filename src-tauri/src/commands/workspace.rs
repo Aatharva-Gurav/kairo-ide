@@ -52,10 +52,16 @@ pub fn workspace_detect_project(root_path: String) -> Result<Vec<String>, String
     if p.join("Cargo.toml").exists() {
         characteristics.push("Rust".to_string());
     }
-    if p.join("pyproject.toml").exists() || p.join("requirements.txt").exists() || p.join("setup.py").exists() {
+    if p.join("pyproject.toml").exists()
+        || p.join("requirements.txt").exists()
+        || p.join("setup.py").exists()
+    {
         characteristics.push("Python".to_string());
     }
-    if p.join("pom.xml").exists() || p.join("build.gradle").exists() || p.join("build.gradle.kts").exists() {
+    if p.join("pom.xml").exists()
+        || p.join("build.gradle").exists()
+        || p.join("build.gradle.kts").exists()
+    {
         characteristics.push("Java".to_string());
     }
     if p.join("CMakeLists.txt").exists() || p.join("Makefile").exists() {
@@ -67,7 +73,10 @@ pub fn workspace_detect_project(root_path: String) -> Result<Vec<String>, String
     if p.join("src-tauri").exists() {
         characteristics.push("Tauri".to_string());
     }
-    if p.join("next.config.ts").exists() || p.join("next.config.js").exists() || p.join("next.config.mjs").exists() {
+    if p.join("next.config.ts").exists()
+        || p.join("next.config.js").exists()
+        || p.join("next.config.mjs").exists()
+    {
         characteristics.push("Next.js".to_string());
     }
 
@@ -95,4 +104,3 @@ mod tests {
         assert_eq!(result, Ok(false));
     }
 }
-

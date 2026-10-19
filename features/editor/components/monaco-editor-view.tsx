@@ -10,82 +10,21 @@ import { IntelliSenseService } from "../services/intellisense.service";
 import { NavigationService } from "../services/navigation.service";
 import { EditorDocument } from "../types";
 import { ideEvents } from "@/lib/events";
+import { installMonacoWorkerStub } from "@/lib/monaco-worker-stub";
 import { THEME_DEFINITIONS, migrateLegacyTheme } from "@/features/theme";
 import { EditorFindReplace } from "./editor-find-replace";
 
-// Ensure Monaco runs completely offline from bundled npm module with offline Web Worker stub
+// Ensure Monaco runs completely offline from the bundled npm module.
+// Registers the shared protocol-compliant worker stub (see lib/monaco-worker-stub.ts)
+// which answers every editor-worker and language-service request with valid
+// empty-result shapes, preventing unhandled rejections in Monaco internals.
 if (typeof window !== "undefined") {
-  const globalObj = window as unknown as {
-    MonacoEnvironment?: {
-      getWorker: (moduleId: unknown, label: string) => Worker;
-    };
-    monaco?: unknown;
-  };
+  installMonacoWorkerStub();
 
-  // 1. Configure MonacoEnvironment to provide inline web workers
-  // This satisfies Monaco's web worker requirement completely offline in Next.js Turbopack
-  // and safely returns valid defaults for all worker queries
-  globalObj.MonacoEnvironment = {
-    getWorker: function () {
-      const workerBlob = new Blob(
-        [
-          `self.onmessage = function (e) {
-            if (e && e.data && typeof e.data === 'object' && e.data.type === 0) {
-              var method = e.data.method;
-              var args = e.data.args;
-              if (method === '$fmr' && Array.isArray(args) && typeof args[0] === 'string') {
-                method = args[0];
-                args = args[1];
-              }
+  // Set window.monaco so @monaco-editor/loader can directly detect the local instance
+  (window as unknown as { monaco?: unknown }).monaco = monaco;
 
-              var res = null;
-              if (method === 'getRenameInfo') {
-                res = { canRename: false, localizedErrorMessage: 'Rename is not supported.' };
-              } else if (method === 'computeDiff') {
-                res = { changes: [], identical: true, quitEarly: false };
-              } else if (
-                method === 'getSyntacticDiagnostics' ||
-                method === 'getSemanticDiagnostics' ||
-                method === 'getSuggestionDiagnostics' ||
-                method === 'getCompilerOptionsDiagnostics' ||
-                method === 'provideInlayHints' ||
-                method === 'getCodeFixesAtPosition' ||
-                method === 'findRenameLocations' ||
-                method === 'getDefinitionAtPosition' ||
-                method === 'getReferencesAtPosition' ||
-                method === 'getDocumentHighlights' ||
-                method === 'getFormattingEditsForRange' ||
-                method === 'getFormattingEditsForDocument' ||
-                method === 'getFormattingEditsAfterKeystroke' ||
-                method === 'doValidation' ||
-                method === 'findDocumentSymbols' ||
-                method === 'findDocumentColors' ||
-                method === 'getColorPresentations' ||
-                method === 'getFoldingRanges' ||
-                method === 'getSelectionRanges' ||
-                method === 'findDocumentHighlights' ||
-                method === 'findDefinition' ||
-                method === 'findReferences' ||
-                method === 'findDocumentLinks'
-              ) {
-                res = [];
-              } else {
-                res = null;
-              }
-              self.postMessage({ vsWorker: e.data.vsWorker, seq: e.data.req, type: 1, res: res });
-            }
-          };`
-        ],
-        { type: "application/javascript" }
-      );
-      return new Worker(URL.createObjectURL(workerBlob));
-    },
-  };
-
-  // 2. Set window.monaco so @monaco-editor/loader can directly detect the local instance
-  globalObj.monaco = monaco;
-
-  // 3. Configure loader to use the bundled monaco instance directly
+  // Configure loader to use the bundled monaco instance directly
   loader.config({ monaco });
 
   // 4. Register custom IDE themes matching all 14 VS Code-inspired themes
@@ -389,7 +328,7 @@ export function MonacoEditorView({ document, onCursorChange }: MonacoEditorViewP
     const model = ModelService.createOrReuseModel(
       monaco,
       document.path,
-      document.content,
+      documentRef.current.content,
       document.language
     );
 
@@ -420,8 +359,8 @@ export function MonacoEditorView({ document, onCursorChange }: MonacoEditorViewP
       }
       ModelService.saveViewState(editor, document.path);
     };
-    // Re-bind when document identity, language, content, or editor instance changes
-  }, [document.path, document.language, document.content, updateContent, editorInstance]);
+    // Re-bind when document identity, language, or editor instance changes, not on content keystrokes
+  }, [document.path, document.language, updateContent, editorInstance]);
 
   // Synchronize external content changes (e.g. workspace replace in files) lively
   useEffect(() => {
@@ -593,6 +532,9 @@ export function MonacoEditorView({ document, onCursorChange }: MonacoEditorViewP
           scrollBeyondLastLine: false,
           fixedOverflowWidgets: false,
           padding: { top: 8, bottom: 8 },
+          hover: {
+            enabled: "off",
+          },
           inlayHints: {
             enabled: "off",
           },
@@ -608,7 +550,7 @@ export function MonacoEditorView({ document, onCursorChange }: MonacoEditorViewP
           suggest: {
             showIcons: suggestions?.showIcons ?? true,
             showStatusBar: true,
-            preview: suggestions?.preview ?? true,
+            preview: false,
             previewMode: "subwordSmart",
             shareSuggestSelections: true,
             filterGraceful: true,

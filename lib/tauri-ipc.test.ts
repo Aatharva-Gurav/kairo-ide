@@ -20,6 +20,7 @@ describe("Tauri IPC & Path Utilities", () => {
     expect(normalizePath("/C:/Users/User/Project")).toBe("C:/Users/User/Project");
     expect(normalizePath("file:///C:/Users/User/Project")).toBe("C:/Users/User/Project");
     expect(normalizePath("c:/users/user/project")).toBe("C:/users/user/project");
+    expect(normalizePath("C:/Users/Aatharva%20Gurav/Project")).toBe("C:/Users/Aatharva Gurav/Project");
   });
 
   it("extracts basename correctly", () => {
