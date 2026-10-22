@@ -18,7 +18,11 @@ import {
 } from "lucide-react";
 
 function formatRelativeTime(timestamp: number): string {
+  if (!timestamp || typeof timestamp !== "number" || Number.isNaN(timestamp) || timestamp <= 0) {
+    return "Just now";
+  }
   const diff = Date.now() - timestamp;
+  if (diff < 0) return "Just now";
   const minutes = Math.floor(diff / (1000 * 60));
   const hours = Math.floor(diff / (1000 * 60 * 60));
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
@@ -114,7 +118,7 @@ export function EmptyWorkspaceView() {
               const isUnavailable = project.exists === false;
               return (
                 <div
-                  key={project.id}
+                  key={project.id || project.rootPath}
                   className={`group relative flex items-center justify-between rounded-md px-2 py-1.5 text-left text-xs transition-colors duration-120 ease-out hover:bg-sidebar-accent/60 ${
                     isUnavailable ? "opacity-50" : ""
                   }`}
@@ -150,7 +154,7 @@ export function EmptyWorkspaceView() {
                     </span>
                     <div className="flex items-center gap-1 text-[9px] text-muted-foreground/60 pl-5 mt-0.5 font-mono">
                       <Clock className="size-2.5" />
-                      <span>{formatRelativeTime(project.lastOpenedAt)}</span>
+                      <span>{formatRelativeTime(project.lastOpenedAt || project.openedAt || 0)}</span>
                     </div>
                   </button>
 

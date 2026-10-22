@@ -35,7 +35,9 @@ export function KeyboardShortcutsSettings() {
         (item.command.title?.toLowerCase().includes(q) ||
           item.command.id?.toLowerCase().includes(q) ||
           item.command.category?.toLowerCase().includes(q) ||
-          item.keybinding?.toLowerCase().includes(q))
+          item.keybinding?.toLowerCase().includes(q) ||
+          item.rawKey?.toLowerCase().includes(q) ||
+          (item.command.keywords && item.command.keywords.some((k: string) => k.toLowerCase().includes(q))))
     );
   }, [keybindings, search]);
 

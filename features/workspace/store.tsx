@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef, useMemo } from "react";
+import { normalizePath } from "@/lib/tauri-ipc";
 import { Workspace, RecentWorkspace } from "./types";
 import { WorkspaceService } from "./service";
 import { ideEvents } from "@/lib/events";
@@ -103,12 +104,19 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const openWorkspacePath = useCallback(async (rootPath: string): Promise<boolean> => {
+    if (!rootPath || typeof rootPath !== "string") {
+      setError("Invalid workspace path.");
+      return false;
+    }
     setError(null);
     try {
       const isValid = await WorkspaceService.validatePath(rootPath);
       if (!isValid) {
+        const normTarget = normalizePath(rootPath).toLowerCase();
         const recents = WorkspaceService.getRecentWorkspaces().map((item) =>
-          item.rootPath.toLowerCase() === rootPath.toLowerCase() ? { ...item, exists: false } : item
+          item && item.rootPath && normalizePath(item.rootPath).toLowerCase() === normTarget
+            ? { ...item, exists: false }
+            : item
         );
         WorkspaceService.saveRecentWorkspaces(recents);
         setRecentWorkspaces(recents);

@@ -1002,8 +1002,9 @@ export const LIGHT_THEMES: ThemeDefinition[] = THEME_LIST.filter(
  * Safely maps any legacy or arbitrary stored theme name to a supported ThemeId or "system".
  */
 export function migrateLegacyTheme(rawTheme: string | null | undefined): ThemeId | "system" {
-  if (!rawTheme) return "dark-modern";
-  switch (rawTheme) {
+  if (!rawTheme || typeof rawTheme !== "string") return "dark-modern";
+  const normalized = rawTheme.trim().toLowerCase();
+  switch (normalized) {
     case "dark":
     case "github-dark":
     case "dark-modern":
@@ -1042,7 +1043,7 @@ export function migrateLegacyTheme(rawTheme: string | null | undefined): ThemeId
     case "system":
       return "system";
     default:
-      if (rawTheme.toLowerCase().includes("light")) return "light-modern";
+      if (normalized.includes("light")) return "light-modern";
       return "dark-modern";
   }
 }
@@ -1053,7 +1054,7 @@ export function migrateLegacyTheme(rawTheme: string | null | undefined): ThemeId
 export function isDarkTheme(theme: string | null | undefined): boolean {
   const resolved = migrateLegacyTheme(theme);
   if (resolved === "system") {
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && window.matchMedia) {
       return window.matchMedia("(prefers-color-scheme: dark)").matches;
     }
     return true;

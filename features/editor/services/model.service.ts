@@ -158,34 +158,38 @@ export class ModelService {
     }
 
     // Subpath matches (e.g. folder moved or renamed)
-    activeModels.forEach((model, p) => {
-      if (p.startsWith(normOld + "/")) {
-        const sub = p.slice(normOld.length);
-        const updated = normNew + sub;
-        activeModels.delete(p);
-        if (model && monacoInstance?.editor && monacoInstance?.Uri) {
-          try {
-            const content = model.getValue();
-            const language = model.getLanguageId();
-            model.dispose();
-            const newUri = monacoInstance.Uri.file(updated);
-            const newModel = monacoInstance.editor.createModel(content, language, newUri);
-            activeModels.set(updated, newModel);
-          } catch {
-            // Fallback
-          }
+    const matchingModelKeys = Array.from(activeModels.keys()).filter((p) =>
+      p.startsWith(normOld + "/")
+    );
+    for (const p of matchingModelKeys) {
+      const model = activeModels.get(p);
+      const sub = p.slice(normOld.length);
+      const updated = normNew + sub;
+      activeModels.delete(p);
+      if (model && monacoInstance?.editor && monacoInstance?.Uri) {
+        try {
+          const content = model.getValue();
+          const language = model.getLanguageId();
+          model.dispose();
+          const newUri = monacoInstance.Uri.file(updated);
+          const newModel = monacoInstance.editor.createModel(content, language, newUri);
+          activeModels.set(updated, newModel);
+        } catch {
+          // Fallback
         }
       }
-    });
+    }
 
-    viewStates.forEach((vs, p) => {
-      if (p.startsWith(normOld + "/")) {
-        const sub = p.slice(normOld.length);
-        const updated = normNew + sub;
-        viewStates.delete(p);
-        viewStates.set(updated, vs);
-      }
-    });
+    const matchingViewStateKeys = Array.from(viewStates.keys()).filter((p) =>
+      p.startsWith(normOld + "/")
+    );
+    for (const p of matchingViewStateKeys) {
+      const vs = viewStates.get(p);
+      const sub = p.slice(normOld.length);
+      const updated = normNew + sub;
+      viewStates.delete(p);
+      viewStates.set(updated, vs);
+    }
   }
 
   /**

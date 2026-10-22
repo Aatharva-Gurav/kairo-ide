@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { getSafeLocalStorage } from "@/lib/storage";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/features/auth/store";
 import { useSettings } from "@/features/settings/store";
@@ -59,8 +60,9 @@ export function OnboardingWizard() {
   const stepStorageKey = `kairo.onboarding_step.${userId}`;
 
   const [step, setStep] = useState<number>(() => {
-    if (typeof window !== "undefined") {
-      const savedStep = window.localStorage.getItem(stepStorageKey);
+    const storage = getSafeLocalStorage();
+    if (storage) {
+      const savedStep = storage.getItem(stepStorageKey);
       if (savedStep) {
         const parsed = parseInt(savedStep, 10);
         if (parsed >= 1 && parsed <= 4) {
@@ -83,19 +85,32 @@ export function OnboardingWizard() {
     profile?.preferredLanguages?.length ? profile.preferredLanguages : ["TypeScript", "Rust"]
   );
   const [selectedTheme, setSelectedTheme] = useState<ThemePreference>(
-    (settings.appearance.theme as ThemePreference) || "dark-modern"
+    (settings?.appearance?.theme as ThemePreference) || "dark-modern"
   );
-  const [tabSize, setTabSize] = useState<number>(settings.editor.tabSize || 2);
+  const [tabSize, setTabSize] = useState<number>(settings?.editor?.tabSize || 2);
   const [wordWrap, setWordWrap] = useState<"on" | "off">(
-    settings.editor.wordWrap === "on" ? "on" : "off"
+    settings?.editor?.wordWrap === "on" ? "on" : "off"
   );
-  const [minimap, setMinimap] = useState<boolean>(settings.editor.minimap !== false);
+  const [minimap, setMinimap] = useState<boolean>(settings?.editor?.minimap !== false);
 
-  // Persist active step
+  // Sync profile data when available asynchronously if form fields are still pristine
+  const [prevProfile, setPrevProfile] = useState(profile);
+  if (profile !== prevProfile) {
+    setPrevProfile(profile);
+    if (profile?.displayName && !displayName) {
+      setDisplayName(profile.displayName);
+    }
+    if (profile?.username && !username) {
+      setUsername(profile.username);
+    }
+  }
+
+  // Persist active step safely
   const handleStepChange = (newStep: number) => {
     setStep(newStep);
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(stepStorageKey, String(newStep));
+    const storage = getSafeLocalStorage();
+    if (storage) {
+      storage.setItem(stepStorageKey, String(newStep));
     }
   };
 
@@ -114,6 +129,12 @@ export function OnboardingWizard() {
   const handleFinish = async () => {
     setIsSubmitting(true);
     try {
+      // Synchronize chosen settings with the local IDE settings store
+      updateSetting("appearance.theme", selectedTheme, "user");
+      updateSetting("editor.tabSize", tabSize, "user");
+      updateSetting("editor.wordWrap", wordWrap, "user");
+      updateSetting("editor.minimap", minimap, "user");
+
       await completeOnboarding({
         displayName: displayName.trim() || undefined,
         username: username.trim() || undefined,
@@ -126,8 +147,9 @@ export function OnboardingWizard() {
         },
       });
 
-      if (typeof window !== "undefined") {
-        window.localStorage.removeItem(stepStorageKey);
+      const storage = getSafeLocalStorage();
+      if (storage) {
+        storage.removeItem(stepStorageKey);
       }
 
       router.push("/");

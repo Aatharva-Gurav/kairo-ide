@@ -30,6 +30,10 @@ export class DirectoryCache {
 
   set(dirPath: string, entries: FileSystemNode[]): void {
     const key = normalizePath(dirPath).toLowerCase();
+    if (this.cache.size >= 500) {
+      const firstKey = this.cache.keys().next().value;
+      if (firstKey) this.cache.delete(firstKey);
+    }
     this.cache.set(key, {
       entries,
       timestamp: Date.now(),

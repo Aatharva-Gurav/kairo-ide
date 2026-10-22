@@ -57,9 +57,12 @@ export class CommandRegistry {
   static isEnabled(commandId: string): boolean {
     const cmd = this.commands.get(commandId);
     if (!cmd) return false;
+    if (typeof cmd.enabled === "boolean") {
+      return cmd.enabled;
+    }
     if (typeof cmd.enabled === "function") {
       try {
-        return cmd.enabled();
+        return Boolean(cmd.enabled());
       } catch (err) {
         console.warn(`[CommandRegistry] Error in enabled() predicate for "${commandId}":`, err);
         return false;
@@ -93,7 +96,7 @@ export class CommandRegistry {
 
     try {
       const result = cmd.execute();
-      if (result instanceof Promise) {
+      if (result && typeof (result as Promise<void>).then === "function") {
         await result;
       }
       return true;
@@ -134,4 +137,3 @@ export class CommandRegistry {
     });
   }
 }
-

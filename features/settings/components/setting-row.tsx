@@ -20,15 +20,14 @@ function NumberSettingInput({
   onCommit: (val: number) => void;
 }) {
   const currentNum = Number(value ?? definition.defaultValue);
+  const [prevNum, setPrevNum] = React.useState(currentNum);
   const [localText, setLocalText] = React.useState<string>(String(currentNum));
 
   // Sync with external value changes (e.g. reset to default or scope change)
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      setLocalText(String(currentNum));
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [currentNum]);
+  if (prevNum !== currentNum) {
+    setPrevNum(currentNum);
+    setLocalText(String(currentNum));
+  }
 
   const commitValue = () => {
     let parsed = Number(localText.trim());
@@ -170,7 +169,13 @@ export function SettingRow({ definition }: SettingRowProps) {
         {definition.type === "select" && (
           <select
             value={String(value ?? definition.defaultValue)}
-            onChange={(e) => updateSetting(definition.key, e.target.value, activeScope)}
+            onChange={(e) => {
+              const selectedOption = definition.options?.find(
+                (opt) => String(opt.value) === e.target.value
+              );
+              const targetValue = selectedOption ? selectedOption.value : e.target.value;
+              updateSetting(definition.key, targetValue, activeScope);
+            }}
             className="h-8.5 w-full max-w-xs rounded-xl border border-border/70 bg-background/80 px-3 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary cursor-pointer shadow-2xs transition-all"
           >
             {definition.options?.map((opt) => (

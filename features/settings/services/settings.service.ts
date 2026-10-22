@@ -59,6 +59,9 @@ function sanitizeValue(key: string, value: unknown, defaultValue: unknown): unkn
   }
 
   if (def.type === "number") {
+    if (typeof value === "string" && value.trim() !== "" && !isNaN(Number(value))) {
+      value = Number(value);
+    }
     if (typeof value !== "number" || isNaN(value)) {
       return defaultValue;
     }
@@ -156,7 +159,10 @@ export class SettingsService {
    */
   static setWorkspaceRootPath(rootPath: string | null): void {
     const normalized = rootPath ? normalizePath(rootPath) : null;
-    if (this.activeWorkspacePath === normalized) {
+    if (
+      (this.activeWorkspacePath === null && normalized === null) ||
+      (this.activeWorkspacePath && normalized && this.activeWorkspacePath.toLowerCase() === normalized.toLowerCase())
+    ) {
       return;
     }
 
@@ -188,7 +194,7 @@ export class SettingsService {
   static getSetting<T>(key: string): T {
     const parts = key.split(".");
     if (parts.length !== 2) {
-      throw new Error(`Invalid setting key: ${key}`);
+      return undefined as T;
     }
 
     const [cat, prop] = parts as [SettingsCategory, string];
@@ -520,11 +526,12 @@ export class SettingsService {
   }
 
   private static loadStoredWorkspaceSettings(rootPath: string): DeepPartial<IDESettings> {
+    if (!rootPath || typeof rootPath !== "string") return {};
     const storage = getStorage();
     if (!storage) return {};
 
     try {
-      const key = `${SETTINGS_STORAGE_KEYS.WORKSPACE_SETTINGS_PREFIX}${rootPath}`;
+      const key = `${SETTINGS_STORAGE_KEYS.WORKSPACE_SETTINGS_PREFIX}${normalizePath(rootPath).toLowerCase()}`;
       const raw = storage.getItem(key);
       if (!raw) return {};
       const parsed = JSON.parse(raw);
@@ -539,15 +546,15 @@ export class SettingsService {
     rootPath: string,
     settings: DeepPartial<IDESettings>
   ): void {
+    if (!rootPath || typeof rootPath !== "string") return;
     const storage = getStorage();
     if (!storage) return;
 
     try {
-      const key = `${SETTINGS_STORAGE_KEYS.WORKSPACE_SETTINGS_PREFIX}${rootPath}`;
+      const key = `${SETTINGS_STORAGE_KEYS.WORKSPACE_SETTINGS_PREFIX}${normalizePath(rootPath).toLowerCase()}`;
       storage.setItem(key, JSON.stringify(settings));
     } catch (error) {
       console.error("[SettingsService] Failed to persist workspace settings:", error);
     }
   }
 }
-

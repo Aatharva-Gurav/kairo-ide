@@ -24,6 +24,18 @@ export function CommandPaletteModal({
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
+  // Synchronize state during render when props change
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  const [prevInitialQuery, setPrevInitialQuery] = useState(initialQuery);
+  if (isOpen !== prevIsOpen || initialQuery !== prevInitialQuery) {
+    setPrevIsOpen(isOpen);
+    setPrevInitialQuery(initialQuery);
+    if (isOpen) {
+      setQuery(initialQuery);
+      setSelectedIndex(0);
+    }
+  }
+
   const handleClose = useCallback(() => {
     setQuery("");
     setSelectedIndex(0);
@@ -48,9 +60,10 @@ export function CommandPaletteModal({
     });
   }, []);
 
-  // Filter commands using fuzzy matching
+  // Filter commands using fuzzy matching (supports leading '>' prefix like VS Code)
   const filteredCommands = useMemo(() => {
-    const clean = query.trim();
+    const trimmed = query.trim();
+    const clean = trimmed.startsWith(">") ? trimmed.slice(1).trim() : trimmed;
     return fuzzyFilter(allCommands, clean, (cmd) => [
       cmd.title,
       cmd.category,
@@ -60,18 +73,24 @@ export function CommandPaletteModal({
     ]);
   }, [allCommands, query]);
 
+  // Derived clamped selection index to ensure selected item is always valid
+  const clampedSelectedIndex =
+    filteredCommands.length > 0
+      ? Math.min(Math.max(0, selectedIndex), filteredCommands.length - 1)
+      : 0;
+
   // Scroll active item into view
   useEffect(() => {
     if (!listRef.current) return;
-    const selectedEl = listRef.current.children[selectedIndex] as HTMLElement;
+    const selectedEl = listRef.current.children[clampedSelectedIndex] as HTMLElement;
     if (selectedEl) {
       selectedEl.scrollIntoView({ block: "nearest" });
     }
-  }, [selectedIndex]);
+  }, [clampedSelectedIndex]);
 
   const executeSelected = useCallback(
     async (cmd?: Command) => {
-      const target = cmd || filteredCommands[selectedIndex];
+      const target = cmd || filteredCommands[clampedSelectedIndex];
       if (!target) return;
 
       const isEnabled = CommandRegistry.isEnabled(target.id);
@@ -80,16 +99,22 @@ export function CommandPaletteModal({
       handleClose();
       await CommandRegistry.execute(target.id);
     },
-    [filteredCommands, selectedIndex, handleClose]
+    [filteredCommands, clampedSelectedIndex, handleClose]
   );
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setSelectedIndex((prev) => Math.min(prev + 1, filteredCommands.length - 1));
+      setSelectedIndex(
+        filteredCommands.length > 0 ? (clampedSelectedIndex + 1) % filteredCommands.length : 0
+      );
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      setSelectedIndex((prev) => Math.max(prev - 1, 0));
+      setSelectedIndex(
+        filteredCommands.length > 0
+          ? (clampedSelectedIndex - 1 + filteredCommands.length) % filteredCommands.length
+          : 0
+      );
     } else if (e.key === "Enter") {
       e.preventDefault();
       executeSelected();
@@ -134,7 +159,7 @@ export function CommandPaletteModal({
         <div ref={listRef} className="flex-1 overflow-y-auto p-2 space-y-1 text-xs">
           {filteredCommands.length > 0 ? (
             filteredCommands.map((cmd, idx) => {
-              const isSelected = idx === selectedIndex;
+              const isSelected = idx === clampedSelectedIndex;
               const isEnabled = CommandRegistry.isEnabled(cmd.id);
               const keybinding = KeybindingService.getRawKeybindingForCommand(cmd.id);
               const displayShortcut = KeybindingService.formatDisplay(keybinding);

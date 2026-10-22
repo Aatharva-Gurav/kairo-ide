@@ -14,6 +14,8 @@ export const DEFAULT_KEYBINDINGS: Keybinding[] = [
   { commandId: "editor.save", key: "ctrl+s", macKey: "cmd+s" },
   { commandId: "editor.saveAll", key: "ctrl+shift+s", macKey: "cmd+shift+s" },
   { commandId: "editor.close", key: "ctrl+w", macKey: "cmd+w" },
+  { commandId: "editor.find", key: "ctrl+f", macKey: "cmd+f" },
+  { commandId: "editor.replace", key: "ctrl+h", macKey: "cmd+h" },
   { commandId: "editor.goToLine", key: "ctrl+g", macKey: "cmd+g" },
   { commandId: "editor.formatDocument", key: "shift+alt+f", macKey: "shift+alt+f" },
   { commandId: "search.findInWorkspace", key: "ctrl+shift+f", macKey: "cmd+shift+f" },
@@ -24,6 +26,22 @@ export const DEFAULT_KEYBINDINGS: Keybinding[] = [
   { commandId: "editor.zoomOut", key: "ctrl+-", macKey: "cmd+-" },
   { commandId: "editor.zoomReset", key: "ctrl+0", macKey: "cmd+0" },
 ];
+
+/**
+ * Splits key combinations by '+' while properly preserving literal '+' key as the last token.
+ * E.g. "ctrl+shift++" -> ["ctrl", "shift", "+"]
+ */
+export function splitKeyTokens(rawKey: string): string[] {
+  if (!rawKey) return [];
+  const trimmed = rawKey.trim();
+  if (trimmed.endsWith("++")) {
+    const prefix = trimmed.slice(0, -2);
+    const parts = prefix.split("+").map((s) => s.trim()).filter(Boolean);
+    parts.push("+");
+    return parts;
+  }
+  return trimmed.split("+").map((s) => s.trim()).filter(Boolean);
+}
 
 function getStorage(): Storage | null {
   return getSafeLocalStorage();
@@ -37,6 +55,24 @@ export class KeybindingService {
     if (this.isInitialized) return;
     this.customKeybindings = this.loadStoredCustomKeybindings();
     this.isInitialized = true;
+  }
+
+  /**
+   * Checks whether a token is purely a modifier key.
+   */
+  static isModifierKey(key: string): boolean {
+    if (!key) return false;
+    const lower = key.toLowerCase();
+    return ["ctrl", "cmd", "command", "alt", "option", "shift", "control", "meta"].includes(lower);
+  }
+
+  /**
+   * Checks whether a key combination contains at least one non-modifier key.
+   */
+  static hasNonModifierKey(rawKey: string): boolean {
+    if (!rawKey) return false;
+    const tokens = splitKeyTokens(rawKey);
+    return tokens.some((t) => !this.isModifierKey(t));
   }
 
   /**
@@ -132,11 +168,7 @@ export class KeybindingService {
    * Normalizes a user-specified string into canonical format (e.g. "Ctrl + Shift + S" -> "ctrl+shift+s").
    */
   static normalizeKeyString(raw: string): string {
-    const tokens = raw
-      .toLowerCase()
-      .split("+")
-      .map((s) => s.trim())
-      .filter(Boolean);
+    const tokens = splitKeyTokens(raw.toLowerCase());
 
     const isMac = this.isMacOS();
     const parts: string[] = [];
@@ -188,12 +220,15 @@ export class KeybindingService {
   static getCommandIdForKeybinding(rawKey: string): string | null {
     this.ensureInit();
     const isMac = this.isMacOS();
-    const normalizedInput = rawKey.toLowerCase();
+    const normalizedInput = rawKey.toLowerCase().replace(/^cmd\+/, "ctrl+");
 
     // 1. Check custom overrides
     for (const [cmdId, key] of Object.entries(this.customKeybindings)) {
-      if (key && key.toLowerCase() === normalizedInput) {
-        return cmdId;
+      if (key) {
+        const normalizedCustom = key.toLowerCase().replace(/^cmd\+/, "ctrl+");
+        if (normalizedCustom === normalizedInput) {
+          return cmdId;
+        }
       }
     }
 
@@ -207,9 +242,8 @@ export class KeybindingService {
       const activeKey = (isMac && def.macKey ? def.macKey : def.key).toLowerCase();
       // Handle "ctrl" matching "cmd" on mac
       const normalizedDef = activeKey.replace(/^cmd\+/, "ctrl+");
-      const normalizedTarget = normalizedInput.replace(/^cmd\+/, "ctrl+");
 
-      if (normalizedDef === normalizedTarget) {
+      if (normalizedDef === normalizedInput) {
         return def.commandId;
       }
     }
@@ -278,14 +312,19 @@ export class KeybindingService {
     if (!rawKey) return "";
     const isMac = this.isMacOS();
 
-    return rawKey
-      .split("+")
+    return splitKeyTokens(rawKey)
       .map((part) => {
         const lower = part.toLowerCase();
         if (lower === "ctrl" || lower === "cmd") return isMac ? "⌘" : "Ctrl";
+        if (lower === "control") return isMac ? "⌃" : "Ctrl";
         if (lower === "shift") return isMac ? "⇧" : "Shift";
-        if (lower === "alt") return isMac ? "⌥" : "Alt";
+        if (lower === "alt" || lower === "option") return isMac ? "⌥" : "Alt";
         if (lower === "esc") return "Esc";
+        if (lower === "space") return "Space";
+        if (lower === "up") return "Up";
+        if (lower === "down") return "Down";
+        if (lower === "left") return "Left";
+        if (lower === "right") return "Right";
         if (lower.length === 1) return lower.toUpperCase();
         return lower.charAt(0).toUpperCase() + lower.slice(1);
       })

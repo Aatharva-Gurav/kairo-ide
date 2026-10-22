@@ -28,14 +28,15 @@ export function resolveIcon(
   options: IconResolveOptions,
   theme: IconTheme = defaultTheme
 ): IconDefinition {
-  const { name, isDirectory = false, isExpanded = false } = options;
+  const currentTheme = theme || defaultTheme;
+  const { name, isDirectory = false, isExpanded = false } = options || {};
 
-  if (!name) {
+  if (!name || typeof name !== "string") {
     return isDirectory
       ? isExpanded
-        ? theme.defaultFolderExpanded
-        : theme.defaultFolder
-      : theme.defaultFile;
+        ? currentTheme.defaultFolderExpanded
+        : currentTheme.defaultFolder
+      : currentTheme.defaultFile;
   }
 
   // Extract base name in case a full or relative path was passed
@@ -43,10 +44,15 @@ export function resolveIcon(
   const lowerName = baseName.toLowerCase();
 
   // Cache lookup
-  const cacheKey = `${theme.id}:${isDirectory ? "dir" : "file"}:${isExpanded ? "open" : "closed"}:${lowerName}`;
+  const cacheKey = `${currentTheme.id}:${isDirectory ? "dir" : "file"}:${isExpanded ? "open" : "closed"}:${lowerName}`;
   const cached = iconResolutionCache.get(cacheKey);
   if (cached) {
     return cached;
+  }
+
+  // Keep cache bounded to prevent memory leaks in large workspaces
+  if (iconResolutionCache.size > 2000) {
+    iconResolutionCache.clear();
   }
 
   let resolved: IconDefinition;
@@ -54,23 +60,24 @@ export function resolveIcon(
   if (isDirectory) {
     if (isExpanded) {
       resolved =
-        theme.folderExpandedNames[lowerName] ??
-        theme.folderNames[lowerName] ??
-        theme.defaultFolderExpanded;
+        currentTheme.folderExpandedNames?.[lowerName] ??
+        currentTheme.folderNames?.[lowerName] ??
+        currentTheme.defaultFolderExpanded;
     } else {
       resolved =
-        theme.folderNames[lowerName] ??
-        theme.defaultFolder;
+        currentTheme.folderNames?.[lowerName] ??
+        currentTheme.defaultFolder;
     }
   } else {
     // 1. Exact filename match
-    if (theme.exactFiles[lowerName]) {
-      resolved = theme.exactFiles[lowerName];
+    if (currentTheme.exactFiles?.[lowerName]) {
+      resolved = currentTheme.exactFiles[lowerName];
     } else {
       // 2. Pattern matching
       let patternMatch: IconDefinition | undefined;
-      for (const rule of theme.filePatterns) {
-        if (rule.pattern.test(lowerName)) {
+      const patterns = currentTheme.filePatterns || [];
+      for (const rule of patterns) {
+        if (rule?.pattern && rule.pattern.test(lowerName)) {
           patternMatch = rule.icon;
           break;
         }
@@ -86,15 +93,15 @@ export function resolveIcon(
         if (parts.length > 2) {
           // Check multi-part extension first (e.g., "d.ts")
           const multiExt = parts.slice(-2).join(".");
-          extMatch = theme.fileExtensions[multiExt];
+          extMatch = currentTheme.fileExtensions?.[multiExt];
         }
 
         if (!extMatch && parts.length > 1) {
           const singleExt = parts[parts.length - 1];
-          extMatch = theme.fileExtensions[singleExt];
+          extMatch = currentTheme.fileExtensions?.[singleExt];
         }
 
-        resolved = extMatch ?? theme.defaultFile;
+        resolved = extMatch ?? currentTheme.defaultFile;
       }
     }
   }
@@ -102,4 +109,3 @@ export function resolveIcon(
   iconResolutionCache.set(cacheKey, resolved);
   return resolved;
 }
-

@@ -34,6 +34,16 @@ export class SearchService {
       return [];
     }
 
+    if (options.isRegex) {
+      try {
+        new RegExp(query);
+      } catch (err) {
+        throw new Error(
+          `Invalid regular expression: ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
+    }
+
     const includePatterns = this.parsePatterns(options.includePattern);
     const excludePatterns = this.parsePatterns(options.excludePattern);
 
@@ -77,7 +87,19 @@ export class SearchService {
   static async replaceAll(
     replacements: FileReplacementPayload[]
   ): Promise<ReplaceSummary> {
-    return await replaceInWorkspaceFiles(replacements);
+    if (!replacements || replacements.length === 0) {
+      return { filesModified: 0, occurrencesReplaced: 0 };
+    }
+    // Sort replacements bottom-to-top (descending line), then right-to-left (descending column)
+    const sorted = [...replacements].sort((a, b) => {
+      if (a.filePath !== b.filePath) {
+        return a.filePath.localeCompare(b.filePath);
+      }
+      if (a.lineNumber !== b.lineNumber) {
+        return b.lineNumber - a.lineNumber;
+      }
+      return b.column - a.column;
+    });
+    return await replaceInWorkspaceFiles(sorted);
   }
 }
-

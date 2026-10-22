@@ -3,6 +3,7 @@
 import React from "react";
 import { useIconTheme } from "../context";
 import { resolveIcon } from "../resolver";
+import { defaultTheme } from "../themes";
 import { cn } from "@/lib/utils";
 
 export interface FileIconProps {
@@ -23,9 +24,10 @@ export function FileIcon({
   style,
 }: FileIconProps) {
   const iconThemeContext = useIconTheme();
-  const iconDef = iconThemeContext
-    ? iconThemeContext.resolveIcon({ name, isDirectory, isExpanded })
-    : resolveIcon({ name, isDirectory, isExpanded });
+  const iconDef =
+    (iconThemeContext
+      ? iconThemeContext.resolveIcon({ name, isDirectory, isExpanded })
+      : resolveIcon({ name, isDirectory, isExpanded })) || defaultTheme.defaultFile;
 
   let resolvedClass = className;
   if (isDirectory) {
@@ -49,9 +51,12 @@ export function FileIcon({
     }
   }
 
+  const renderFn =
+    typeof iconDef?.render === "function" ? iconDef.render : defaultTheme.defaultFile.render;
+
   return (
     <>
-      {iconDef.render({
+      {renderFn({
         className: cn(
           "shrink-0 inline-block align-middle transition-opacity duration-100",
           resolvedClass
@@ -60,12 +65,11 @@ export function FileIcon({
           title ??
           (isDirectory
             ? isExpanded
-              ? `${name} (Open folder)`
-              : `${name} (Folder)`
-            : name),
+              ? `${name || "Folder"} (Open folder)`
+              : `${name || "Folder"} (Folder)`
+            : name || "File"),
         style,
       })}
     </>
   );
 }
-

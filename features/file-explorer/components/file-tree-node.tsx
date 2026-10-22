@@ -80,6 +80,14 @@ export function FileTreeNode({
     }
   }, [isRenaming, node.name, isDirectory]);
 
+  useEffect(() => {
+    return () => {
+      if (hoverTimerRef.current) {
+        clearTimeout(hoverTimerRef.current);
+      }
+    };
+  }, []);
+
   // Drag & Drop
   const handleDragStart = (e: React.DragEvent) => {
     e.stopPropagation();

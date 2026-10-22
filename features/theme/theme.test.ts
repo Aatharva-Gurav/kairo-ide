@@ -102,14 +102,17 @@ describe("Theme System & Registry", () => {
       expect(migrateLegacyTheme("monokai")).toBe("forest-dark");
     });
 
-    it("preserves modern theme IDs", () => {
+    it("preserves modern theme IDs and handles case variations", () => {
       expect(migrateLegacyTheme("dark-modern")).toBe("dark-modern");
-      expect(migrateLegacyTheme("dark-plus")).toBe("dark-plus");
+      expect(migrateLegacyTheme("Dark-Modern")).toBe("dark-modern");
+      expect(migrateLegacyTheme("DARK-PLUS")).toBe("dark-plus");
       expect(migrateLegacyTheme("hc-dark")).toBe("hc-dark");
       expect(migrateLegacyTheme("arctic-blue")).toBe("arctic-blue");
       expect(migrateLegacyTheme("warm-sand")).toBe("warm-sand");
       expect(migrateLegacyTheme("mint-light")).toBe("mint-light");
       expect(migrateLegacyTheme("system")).toBe("system");
+      expect(migrateLegacyTheme("SYSTEM")).toBe("system");
+      expect(migrateLegacyTheme("Dracula")).toBe("midnight-blue");
     });
 
     it("safely handles null, undefined, and corrupt strings", () => {

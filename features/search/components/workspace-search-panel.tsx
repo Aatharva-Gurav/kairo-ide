@@ -44,19 +44,29 @@ export function WorkspaceSearchPanel() {
 
   const [showFilters, setShowFilters] = useState(false);
 
-  // Debounced search when options or query change
+  // Debounced search when options or query change; clears results when query is empty
   useEffect(() => {
     if (!query.trim()) {
+      clearSearch();
       return;
     }
     const timer = setTimeout(() => {
       performSearch();
     }, 250);
     return () => clearTimeout(timer);
-  }, [query, options, performSearch]);
+  }, [query, options, performSearch, clearSearch]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
+    if (e.altKey && e.key.toLowerCase() === "c") {
+      e.preventDefault();
+      updateOption("isCaseSensitive", !options.isCaseSensitive);
+    } else if (e.altKey && e.key.toLowerCase() === "w") {
+      e.preventDefault();
+      updateOption("isWholeWord", !options.isWholeWord);
+    } else if (e.altKey && e.key.toLowerCase() === "r") {
+      e.preventDefault();
+      updateOption("isRegex", !options.isRegex);
+    } else if (e.key === "Enter") {
       e.preventDefault();
       performSearch();
     }
@@ -195,6 +205,12 @@ export function WorkspaceSearchPanel() {
               type="text"
               value={replaceQuery}
               onChange={(e) => setReplaceQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && totalMatches > 0 && !isReplacing) {
+                  e.preventDefault();
+                  requestReplaceAll();
+                }
+              }}
               placeholder="Replace..."
               className="h-6.5 flex-1 min-w-0 rounded border border-sidebar-border/80 bg-background/50 px-2 text-xs text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-sidebar-ring focus:ring-1 focus:ring-sidebar-ring font-sans transition-colors"
             />

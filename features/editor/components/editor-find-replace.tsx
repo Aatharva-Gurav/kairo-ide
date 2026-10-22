@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { normalizePath } from "@/lib/tauri-ipc";
+import { getSafeLocalStorage } from "@/lib/storage";
 
 import { useEditor } from "../store";
 
@@ -88,7 +89,8 @@ export function EditorFindReplace({
       let targetX = maxX - 20; // default top-right
       let targetY = 12;
 
-      const saved = typeof window !== "undefined" ? window.localStorage.getItem(STORAGE_KEY) : null;
+      const storage = getSafeLocalStorage();
+      const saved = storage ? storage.getItem(STORAGE_KEY) : null;
       if (saved) {
         try {
           const parsed = JSON.parse(saved);

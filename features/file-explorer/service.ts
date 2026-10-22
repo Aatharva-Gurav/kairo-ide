@@ -269,7 +269,7 @@ export class FileExplorerService {
       throw new Error("Cannot copy a directory into itself or one of its subdirectories.");
     }
 
-    const srcName = normSrc.split("/").pop() || "item";
+    const srcName = basename(normSrc) || "item";
     const destPath = joinPath(normDestDir, srcName);
 
     await invokeCommand<void>("fs_copy", {
@@ -346,7 +346,7 @@ export class FileExplorerService {
       throw new Error("Cannot move a directory into itself or one of its subdirectories.");
     }
 
-    const srcName = normSrc.split("/").pop() || "item";
+    const srcName = basename(normSrc) || "item";
     const destPath = joinPath(normDestDir, srcName);
 
     if (normSrc.toLowerCase() === destPath.toLowerCase()) {

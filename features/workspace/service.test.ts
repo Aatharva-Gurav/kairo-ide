@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { WorkspaceService, MAX_RECENT_PROJECTS, STORAGE_KEYS } from "./service";
+import type { Workspace } from "./types";
 
 // Simple in-memory localStorage polyfill for testing
 const localStorageMock = (() => {
@@ -57,6 +58,17 @@ describe("WorkspaceService", () => {
     recents = WorkspaceService.getRecentWorkspaces();
     expect(recents.length).toBe(2);
     expect(recents[0].name).toBe("ProjectA");
+  });
+
+  it("deduplicates recent workspaces across Windows backslashes and forward slashes case-insensitively", () => {
+    const ws1 = WorkspaceService.createWorkspace("C:\\Projects\\MyApp");
+    const ws2 = WorkspaceService.createWorkspace("c:/projects/myapp");
+
+    WorkspaceService.addRecentWorkspace(ws1);
+    WorkspaceService.addRecentWorkspace(ws2);
+
+    const recents = WorkspaceService.getRecentWorkspaces();
+    expect(recents.length).toBe(1);
   });
 
   it("enforces MAX_RECENT_PROJECTS limit", () => {
@@ -123,5 +135,17 @@ describe("WorkspaceService", () => {
     expect(loaded?.sortMode).toBe("type-based");
     expect(loaded?.showHidden).toBe(true);
   });
-});
 
+  it("safely handles empty or invalid paths in validatePath and detectProjectCharacteristics", async () => {
+    expect(await WorkspaceService.validatePath("")).toBe(false);
+    expect(await WorkspaceService.validatePath("   ")).toBe(false);
+    expect(await WorkspaceService.detectProjectCharacteristics("")).toEqual([]);
+    expect(await WorkspaceService.detectProjectCharacteristics("   ")).toEqual([]);
+  });
+
+  it("safely handles invalid inputs in addRecentWorkspace and removeRecentWorkspace", () => {
+    expect(WorkspaceService.addRecentWorkspace(null as unknown as Workspace)).toEqual([]);
+    expect(WorkspaceService.removeRecentWorkspace("")).toEqual([]);
+    expect(WorkspaceService.getWorkspaceState("")).toBeNull();
+  });
+});

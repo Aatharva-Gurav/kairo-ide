@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Command, KeybindingConflict } from "../types";
 import { KeybindingService } from "../keybinding.service";
 import { Button } from "@/components/ui/button";
@@ -30,53 +30,76 @@ function ShortcutRecorderContent({
   const [conflict, setConflict] = useState<KeybindingConflict | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const isComplete = KeybindingService.hasNonModifierKey(recordedRawKey);
+
+  const handleSave = useCallback(() => {
+    if (!recordedRawKey || !KeybindingService.hasNonModifierKey(recordedRawKey)) return;
+    KeybindingService.setKeybinding(command.id, recordedRawKey);
+    onSaved();
+    onClose();
+  }, [command.id, recordedRawKey, onSaved, onClose]);
+
+  const handleClear = useCallback(() => {
+    KeybindingService.clearKeybinding(command.id);
+    onSaved();
+    onClose();
+  }, [command.id, onSaved, onClose]);
+
+  const handleReset = useCallback(() => {
+    KeybindingService.resetKeybinding(command.id);
+    onSaved();
+    onClose();
+  }, [command.id, onSaved, onClose]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Allow Escape to close modal if no keys are being held
-      if (e.key === "Escape" && !recordedRawKey) {
+      // Escape cancels and closes the modal
+      if (e.key === "Escape") {
         e.preventDefault();
+        e.stopPropagation();
         onClose();
         return;
+      }
+
+      // Enter saves the shortcut if complete
+      if (
+        e.key === "Enter" &&
+        !e.ctrlKey &&
+        !e.metaKey &&
+        !e.altKey &&
+        !e.shiftKey
+      ) {
+        if (recordedRawKey && KeybindingService.hasNonModifierKey(recordedRawKey)) {
+          e.preventDefault();
+          e.stopPropagation();
+          handleSave();
+          return;
+        }
       }
 
       e.preventDefault();
       e.stopPropagation();
 
       const normalized = KeybindingService.normalizeKeyboardEvent(e);
-      if (!normalized || ["ctrl", "alt", "shift", "control", "meta"].includes(normalized)) {
+      if (!normalized) {
         return;
       }
 
       setRecordedRawKey(normalized);
       setDisplayKey(KeybindingService.formatDisplay(normalized));
 
-      // Check conflict
-      const foundConflict = KeybindingService.findConflict(normalized, command.id);
-      setConflict(foundConflict);
+      // Check conflict only if key has non-modifier
+      if (KeybindingService.hasNonModifierKey(normalized)) {
+        const foundConflict = KeybindingService.findConflict(normalized, command.id);
+        setConflict(foundConflict);
+      } else {
+        setConflict(null);
+      }
     };
 
     window.addEventListener("keydown", handleKeyDown, true);
     return () => window.removeEventListener("keydown", handleKeyDown, true);
-  }, [command, recordedRawKey, onClose]);
-
-  const handleSave = () => {
-    if (!recordedRawKey) return;
-    KeybindingService.setKeybinding(command.id, recordedRawKey);
-    onSaved();
-    onClose();
-  };
-
-  const handleClear = () => {
-    KeybindingService.clearKeybinding(command.id);
-    onSaved();
-    onClose();
-  };
-
-  const handleReset = () => {
-    KeybindingService.resetKeybinding(command.id);
-    onSaved();
-    onClose();
-  };
+  }, [command.id, recordedRawKey, onClose, handleSave]);
 
   return (
     <div
@@ -159,7 +182,7 @@ function ShortcutRecorderContent({
             <Button
               size="sm"
               onClick={handleSave}
-              disabled={!recordedRawKey}
+              disabled={!recordedRawKey || !isComplete}
               className="rounded-xl cursor-pointer shadow-xs font-medium"
             >
               {conflict ? "Replace & Save" : "Save Shortcut"}

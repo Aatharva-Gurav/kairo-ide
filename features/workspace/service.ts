@@ -32,6 +32,9 @@ export class WorkspaceService {
    * Validates if a directory path exists and is accessible.
    */
   static async validatePath(pathStr: string): Promise<boolean> {
+    if (!pathStr || typeof pathStr !== "string" || !pathStr.trim()) {
+      return false;
+    }
     try {
       return await invokeCommand<boolean>("workspace_validate_path", {
         path: normalizePath(pathStr),
@@ -46,6 +49,9 @@ export class WorkspaceService {
    * Detects project characteristics (e.g. Node.js, TypeScript, Rust, Python, etc.)
    */
   static async detectProjectCharacteristics(rootPath: string): Promise<string[]> {
+    if (!rootPath || typeof rootPath !== "string" || !rootPath.trim()) {
+      return [];
+    }
     try {
       const types = await invokeCommand<string[]>("workspace_detect_project", {
         rootPath: normalizePath(rootPath),
@@ -60,8 +66,8 @@ export class WorkspaceService {
    * Creates a workspace model from a root directory path (multi-root ready).
    */
   static createWorkspace(rootPath: string, projectTypes?: string[]): Workspace {
-    const norm = normalizePath(rootPath);
-    const name = basename(norm) || norm;
+    const norm = normalizePath(rootPath || "");
+    const name = basename(norm) || norm || "Untitled";
     const id = `ws_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
     const rootId = `root_${Date.now().toString(36)}_0`;
 
@@ -126,11 +132,14 @@ export class WorkspaceService {
    * Adds or updates a workspace in the recent projects list.
    */
   static addRecentWorkspace(workspace: Workspace): RecentWorkspace[] {
+    if (!workspace || !workspace.rootPath) {
+      return this.getRecentWorkspaces();
+    }
     const existing = this.getRecentWorkspaces();
     const normPath = normalizePath(workspace.rootPath).toLowerCase();
 
     const filtered = (existing || []).filter(
-      (item) => item && normalizePath(item.rootPath).toLowerCase() !== normPath
+      (item) => item && item.rootPath && normalizePath(item.rootPath).toLowerCase() !== normPath
     );
 
     const newRecent: RecentWorkspace = {
@@ -152,10 +161,13 @@ export class WorkspaceService {
    * Removes a recent workspace from the list.
    */
   static removeRecentWorkspace(rootPath: string): RecentWorkspace[] {
+    if (!rootPath || typeof rootPath !== "string") {
+      return this.getRecentWorkspaces();
+    }
     const existing = this.getRecentWorkspaces();
     const normTarget = normalizePath(rootPath).toLowerCase();
     const updated = (existing || []).filter(
-      (item) => item && normalizePath(item.rootPath).toLowerCase() !== normTarget
+      (item) => item && item.rootPath && normalizePath(item.rootPath).toLowerCase() !== normTarget
     );
     this.saveRecentWorkspaces(updated);
     return updated;
@@ -210,7 +222,9 @@ export class WorkspaceService {
         const recents = this.getRecentWorkspaces();
         const normTarget = normalizePath(parsed.rootPath).toLowerCase();
         const updated = recents.map((item) =>
-          normalizePath(item.rootPath).toLowerCase() === normTarget ? { ...item, exists: false } : item
+          item && item.rootPath && normalizePath(item.rootPath).toLowerCase() === normTarget
+            ? { ...item, exists: false }
+            : item
         );
         this.saveRecentWorkspaces(updated);
         return null;
@@ -226,6 +240,7 @@ export class WorkspaceService {
    * Persists explorer state specific to this workspace.
    */
   static saveWorkspaceState(workspacePath: string, state: PersistedWorkspaceExplorerState): void {
+    if (!workspacePath || typeof workspacePath !== "string") return;
     const storage = getStorage();
     if (!storage) return;
     try {
@@ -240,6 +255,7 @@ export class WorkspaceService {
    * Loads explorer state specific to this workspace.
    */
   static getWorkspaceState(workspacePath: string): PersistedWorkspaceExplorerState | null {
+    if (!workspacePath || typeof workspacePath !== "string") return null;
     const storage = getStorage();
     if (!storage) return null;
     try {

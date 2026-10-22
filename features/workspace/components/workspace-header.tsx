@@ -11,7 +11,8 @@ export interface WorkspaceHeaderProps {
   onCollapseAll?: () => void;
 }
 
-export function WorkspaceHeader({}: WorkspaceHeaderProps = {}) {
+export function WorkspaceHeader(props: WorkspaceHeaderProps = {}) {
+  void props;
   const { activeWorkspace, closeWorkspace } = useWorkspace();
 
   if (!activeWorkspace) return null;

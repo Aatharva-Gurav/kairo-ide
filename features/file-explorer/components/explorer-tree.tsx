@@ -78,15 +78,17 @@ export function ExplorerTree({ onOpenContextMenu }: ExplorerTreeProps) {
     }
 
     const sourcePath = e.dataTransfer.getData("text/plain");
-    if (!sourcePath || sourcePath === activeWorkspace.rootPath) return;
+    const normSource = sourcePath ? normalizePath(sourcePath) : "";
+    const normRoot = normalizePath(activeWorkspace.rootPath);
+    if (!normSource || normSource.toLowerCase() === normRoot.toLowerCase()) return;
 
     // Already directly under root
-    if (dirname(sourcePath) === activeWorkspace.rootPath) {
+    if (dirname(normSource).toLowerCase() === normRoot.toLowerCase()) {
       return;
     }
 
     // Cannot drop parent into its own child
-    if (isDescendant(sourcePath, activeWorkspace.rootPath)) {
+    if (isDescendant(normSource, normRoot)) {
       return;
     }
 

@@ -64,7 +64,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   // Sync workspace path changes to SettingsService
   useEffect(() => {
     SettingsService.setWorkspaceRootPath(activeWorkspace?.rootPath || null);
-  }, [activeWorkspace]);
+  }, [activeWorkspace?.rootPath]);
 
   // Subscribe to settings changes from the central service
   useEffect(() => {

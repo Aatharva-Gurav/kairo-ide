@@ -177,4 +177,24 @@ describe("SettingsService", () => {
     SettingsService.updateSetting("appearance.theme", "tokyo-night", "user");
     expect(SettingsService.getSetting<string>("appearance.theme")).toBe("midnight-blue");
   });
+
+  it("safely handles invalid keypaths in getSetting without throwing", () => {
+    expect(SettingsService.getSetting("invalidKey")).toBeUndefined();
+    expect(SettingsService.getSetting("too.many.nested.parts")).toBeUndefined();
+  });
+
+  it("sanitizes numeric strings into numbers for numeric settings", () => {
+    SettingsService.updateSetting("editor.fontSize", "18" as unknown as number, "user");
+    expect(SettingsService.getSetting<number>("editor.fontSize")).toBe(18);
+  });
+
+  it("normalizes workspace paths across slashes and casing for settings persistence", () => {
+    SettingsService.setWorkspaceRootPath("C:\\Projects\\MyApp");
+    SettingsService.updateSetting("editor.tabSize", 4, "workspace");
+    expect(SettingsService.getSetting<number>("editor.tabSize")).toBe(4);
+
+    // Switch to same path formatted with forward slashes and lowercase
+    SettingsService.setWorkspaceRootPath("c:/projects/myapp");
+    expect(SettingsService.getSetting<number>("editor.tabSize")).toBe(4);
+  });
 });

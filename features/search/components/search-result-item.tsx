@@ -11,13 +11,14 @@ interface SearchResultItemProps {
 export function SearchResultItem({ match }: SearchResultItemProps) {
   const { navigateToMatch } = useSearch();
 
-  // Extract preview around the match
-  const colIdx = match.column - 1;
-  const matchLen = match.matchLength;
+  // Extract preview around the match safely
+  const lineContent = match.lineContent || "";
+  const colIdx = Math.max(0, (match.column || 1) - 1);
+  const matchLen = Math.max(0, match.matchLength || 0);
 
-  const before = match.lineContent.slice(0, colIdx).trimStart();
-  const matchedText = match.lineContent.slice(colIdx, colIdx + matchLen);
-  const after = match.lineContent.slice(colIdx + matchLen);
+  const before = lineContent.slice(0, colIdx).trimStart();
+  const matchedText = lineContent.slice(colIdx, colIdx + matchLen);
+  const after = lineContent.slice(colIdx + matchLen);
 
   return (
     <div

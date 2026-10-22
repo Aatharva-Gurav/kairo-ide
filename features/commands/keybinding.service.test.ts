@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { KeybindingService, KEYBINDINGS_STORAGE_KEY } from "./keybinding.service";
+import { describe, it, expect, beforeEach } from "vitest";
+import { KeybindingService, KEYBINDINGS_STORAGE_KEY, splitKeyTokens } from "./keybinding.service";
 import { CommandRegistry } from "./command-registry";
 
 // In-memory storage mock
@@ -27,20 +27,40 @@ describe("KeybindingService", () => {
       id: "editor.save",
       title: "Save",
       category: "editor",
-      execute: vi.fn(),
+      execute: () => {},
     });
     CommandRegistry.register({
       id: "editor.formatDocument",
       title: "Format Document",
       category: "editor",
-      execute: vi.fn(),
+      execute: () => {},
+    });
+    CommandRegistry.register({
+      id: "editor.find",
+      title: "Find in Current File",
+      category: "editor",
+      execute: () => {},
+    });
+    CommandRegistry.register({
+      id: "editor.replace",
+      title: "Replace in Current File",
+      category: "editor",
+      execute: () => {},
     });
   });
 
-  it("resolves default keybinding for standard commands", () => {
-    const rawKey = KeybindingService.getRawKeybindingForCommand("editor.save");
-    expect(rawKey).toBe("ctrl+s");
-    expect(KeybindingService.formatDisplay(rawKey)).toBe("Ctrl+S");
+  it("resolves default keybinding for standard commands including find and replace", () => {
+    const rawSave = KeybindingService.getRawKeybindingForCommand("editor.save");
+    expect(rawSave).toBe("ctrl+s");
+    expect(KeybindingService.formatDisplay(rawSave)).toBe("Ctrl+S");
+
+    const rawFind = KeybindingService.getRawKeybindingForCommand("editor.find");
+    expect(rawFind).toBe("ctrl+f");
+    expect(KeybindingService.formatDisplay(rawFind)).toBe("Ctrl+F");
+
+    const rawReplace = KeybindingService.getRawKeybindingForCommand("editor.replace");
+    expect(rawReplace).toBe("ctrl+h");
+    expect(KeybindingService.formatDisplay(rawReplace)).toBe("Ctrl+H");
   });
 
   it("looks up command ID from normalized key combination", () => {
@@ -102,6 +122,23 @@ describe("KeybindingService", () => {
     expect(KeybindingService.formatDisplay(null)).toBe("");
   });
 
+  it("handles shortcuts ending with '+' key correctly using splitKeyTokens", () => {
+    expect(splitKeyTokens("ctrl++")).toEqual(["ctrl", "+"]);
+    expect(splitKeyTokens("ctrl+shift++")).toEqual(["ctrl", "shift", "+"]);
+    expect(splitKeyTokens("ctrl+s")).toEqual(["ctrl", "s"]);
+    expect(KeybindingService.formatDisplay("ctrl++")).toBe("Ctrl++");
+  });
+
+  it("correctly checks modifier keys and complete shortcuts", () => {
+    expect(KeybindingService.isModifierKey("ctrl")).toBe(true);
+    expect(KeybindingService.isModifierKey("shift")).toBe(true);
+    expect(KeybindingService.isModifierKey("s")).toBe(false);
+
+    expect(KeybindingService.hasNonModifierKey("ctrl+shift")).toBe(false);
+    expect(KeybindingService.hasNonModifierKey("ctrl+shift+s")).toBe(true);
+    expect(KeybindingService.hasNonModifierKey("f12")).toBe(true);
+  });
+
   it("detects desktop workstation OS correctly and ignores iOS/mobile", () => {
     // Test Windows platform
     const originalNavigator = global.navigator;
@@ -147,4 +184,3 @@ describe("KeybindingService", () => {
     });
   });
 });
-

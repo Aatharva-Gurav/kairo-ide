@@ -57,7 +57,7 @@ export function BinaryFileView({ document }: BinaryFileViewProps) {
   }, [document.path]);
 
   let mediaSrc = "";
-  if (isAudio || isVideo) {
+  if (isAudio || isVideo || isImage) {
     try {
       mediaSrc = convertFileSrc(document.path);
     } catch {
@@ -153,6 +153,48 @@ export function BinaryFileView({ document }: BinaryFileViewProps) {
           >
             Your browser does not support the video tag.
           </video>
+        </div>
+      </div>
+    );
+  }
+
+  // 2b. IMAGE VIEWER
+  if (isImage) {
+    return (
+      <div className="flex flex-1 flex-col h-full w-full bg-background select-none overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-2 border-b border-border/70 bg-card/40 backdrop-blur-xs text-xs z-10 shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-[11px] text-muted-foreground uppercase px-2 py-0.5 rounded bg-muted/50 border border-border/50 font-semibold">
+              {ext || "IMAGE"}
+            </span>
+            <span className="font-medium text-foreground truncate max-w-[240px]">
+              {document.title}
+            </span>
+            {metadata?.size !== undefined && (
+              <span className="text-muted-foreground/70 font-mono text-[11px]">
+                ({formatBytes(metadata.size)})
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button size="xs" variant="outline" onClick={handleCopyPath} className="cursor-pointer gap-1 text-[11px]">
+              {copied ? <Check className="size-3 text-green-500" /> : <Copy className="size-3" />}
+              {copied ? "Copied" : "Copy Path"}
+            </Button>
+            <Button size="xs" variant="outline" onClick={handleReveal} className="cursor-pointer gap-1 text-[11px]">
+              <Folder className="size-3" />
+              Reveal in File Manager
+            </Button>
+          </div>
+        </div>
+
+        <div className="flex flex-1 items-center justify-center p-6 bg-[radial-gradient(#80808020_1px,transparent_1px)] [background-size:16px_16px] overflow-auto">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={mediaSrc}
+            alt={document.title}
+            className="max-h-[80vh] max-w-full rounded-lg shadow-xl border border-border/60 object-contain"
+          />
         </div>
       </div>
     );

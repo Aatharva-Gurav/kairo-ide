@@ -13,11 +13,19 @@ export interface FuzzyScoreResult {
  * Higher score means better match. Score 0 or matches=false means no match.
  */
 export function fuzzyMatch(query: string, target: string): FuzzyScoreResult {
+  if (typeof query !== "string" || typeof target !== "string") {
+    return { score: 0, matches: false };
+  }
+
   const q = query.trim().toLowerCase();
   const t = target.toLowerCase();
 
   if (!q) {
     return { score: 1, matches: true };
+  }
+
+  if (!t) {
+    return { score: 0, matches: false };
   }
 
   // 1. Exact match
@@ -92,9 +100,13 @@ export function fuzzyMatch(query: string, target: string): FuzzyScoreResult {
 export function fuzzyFilter<T>(
   items: T[],
   query: string,
-  getText: (item: T) => string[]
+  getText: (item: T) => (string | undefined | null)[]
 ): T[] {
-  if (!query.trim()) {
+  if (!Array.isArray(items)) {
+    return [];
+  }
+
+  if (!query || !query.trim()) {
     return items;
   }
 
@@ -105,6 +117,7 @@ export function fuzzyFilter<T>(
     let bestScore = 0;
 
     for (const text of candidates) {
+      if (!text) continue;
       const { score, matches } = fuzzyMatch(query, text);
       if (matches && score > bestScore) {
         bestScore = score;
@@ -121,4 +134,3 @@ export function fuzzyFilter<T>(
 
   return scored.map((s) => s.item);
 }
-

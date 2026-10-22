@@ -555,7 +555,6 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
       if (!commandId) return;
 
       // Accelerators that should work even inside inputs:
-      // Ctrl+S, Ctrl+Shift+S, Ctrl+P, Ctrl+Shift+P, Ctrl+B, Ctrl+,
       const isGlobalAccelerator = [
         "workbench.openFile",
         "workbench.openFolder",
@@ -563,11 +562,33 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
         "workbench.quickOpen",
         "workbench.openSettings",
         "workbench.toggleSidebar",
+        "search.findInWorkspace",
         "editor.save",
         "editor.saveAll",
       ].includes(commandId);
 
-      if (isTextInput && !isGlobalAccelerator) {
+      const isMonacoEditor = Boolean(target?.closest?.(".monaco-editor"));
+      const isMonacoAccelerator =
+        isMonacoEditor &&
+        [
+          "editor.goToLine",
+          "editor.close",
+          "editor.closeAll",
+          "editor.closeOthers",
+          "editor.formatDocument",
+          "editor.find",
+          "editor.replace",
+          "workbench.action.splitEditor",
+          "workbench.action.splitEditorDown",
+          "workbench.action.toggleEditorLayout",
+          "workbench.action.swapEditorPanes",
+          "workbench.action.closeSplitEditor",
+          "editor.zoomIn",
+          "editor.zoomOut",
+          "editor.zoomReset",
+        ].includes(commandId);
+
+      if (isTextInput && !isGlobalAccelerator && !isMonacoAccelerator) {
         return;
       }
 

@@ -70,5 +70,58 @@ describe("SearchService", () => {
     expect(results).toEqual([]);
     expect(spy).not.toHaveBeenCalled();
   });
-});
 
+  it("validates regular expressions when regex option is enabled", async () => {
+    await expect(
+      SearchService.search("C:/projects/app", "[unclosed-class", {
+        isCaseSensitive: false,
+        isWholeWord: false,
+        isRegex: true,
+        includePattern: "",
+        excludePattern: "",
+      })
+    ).rejects.toThrow("Invalid regular expression");
+  });
+
+  it("sorts replacements descending bottom-to-top and right-to-left", async () => {
+    const spy = vi.spyOn(tauriIpc, "replaceInWorkspaceFiles").mockResolvedValueOnce({
+      filesModified: 1,
+      occurrencesReplaced: 2,
+    });
+
+    await SearchService.replaceAll([
+      {
+        filePath: "C:/app/file.ts",
+        lineNumber: 5,
+        column: 10,
+        matchLength: 3,
+        replacement: "abc",
+      },
+      {
+        filePath: "C:/app/file.ts",
+        lineNumber: 10,
+        column: 2,
+        matchLength: 3,
+        replacement: "abc",
+      },
+      {
+        filePath: "C:/app/file.ts",
+        lineNumber: 5,
+        column: 20,
+        matchLength: 3,
+        replacement: "abc",
+      },
+    ]);
+
+    expect(spy).toHaveBeenCalled();
+    const passed = spy.mock.calls[0][0];
+    // First should be line 10
+    expect(passed[0].lineNumber).toBe(10);
+    // Next should be line 5 column 20
+    expect(passed[1].lineNumber).toBe(5);
+    expect(passed[1].column).toBe(20);
+    // Next should be line 5 column 10
+    expect(passed[2].lineNumber).toBe(5);
+    expect(passed[2].column).toBe(10);
+  });
+});

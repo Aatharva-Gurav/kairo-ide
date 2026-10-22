@@ -111,8 +111,9 @@ export function QuickOpenModal({
       setSelectedIndex((prev) => Math.max(prev - 1, 0));
     } else if (e.key === "Enter") {
       e.preventDefault();
-      if (filteredFiles[selectedIndex]) {
-        openDocument(filteredFiles[selectedIndex].path);
+      const safeIndex = Math.min(selectedIndex, Math.max(0, filteredFiles.length - 1));
+      if (filteredFiles[safeIndex]) {
+        openDocument(filteredFiles[safeIndex].path);
         handleClose();
       }
     } else if (e.key === "Escape") {

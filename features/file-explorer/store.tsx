@@ -25,6 +25,7 @@ import { ideEvents } from "@/lib/events";
 import {
   dirname,
   normalizePath,
+  joinPath,
   relativePath,
   getFileExtension,
   copyToClipboard,
@@ -387,7 +388,7 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
 
       const savedState = WorkspaceService.getWorkspaceState(activeWorkspacePath);
       const restoredExpanded = savedState?.expandedPaths
-        ? new Set(savedState.expandedPaths)
+        ? new Set(savedState.expandedPaths.map((p) => normalizePath(p)))
         : new Set<string>();
       const restoredSortMode = (savedState?.sortMode as ExplorerSortMode) || "folders-first";
       const restoredShowHidden = savedState?.showHidden ?? false;
@@ -907,17 +908,29 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
 
           // Migrate expanded and selected paths to the new renamed path
           setExpandedPaths((prev) => {
-            if (!prev.has(targetNorm)) return prev;
-            const next = new Set(prev);
-            next.delete(targetNorm);
-            next.add(newPathNorm);
+            const next = new Set<string>();
+            for (const p of prev) {
+              if (p === targetNorm) {
+                next.add(newPathNorm);
+              } else if (p.startsWith(targetNorm + "/")) {
+                next.add(newPathNorm + p.slice(targetNorm.length));
+              } else {
+                next.add(p);
+              }
+            }
             return next;
           });
           setSelectedPaths((prev) => {
-            if (!prev.has(targetNorm)) return prev;
-            const next = new Set(prev);
-            next.delete(targetNorm);
-            next.add(newPathNorm);
+            const next = new Set<string>();
+            for (const p of prev) {
+              if (p === targetNorm) {
+                next.add(newPathNorm);
+              } else if (p.startsWith(targetNorm + "/")) {
+                next.add(newPathNorm + p.slice(targetNorm.length));
+              } else {
+                next.add(p);
+              }
+            }
             return next;
           });
 
@@ -1088,7 +1101,7 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
           for (const src of clipboard.sourceNodes) {
             ideEvents.emit("file:copied", {
               sourcePath: src.path,
-              destPath: `${targetNorm}/${src.name}`,
+              destPath: joinPath(targetNorm, src.name),
             });
           }
         } else if (clipboard.type === "cut") {

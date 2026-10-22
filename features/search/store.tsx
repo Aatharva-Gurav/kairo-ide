@@ -9,7 +9,7 @@ import React, {
   useRef,
   useEffect,
 } from "react";
-import { SearchOptions, FileSearchResult } from "./types";
+import { SearchOptions, FileSearchResult, DEFAULT_SEARCH_OPTIONS } from "./types";
 import { SearchService } from "./services/search.service";
 import { useWorkspace } from "@/features/workspace/store";
 import { ideEvents } from "@/lib/events";
@@ -57,14 +57,19 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
   const [replaceQuery, setReplaceQuery] = useState("");
   const [isReplaceOpen, setIsReplaceOpen] = useState(false);
   const [options, setOptions] = useState<SearchOptions>(() => {
-    const s = SettingsService.getEffectiveSettings().search;
-    return {
-      isCaseSensitive: s.isCaseSensitive,
-      isWholeWord: s.isWholeWord,
-      isRegex: s.isRegex,
-      includePattern: s.includePattern,
-      excludePattern: s.excludePattern,
-    };
+    try {
+      const s = SettingsService.getEffectiveSettings()?.search;
+      if (!s) return DEFAULT_SEARCH_OPTIONS;
+      return {
+        isCaseSensitive: Boolean(s.isCaseSensitive),
+        isWholeWord: Boolean(s.isWholeWord),
+        isRegex: Boolean(s.isRegex),
+        includePattern: s.includePattern || "",
+        excludePattern: s.excludePattern || "",
+      };
+    } catch {
+      return DEFAULT_SEARCH_OPTIONS;
+    }
   });
 
   const [results, setResults] = useState<FileSearchResult[]>([]);
@@ -88,6 +93,8 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     optionsRef.current = options;
   }, [options]);
+
+  const searchIdRef = useRef(0);
 
   const totalMatches = useMemo(() => {
     return results.reduce((sum, file) => sum + file.matches.length, 0);
@@ -135,6 +142,7 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      const searchId = ++searchIdRef.current;
       setIsSearching(true);
       setError(null);
 
@@ -144,14 +152,18 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
           targetQuery,
           optionsRef.current
         );
+        if (searchId !== searchIdRef.current) return;
         setResults(searchResults);
         // Expand all matching files by default
         setExpandedFiles(new Set(searchResults.map((r) => r.filePath)));
       } catch (err: unknown) {
+        if (searchId !== searchIdRef.current) return;
         const msg = err instanceof Error ? err.message : "Search failed.";
         setError(msg);
       } finally {
-        setIsSearching(false);
+        if (searchId === searchIdRef.current) {
+          setIsSearching(false);
+        }
       }
     },
     []
@@ -174,9 +186,9 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const requestReplaceAll = useCallback(() => {
-    if (totalMatches === 0) return;
+    if (totalMatches === 0 || isReplacing) return;
     setIsReplaceConfirmOpen(true);
-  }, [totalMatches]);
+  }, [totalMatches, isReplacing]);
 
   const cancelReplaceAll = useCallback(() => {
     setIsReplaceConfirmOpen(false);
