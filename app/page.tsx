@@ -40,10 +40,10 @@ function PageContent() {
         <EditorWorkspace />
       ) : (
         <div className="flex flex-1 items-center justify-center p-8 h-full w-full bg-background select-none">
-          <Empty className="max-w-sm w-full border-none bg-transparent gap-3 animate-in fade-in-50 zoom-in-95 duration-200">
+          <Empty className="max-w-sm w-full border-none bg-transparent gap-3 animate-in fade-in-50 zoom-in-[0.98] duration-220 ease-[cubic-bezier(0.16,1,0.3,1)]">
             <EmptyHeader className="max-w-sm flex flex-col items-center">
               <div className="animate-kairo-float mb-2.5">
-                <KairoBrandIcon size={54} className="rounded-2xl shadow-lg hover:scale-105 transition-transform duration-200" />
+                <KairoBrandIcon size={54} className="rounded-2xl shadow-lg hover:scale-105 transition-transform duration-220 ease-[cubic-bezier(0.16,1,0.3,1)]" />
               </div>
               <EmptyTitle className="text-base font-semibold tracking-tight text-foreground">Welcome to Kairo IDE</EmptyTitle>
               <EmptyDescription className="text-xs text-muted-foreground mt-1 leading-relaxed">
@@ -52,11 +52,11 @@ function PageContent() {
             </EmptyHeader>
             <EmptyContent className="mt-2 flex items-center justify-center gap-2.5">
               <Button onClick={handleOpenFile} variant="outline" className="w-36 justify-center cursor-pointer shadow-2xs font-medium interactive-hover" size="default">
-                <File className="size-4 mr-1.5 shrink-0 transition-transform duration-150 group-hover:scale-110" />
+                <File className="size-4 mr-1.5 shrink-0 transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110" />
                 Open File
               </Button>
               <Button onClick={() => openFolder()} className="w-36 justify-center cursor-pointer shadow-2xs font-medium interactive-hover" size="default">
-                <Folder className="size-4 mr-1.5 shrink-0 transition-transform duration-150 group-hover:scale-110" />
+                <Folder className="size-4 mr-1.5 shrink-0 transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110" />
                 Open Folder
               </Button>
             </EmptyContent>

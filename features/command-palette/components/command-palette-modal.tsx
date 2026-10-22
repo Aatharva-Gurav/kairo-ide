@@ -129,11 +129,11 @@ export function CommandPaletteModal({
   return (
     <div
       onClick={handleClose}
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 backdrop-blur-md pt-[12vh] px-4 animate-in fade-in-0 duration-200 ease-out"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 backdrop-blur-md pt-[12vh] px-4 animate-in fade-in-0 duration-180 ease-out"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-2xl rounded-2xl border border-border/70 dark:border-white/10 bg-popover/95 dark:bg-[#1e1e1e]/95 backdrop-blur-xl shadow-2xl ring-1 ring-black/5 dark:ring-white/10 overflow-hidden flex flex-col max-h-[65vh] text-popover-foreground animate-in zoom-in-95 slide-in-from-top-3 duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]"
+        className="w-full max-w-2xl rounded-2xl border border-border/70 dark:border-white/10 bg-popover/95 dark:bg-[#1e1e1e]/95 backdrop-blur-xl shadow-2xl ring-1 ring-black/5 dark:ring-white/10 overflow-hidden flex flex-col max-h-[65vh] text-popover-foreground animate-in zoom-in-[0.98] slide-in-from-top-2 duration-180 ease-[cubic-bezier(0.16,1,0.3,1)]"
       >
         {/* Search Input Bar */}
         <div className="flex items-center gap-3 px-4.5 py-3 border-b border-border/60 bg-transparent">
@@ -169,7 +169,7 @@ export function CommandPaletteModal({
                   key={cmd.id}
                   onClick={() => executeSelected(cmd)}
                   onMouseEnter={() => setSelectedIndex(idx)}
-                  className={`relative flex items-center justify-between px-3.5 py-2.5 rounded-xl cursor-pointer select-none transition-all duration-120 ease-out active:scale-[0.99] ${
+                  className={`relative flex items-center justify-between px-3.5 py-2.5 rounded-xl cursor-pointer select-none transition-all duration-140 ease-[cubic-bezier(0.16,1,0.3,1)] active:scale-[0.99] ${
                     !isEnabled
                       ? "opacity-50 cursor-not-allowed"
                       : isSelected

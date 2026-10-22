@@ -110,7 +110,7 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
         top: `${y}px`,
         boxShadow: "var(--shadow-elevation-high)",
       }}
-      className="fixed z-[100] min-w-[220px] max-w-[280px] rounded-lg border border-border/80 bg-popover/98 backdrop-blur-md p-1 text-popover-foreground text-xs select-none animate-in fade-in-0 zoom-in-95 duration-120 ease-out origin-top-left"
+      className="fixed z-[100] min-w-[220px] max-w-[280px] rounded-lg border border-border/80 bg-popover/98 backdrop-blur-md p-1 text-popover-foreground text-xs select-none animate-in fade-in-0 zoom-in-[0.97] duration-140 ease-[cubic-bezier(0.16,1,0.3,1)] origin-top-left"
     >
       {/* Multi-Selection Context Menu */}
       {isMultiSelect && (

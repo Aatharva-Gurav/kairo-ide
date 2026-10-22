@@ -123,7 +123,7 @@ export function ExplorerToolbar() {
         {isSortMenuOpen && (
           <div
             ref={sortMenuRef}
-            className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-50 w-40 rounded-lg border border-border/80 bg-popover/98 backdrop-blur-md p-1 shadow-2xl text-popover-foreground text-xs animate-in fade-in-0 zoom-in-95 duration-120 delay-subtle origin-bottom"
+            className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-50 w-40 rounded-lg border border-border/80 bg-popover/98 backdrop-blur-md p-1 shadow-2xl text-popover-foreground text-xs animate-in fade-in-0 zoom-in-[0.97] duration-140 ease-[cubic-bezier(0.16,1,0.3,1)] origin-bottom"
           >
             <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider font-mono">
               Sort By

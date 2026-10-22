@@ -191,7 +191,7 @@ export function WorkspaceSearchPanel() {
 
         {/* Replace input row */}
         {isReplaceOpen && (
-          <div className="flex items-center gap-1.5 pl-4 w-full animate-in fade-in-0 slide-in-from-top-1 duration-150 ease-out">
+          <div className="flex items-center gap-1.5 pl-4 w-full animate-in fade-in-0 slide-in-from-top-1 duration-180 ease-[cubic-bezier(0.16,1,0.3,1)]">
             <button
               type="button"
               disabled={totalMatches === 0 || isReplacing}
@@ -236,7 +236,7 @@ export function WorkspaceSearchPanel() {
 
         {/* Expandable Include / Exclude Inputs */}
         {showFilters && (
-          <div className="flex flex-col gap-1.5 pt-1 text-xs animate-in fade-in-0 slide-in-from-top-1 duration-150 ease-out">
+          <div className="flex flex-col gap-1.5 pt-1 text-xs animate-in fade-in-0 slide-in-from-top-1 duration-180 ease-[cubic-bezier(0.16,1,0.3,1)]">
             <div>
               <label className="text-[10px] text-muted-foreground font-mono">files to include</label>
               <input

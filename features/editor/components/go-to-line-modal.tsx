@@ -43,11 +43,11 @@ export function GoToLineModal() {
   return (
     <div
       onClick={() => setGoToLineVisible(false)}
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 backdrop-blur-xs pt-[15vh] px-4 animate-in fade-in-0 duration-150 ease-out"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 backdrop-blur-xs pt-[15vh] px-4 animate-in fade-in-0 duration-180 ease-out"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-sm rounded-xl border border-border/80 bg-card p-4 shadow-2xl text-card-foreground animate-in zoom-in-95 slide-in-from-top-2 duration-150 delay-subtle ease-[cubic-bezier(0.16,1,0.3,1)]"
+        className="w-full max-w-sm rounded-xl border border-border/80 bg-card p-4 shadow-2xl text-card-foreground animate-in zoom-in-[0.98] slide-in-from-top-1.5 duration-180 ease-[cubic-bezier(0.16,1,0.3,1)]"
       >
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <label className="text-xs font-semibold text-foreground tracking-tight">

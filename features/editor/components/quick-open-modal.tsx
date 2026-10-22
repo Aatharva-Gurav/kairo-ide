@@ -136,11 +136,11 @@ export function QuickOpenModal({
   return (
     <div
       onClick={handleClose}
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 backdrop-blur-xs pt-[12vh] px-4 animate-in fade-in-0 duration-150 ease-out"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 backdrop-blur-xs pt-[12vh] px-4 animate-in fade-in-0 duration-180 ease-out"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-xl rounded-xl border border-border/80 bg-popover/98 shadow-2xl overflow-hidden flex flex-col max-h-[60vh] text-popover-foreground animate-in zoom-in-95 slide-in-from-top-3 duration-150 delay-subtle ease-[cubic-bezier(0.16,1,0.3,1)]"
+        className="w-full max-w-xl rounded-xl border border-border/80 bg-popover/98 shadow-2xl overflow-hidden flex flex-col max-h-[60vh] text-popover-foreground animate-in zoom-in-[0.98] slide-in-from-top-2 duration-180 ease-[cubic-bezier(0.16,1,0.3,1)]"
       >
         {/* Search Input Bar */}
         <div className="flex items-center gap-2.5 px-3.5 border-b border-border/70 bg-popover/80 backdrop-blur-sm">
@@ -172,7 +172,7 @@ export function QuickOpenModal({
                     handleClose();
                   }}
                   onMouseEnter={() => setSelectedIndex(idx)}
-                  className={`relative flex items-center justify-between px-3 py-2 rounded-md cursor-pointer select-none transition-colors duration-100 ease-out active:scale-[0.99] ${
+                  className={`relative flex items-center justify-between px-3 py-2 rounded-md cursor-pointer select-none transition-colors duration-120 ease-out active:scale-[0.99] ${
                     isSelected
                       ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold shadow-2xs before:absolute before:left-0.5 before:top-1.5 before:bottom-1.5 before:w-0.5 before:bg-primary before:rounded-full"
                       : "text-foreground hover:bg-muted/50"

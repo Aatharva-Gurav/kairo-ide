@@ -132,7 +132,7 @@ export function SplitEditorPane({
 
           {/* Quick File Switcher Dropdown List */}
           {isDropdownOpen && (
-            <div className="absolute right-0 top-full mt-1 z-50 min-w-[230px] max-h-[280px] overflow-y-auto rounded-lg border border-border/80 bg-popover/98 backdrop-blur-md p-1 shadow-2xl text-xs animate-in fade-in-0 zoom-in-95 duration-120">
+            <div className="absolute right-0 top-full mt-1 z-50 min-w-[230px] max-h-[280px] overflow-y-auto rounded-lg border border-border/80 bg-popover/98 backdrop-blur-md p-1 shadow-2xl text-xs animate-in fade-in-0 zoom-in-[0.97] duration-140 ease-[cubic-bezier(0.16,1,0.3,1)]">
               <div className="px-2 py-1 text-[10px] uppercase font-semibold text-muted-foreground tracking-wider font-mono">
                 Open Files ({documents.length})
               </div>

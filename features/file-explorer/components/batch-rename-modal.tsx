@@ -108,9 +108,9 @@ export function BatchRenameModal() {
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-md animate-in fade-in-0 duration-200 ease-out">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-md animate-in fade-in-0 duration-180 ease-out">
       <div
-        className="w-full max-w-2xl rounded-2xl border border-border/70 dark:border-white/10 bg-card/98 dark:bg-[#1e1e1e]/98 p-6 shadow-2xl ring-1 ring-black/5 dark:ring-white/10 backdrop-blur-xl text-card-foreground animate-in zoom-in-95 duration-200 ease-out flex flex-col max-h-[86vh]"
+        className="w-full max-w-2xl rounded-2xl border border-border/70 dark:border-white/10 bg-card/98 dark:bg-[#1e1e1e]/98 p-6 shadow-2xl ring-1 ring-black/5 dark:ring-white/10 backdrop-blur-xl text-card-foreground animate-in zoom-in-[0.98] duration-180 ease-[cubic-bezier(0.16,1,0.3,1)] flex flex-col max-h-[86vh]"
         role="dialog"
         aria-modal="true"
         aria-labelledby="batch-rename-title"
@@ -143,7 +143,7 @@ export function BatchRenameModal() {
           <button
             type="button"
             onClick={() => setMode("find-replace")}
-            className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-120 cursor-pointer ${
+            className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-140 ease-[cubic-bezier(0.16,1,0.3,1)] cursor-pointer ${
               mode === "find-replace"
                 ? "bg-card text-foreground font-semibold shadow-xs"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted/50"

@@ -41,11 +41,11 @@ export function ReplaceConfirmModal() {
   return createPortal(
     <div
       onClick={cancelReplaceAll}
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in-0 duration-150 ease-out"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in-0 duration-180 ease-out"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-xl border border-border/80 bg-popover/98 dark:bg-[#1a1a1a]/98 p-4 shadow-2xl backdrop-blur-md text-popover-foreground animate-in zoom-in-95 duration-150 ease-out flex flex-col"
+        className="w-full max-w-md rounded-xl border border-border/80 bg-popover/98 dark:bg-[#1a1a1a]/98 p-4 shadow-2xl backdrop-blur-md text-popover-foreground animate-in zoom-in-[0.98] duration-180 ease-[cubic-bezier(0.16,1,0.3,1)] flex flex-col"
         role="dialog"
         aria-modal="true"
         aria-labelledby="replace-dialog-title"

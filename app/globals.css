@@ -116,13 +116,16 @@
   --motion-micro: 110ms;
   --motion-standard: 150ms;
   --motion-surface: 200ms;
-  --delay-subtle: 30ms;
-  --delay-micro: 50ms;
-  --ease-standard: cubic-bezier(0.25, 1, 0.5, 1);
-  --ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --motion-slow: 280ms;
+  --delay-subtle: 0ms;
+  --delay-micro: 30ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-spring-subtle: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-spring-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-spring-smooth: cubic-bezier(0.175, 0.885, 0.32, 1.1);
+  --ease-spring-bounce: cubic-bezier(0.34, 1.4, 0.64, 1);
   --ease-in-out-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
 
   /* Desktop Elevation Shadows */
   --shadow-elevation-low: 0 1px 2px 0 oklch(0 0 0 / 6%);
@@ -650,25 +653,53 @@
   --sidebar-ring: #0f766e;
 }
 
-/* ─── BASE STYLES ──────────────────────────────────────────────────────────── */
+/* ─── BASE STYLES & TYPOGRAPHY ────────────────────────────────────────────── */
 
 @layer base {
   * {
     @apply border-border;
   }
-  body {
-    @apply bg-background text-foreground antialiased selection:bg-primary/25 selection:text-foreground;
-  }
   html {
     @apply font-sans;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+  body {
+    @apply bg-background text-foreground antialiased selection:bg-primary/25 selection:text-foreground;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    font-optical-sizing: auto;
+  }
+  code, kbd, samp, pre, .font-mono {
+    font-feature-settings: "liga" 0, "calt" 0;
+    font-variant-numeric: tabular-nums;
   }
 }
 
 /* ─── ANIMATIONS & TRANSITIONS ─────────────────────────────────────────────── */
 
+@keyframes kairo-modal-enter {
+  0% { opacity: 0; transform: scale(0.98) translateY(-4px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes kairo-dropdown-enter {
+  0% { opacity: 0; transform: scale(0.97) translateY(-3px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes kairo-fade-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
 @keyframes kairo-pop {
   0% { transform: scale(0.92); opacity: 0.7; }
-  50% { transform: scale(1.05); }
+  50% { transform: scale(1.04); }
   100% { transform: scale(1); opacity: 1; }
 }
 
@@ -689,33 +720,38 @@
 }
 
 @keyframes kairo-fade-slide-up {
-  0% { opacity: 0; transform: translateY(5px) scale(0.985); }
+  0% { opacity: 0; transform: translateY(4px) scale(0.99); }
   100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 @keyframes kairo-tab-enter {
-  0% { opacity: 0; transform: translateY(2px) scale(0.985); }
+  0% { opacity: 0; transform: translateY(2px) scale(0.99); }
   100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .interactive-press {
-  transition: transform 100ms var(--ease-spring-subtle), opacity 100ms ease;
+  transition: transform 120ms var(--ease-spring-subtle), opacity 120ms ease;
+  will-change: transform;
 }
 .interactive-press:active {
   transform: scale(0.97);
 }
 
 .interactive-hover {
-  transition: background-color 140ms ease, border-color 140ms ease, opacity 140ms ease, box-shadow 140ms ease, transform 140ms var(--ease-spring-subtle);
-  transition-delay: var(--delay-subtle);
+  transition: background-color 140ms var(--ease-spring-subtle),
+              border-color 140ms var(--ease-spring-subtle),
+              color 140ms var(--ease-spring-subtle),
+              opacity 140ms var(--ease-spring-subtle),
+              box-shadow 140ms var(--ease-spring-subtle),
+              transform 140ms var(--ease-spring-subtle);
+  will-change: transform;
 }
 .interactive-hover:hover {
   transform: translateY(-1px);
-  opacity: 0.96;
+  opacity: 0.98;
 }
 .interactive-hover:active {
   transform: scale(0.98);
-  transition-delay: 0ms;
 }
 
 .kbd-shortcut {
@@ -730,6 +766,8 @@
   box-shadow: 0 1px 0 0 color-mix(in oklch, var(--border) 70%, transparent);
   user-select: none;
   letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
 }
 
 .delay-subtle {
@@ -749,11 +787,11 @@
 }
 
 .animate-kairo-pop {
-  animation: kairo-pop 200ms var(--ease-spring-bounce) var(--delay-subtle) forwards;
+  animation: kairo-pop 200ms var(--ease-spring-bounce) forwards;
 }
 
 .animate-kairo-spin {
-  animation: kairo-spin-bounce 600ms var(--ease-spring-subtle) var(--delay-subtle) forwards;
+  animation: kairo-spin-bounce 600ms var(--ease-spring-subtle) forwards;
 }
 
 .animate-kairo-pulse {
@@ -765,11 +803,22 @@
 }
 
 .animate-kairo-slide-up {
-  animation: kairo-fade-slide-up 150ms var(--ease-spring-subtle) var(--delay-subtle) forwards;
+  animation: kairo-fade-slide-up 150ms var(--ease-spring-subtle) forwards;
 }
 
 .animate-tab-enter {
-  animation: kairo-tab-enter 160ms var(--ease-spring-subtle) var(--delay-subtle) forwards;
+  animation: kairo-tab-enter 160ms var(--ease-spring-subtle) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* ─── SCROLLBARS ───────────────────────────────────────────────────────────── */

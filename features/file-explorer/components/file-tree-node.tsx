@@ -272,7 +272,7 @@ export function FileTreeNode({
         }}
         style={{ paddingLeft: `${depth * 14 + 6}px` }}
         className={cn(
-          "group relative flex h-6.5 w-full items-center gap-1.5 pr-2 text-xs transition-colors duration-100 ease-out cursor-pointer rounded-xs select-none",
+          "group relative flex h-6.5 w-full items-center gap-1.5 pr-2 text-xs transition-colors duration-120 ease-out cursor-pointer rounded-xs select-none",
           isSelected
             ? cn(
                 selectedPaths.size > 1
@@ -303,7 +303,7 @@ export function FileTreeNode({
             ) : (
               <ChevronRight
                 className={cn(
-                  "size-2.5 transition-transform duration-160 ease-[cubic-bezier(0.16,1,0.3,1)]",
+                  "size-2.5 transition-transform duration-180 ease-[cubic-bezier(0.16,1,0.3,1)]",
                   isExpanded && "rotate-90"
                 )}
               />
@@ -320,7 +320,7 @@ export function FileTreeNode({
           isExpanded={isExpanded}
           className={cn(
             isDirectory ? "w-[17px] h-[13.5px]" : "size-3.5",
-            "shrink-0 transition-transform duration-140 group-hover:scale-105"
+            "shrink-0 transition-transform duration-140 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-105"
           )}
         />
 

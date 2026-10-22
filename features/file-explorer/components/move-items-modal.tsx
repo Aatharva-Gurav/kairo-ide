@@ -358,9 +358,9 @@ export function MoveItemsModal() {
   const isRootSelected = selectedDir === rootNorm;
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 p-4 backdrop-blur-xs animate-in fade-in-0 duration-150 ease-out">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 p-4 backdrop-blur-xs animate-in fade-in-0 duration-180 ease-out">
       <div
-        className="w-full max-w-md rounded-xl border border-border/80 bg-popover/98 dark:bg-[#1a1a1a]/98 p-3.5 shadow-2xl backdrop-blur-md text-popover-foreground animate-in zoom-in-95 duration-150 ease-out flex flex-col max-h-[82vh]"
+        className="w-full max-w-md rounded-xl border border-border/80 bg-popover/98 dark:bg-[#1a1a1a]/98 p-3.5 shadow-2xl backdrop-blur-md text-popover-foreground animate-in zoom-in-[0.98] duration-180 ease-[cubic-bezier(0.16,1,0.3,1)] flex flex-col max-h-[82vh]"
         role="dialog"
         aria-modal="true"
         aria-labelledby="move-modal-title"

@@ -38,14 +38,14 @@ export function EditorStatusBar({ document, cursorPosition }: EditorStatusBarPro
   const lineEnding = document.content.includes("\r\n") ? "CRLF" : "LF";
 
   return (
-    <div className="relative z-20 shrink-0 flex h-6 w-full items-center justify-between border-t border-border/70 bg-sidebar/95 px-3 text-[11px] text-muted-foreground select-none font-mono shadow-xs">
+    <div className="relative z-20 shrink-0 flex h-6 w-full items-center justify-between border-t border-border/70 bg-sidebar/95 px-3 text-[11px] text-muted-foreground select-none font-mono shadow-xs tabular-nums">
       {/* Left side: line and column, indent, encoding, line endings */}
       <div className="flex items-center gap-2">
         <button
           type="button"
           onClick={() => setGoToLineVisible(true)}
           title={`Line ${line}, Column ${col}${totalLines ? ` (Total: ${totalLines} lines)` : ""} — Click to Go to Line (Ctrl+G)`}
-          className="hover:text-foreground cursor-pointer transition-colors px-1 py-0.5 rounded hover:bg-sidebar-accent/60 flex items-center gap-1 font-mono text-[11px]"
+          className="hover:text-foreground cursor-pointer transition-colors px-1 py-0.5 rounded hover:bg-sidebar-accent/60 flex items-center gap-1 font-mono text-[11px] transition-colors duration-120 ease-out"
         >
           <span>
             Ln {line}, Col {col}

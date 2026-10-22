@@ -774,7 +774,7 @@ export function AppTitleBar() {
                   onClick={() => handleMenuClick(menu.id)}
                   onMouseEnter={() => handleMenuMouseEnter(menu.id)}
                   className={cn(
-                    "h-[22px] px-2 rounded-sm text-[12px] font-medium transition-all duration-100 flex items-center focus:outline-none focus-visible:ring-1 focus-visible:ring-sidebar-ring cursor-pointer select-none",
+                    "h-[22px] px-2 rounded-sm text-[12px] font-medium transition-all duration-140 ease-[cubic-bezier(0.16,1,0.3,1)] flex items-center focus:outline-none focus-visible:ring-1 focus-visible:ring-sidebar-ring cursor-pointer select-none",
                     isOpen
                       ? "bg-sidebar-accent text-sidebar-foreground shadow-2xs font-semibold"
                       : "text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent/70"
@@ -786,7 +786,7 @@ export function AppTitleBar() {
                 {/* Dropdown Menu Popup */}
                 {isOpen && (
                   <div
-                    className="absolute top-[28px] left-0 z-50 min-w-[210px] rounded-lg border border-border/80 bg-popover/98 backdrop-blur-md p-1 shadow-2xl text-xs text-popover-foreground animate-in fade-in-0 zoom-in-95 duration-120 ease-out origin-top-left"
+                    className="absolute top-[28px] left-0 z-50 min-w-[210px] rounded-lg border border-border/80 bg-popover/98 backdrop-blur-md p-1 shadow-2xl text-xs text-popover-foreground animate-in fade-in-0 zoom-in-[0.97] slide-in-from-top-1 duration-140 ease-[cubic-bezier(0.16,1,0.3,1)] origin-top-left"
                     style={{
                       boxShadow: "var(--shadow-elevation-high)",
                     }}
@@ -813,7 +813,7 @@ export function AppTitleBar() {
                             disabled={item.disabled}
                             onClick={() => handleItemClick(item)}
                             className={cn(
-                              "flex w-full items-center justify-between px-2.5 py-1.5 rounded-md text-left transition-colors duration-100 select-none cursor-pointer",
+                              "flex w-full items-center justify-between px-2.5 py-1.5 rounded-md text-left transition-colors duration-120 ease-out select-none cursor-pointer",
                               item.disabled
                                 ? "opacity-40 cursor-not-allowed text-muted-foreground"
                                 : item.danger
@@ -841,7 +841,7 @@ export function AppTitleBar() {
                           {/* Submenu flyout */}
                           {hasSubmenu && isSubOpen && (
                             <div
-                              className="absolute top-0 left-[calc(100%+2px)] z-50 min-w-[190px] rounded-lg border border-border/80 bg-popover/98 backdrop-blur-md p-1 shadow-2xl text-xs text-popover-foreground animate-in fade-in-0 zoom-in-95 duration-120 origin-top-left"
+                              className="absolute top-0 left-[calc(100%+2px)] z-50 min-w-[190px] rounded-lg border border-border/80 bg-popover/98 backdrop-blur-md p-1 shadow-2xl text-xs text-popover-foreground animate-in fade-in-0 zoom-in-[0.97] duration-140 ease-[cubic-bezier(0.16,1,0.3,1)] origin-top-left"
                               style={{
                                 boxShadow: "var(--shadow-elevation-high)",
                               }}
@@ -914,7 +914,7 @@ export function AppTitleBar() {
                 : "Account"
             }
             className={cn(
-              "h-[22px] px-2 rounded-sm text-[11px] font-medium transition-all duration-100 flex items-center gap-1.5 focus:outline-none focus-visible:ring-1 focus-visible:ring-sidebar-ring cursor-pointer select-none",
+              "h-[22px] px-2 rounded-sm text-[11px] font-medium transition-all duration-140 ease-[cubic-bezier(0.16,1,0.3,1)] flex items-center gap-1.5 focus:outline-none focus-visible:ring-1 focus-visible:ring-sidebar-ring cursor-pointer select-none",
               isProfileMenuOpen
                 ? "bg-sidebar-accent text-sidebar-foreground shadow-2xs font-semibold"
                 : "text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent/70"
@@ -937,7 +937,7 @@ export function AppTitleBar() {
           {/* Profile Dropdown Popup */}
           {isProfileMenuOpen && (
             <div
-              className="absolute top-[28px] right-0 z-50 min-w-[210px] rounded-lg border border-border/80 bg-popover/98 backdrop-blur-md p-1.5 shadow-2xl text-xs text-popover-foreground animate-in fade-in-0 zoom-in-95 duration-120 ease-out origin-top-right"
+              className="absolute top-[28px] right-0 z-50 min-w-[210px] rounded-lg border border-border/80 bg-popover/98 backdrop-blur-md p-1.5 shadow-2xl text-xs text-popover-foreground animate-in fade-in-0 zoom-in-[0.97] slide-in-from-top-1 duration-140 ease-[cubic-bezier(0.16,1,0.3,1)] origin-top-right"
               style={{
                 boxShadow: "var(--shadow-elevation-high)",
               }}
@@ -1056,11 +1056,11 @@ export function AppTitleBar() {
       {isAboutOpen && (
         <div
           onClick={() => setIsAboutOpen(false)}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in-0 duration-150"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in-0 duration-180 ease-out"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md rounded-xl border border-border/80 bg-card p-6 shadow-2xl text-card-foreground animate-in zoom-in-95 duration-150 flex flex-col items-center text-center relative"
+            className="w-full max-w-md rounded-xl border border-border/80 bg-card p-6 shadow-2xl text-card-foreground animate-in zoom-in-[0.97] slide-in-from-top-1 duration-180 ease-[cubic-bezier(0.16,1,0.3,1)] flex flex-col items-center text-center relative"
           >
             <button
               onClick={() => setIsAboutOpen(false)}

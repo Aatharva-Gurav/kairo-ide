@@ -104,12 +104,12 @@ function ShortcutRecorderContent({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in-0 duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in-0 duration-180 ease-out"
     >
       <div
         ref={containerRef}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-2xl border border-border/70 dark:border-white/10 bg-card/98 dark:bg-[#1e1e1e]/98 p-6 shadow-2xl ring-1 ring-black/5 dark:ring-white/10 backdrop-blur-xl text-card-foreground animate-in zoom-in-95 duration-200"
+        className="w-full max-w-md rounded-2xl border border-border/70 dark:border-white/10 bg-card/98 dark:bg-[#1e1e1e]/98 p-6 shadow-2xl ring-1 ring-black/5 dark:ring-white/10 backdrop-blur-xl text-card-foreground animate-in zoom-in-[0.98] duration-180 ease-[cubic-bezier(0.16,1,0.3,1)]"
       >
         <div className="flex items-start justify-between gap-3 mb-1">
           <div className="flex items-center gap-3">

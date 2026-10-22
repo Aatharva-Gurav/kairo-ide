@@ -52,7 +52,7 @@ export const FloatingCreationButton = React.forwardRef<
                 // Focus ring
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                 // Smooth animations on sidebar toggle and reduced-motion compliance
-                "transition-all duration-200 ease-out active:duration-75 motion-reduce:transition-none motion-reduce:transform-none",
+                "transition-all duration-220 ease-[cubic-bezier(0.16,1,0.3,1)] active:duration-100 motion-reduce:transition-none motion-reduce:transform-none",
                 isVisible
                   ? "opacity-100 scale-100 translate-y-0 pointer-events-auto animate-in fade-in-0 zoom-in-75 duration-200"
                   : "opacity-0 scale-75 translate-y-3 pointer-events-none"
@@ -60,7 +60,7 @@ export const FloatingCreationButton = React.forwardRef<
             >
               <div
                 className={cn(
-                  "transition-transform duration-200 ease-out flex items-center justify-center",
+                  "transition-transform duration-220 ease-[cubic-bezier(0.16,1,0.3,1)] flex items-center justify-center",
                   isOpen ? "rotate-45" : "rotate-0"
                 )}
               >

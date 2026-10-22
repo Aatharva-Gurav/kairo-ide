@@ -55,7 +55,7 @@ export function EditorTab({ document, isActive, onSelect, onClose }: EditorTabPr
         onContextMenu={handleContextMenu}
         title={document.path}
         className={cn(
-          "group relative flex h-[28px] shrink-0 items-center gap-1.5 px-2.5 mx-0.5 rounded-md text-[12px] cursor-pointer select-none transition-all duration-120 font-sans tracking-tight",
+          "group relative flex h-[28px] shrink-0 items-center gap-1.5 px-2.5 mx-0.5 rounded-md text-[12px] cursor-pointer select-none transition-all duration-140 ease-[cubic-bezier(0.16,1,0.3,1)] font-sans tracking-tight",
           isActive
             ? "bg-background text-foreground font-medium shadow-[0_1px_3px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)] border border-border/80 dark:bg-[#1f1f23] z-10"
             : "text-muted-foreground/80 hover:text-foreground hover:bg-muted/40 border border-transparent"
@@ -64,7 +64,7 @@ export function EditorTab({ document, isActive, onSelect, onClose }: EditorTabPr
         <FileIcon
           name={document.title}
           isDirectory={false}
-          className="size-3.5 shrink-0 transition-transform duration-120 group-hover:scale-105"
+          className="size-3.5 shrink-0 transition-transform duration-140 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-105"
         />
         <span className="truncate max-w-[150px]">{document.title}</span>
 
@@ -89,7 +89,7 @@ export function EditorTab({ document, isActive, onSelect, onClose }: EditorTabPr
               onClose();
             }}
             className={cn(
-              "rounded-full p-0.5 hover:bg-muted/80 text-muted-foreground hover:text-foreground cursor-pointer transition-colors duration-100 active:scale-90",
+              "rounded-full p-0.5 hover:bg-muted/80 text-muted-foreground hover:text-foreground cursor-pointer transition-all duration-120 ease-out active:scale-90",
               document.isDirty ? "hidden group-hover:flex" : "opacity-0 group-hover:opacity-100",
               isActive && !document.isDirty && "opacity-70 hover:opacity-100"
             )}

@@ -72,7 +72,7 @@ export function CreationOptionsPopup({
         <div
           className={cn(
             "flex items-center justify-center cursor-pointer",
-            "animate-in fade-in-0 zoom-in-50 slide-in-from-bottom-4 duration-200 delay-50 ease-out fill-mode-both"
+            "animate-in fade-in-0 zoom-in-75 slide-in-from-bottom-2 duration-180 ease-[cubic-bezier(0.16,1,0.3,1)] fill-mode-both"
           )}
           onClick={() => onSelectType("folder")}
         >
@@ -107,7 +107,7 @@ export function CreationOptionsPopup({
         <div
           className={cn(
             "flex items-center justify-center cursor-pointer",
-            "animate-in fade-in-0 zoom-in-50 slide-in-from-bottom-2 duration-150 ease-out fill-mode-both"
+            "animate-in fade-in-0 zoom-in-75 slide-in-from-bottom-1 duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] fill-mode-both"
           )}
           onClick={() => onSelectType("file")}
         >

@@ -49,7 +49,7 @@ export function EditorBreadcrumb({ document }: EditorBreadcrumbProps) {
           <div
             onClick={handleWorkspaceClick}
             title={activeWorkspace.rootPath}
-            className="flex items-center gap-1.5 shrink-0 font-medium text-foreground/80 hover:text-foreground text-[11px] px-1 py-0.5 rounded hover:bg-muted/50 cursor-pointer transition-colors duration-100"
+            className="flex items-center gap-1.5 shrink-0 font-medium text-foreground/80 hover:text-foreground text-[11px] px-1 py-0.5 rounded hover:bg-muted/50 cursor-pointer transition-colors duration-120 ease-out"
           >
             <Folder className="size-3 text-primary/90 shrink-0" />
             <span className="tracking-tight truncate max-w-[120px]">{activeWorkspace.name}</span>

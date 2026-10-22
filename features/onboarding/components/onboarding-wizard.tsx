@@ -161,7 +161,7 @@ export function OnboardingWizard() {
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center bg-background text-foreground p-6 selection:bg-primary/20">
-      <div className="w-full max-w-xl bg-card/95 dark:bg-[#1e1e1e]/95 border border-border/70 dark:border-white/10 rounded-3xl p-8 md:p-9 shadow-2xl ring-1 ring-black/5 dark:ring-white/10 backdrop-blur-xl animate-in fade-in-50 zoom-in-95 duration-200">
+      <div className="w-full max-w-xl bg-card/95 dark:bg-[#1e1e1e]/95 border border-border/70 dark:border-white/10 rounded-3xl p-8 md:p-9 shadow-2xl ring-1 ring-black/5 dark:ring-white/10 backdrop-blur-xl animate-in fade-in-50 zoom-in-[0.98] duration-220 ease-[cubic-bezier(0.16,1,0.3,1)]">
         {/* Header branding */}
         <div className="flex flex-col items-center text-center mb-8">
           <div className="animate-kairo-float mb-3">
@@ -176,7 +176,7 @@ export function OnboardingWizard() {
               <div
                 key={i}
                 className={cn(
-                  "h-2 rounded-full transition-all duration-300",
+                  "h-2 rounded-full transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
                   i === step
                     ? "w-8 bg-primary shadow-xs"
                     : i < step
@@ -190,7 +190,7 @@ export function OnboardingWizard() {
 
         {/* STEP 1: Profile & Identity */}
         {step === 1 && (
-          <div className="space-y-5 animate-in fade-in duration-150">
+          <div className="space-y-5 animate-in fade-in duration-180 ease-[cubic-bezier(0.16,1,0.3,1)]">
             <div className="flex items-center gap-2.5 pb-2.5 border-b border-border/60">
               <User className="size-4 text-primary" />
               <h2 className="text-sm font-semibold tracking-tight">Your Profile</h2>

@@ -49,13 +49,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         aria-label={open ? "Hide Sidebar (Ctrl+B)" : "Show Sidebar (Ctrl+B)"}
         title={open ? "Hide Sidebar (Ctrl+B)" : "Show Sidebar (Ctrl+B)"}
         className={cn(
-          "fixed z-40 flex items-center justify-center transition-all duration-150 ease-out cursor-pointer select-none size-7 rounded-md active:scale-95 border backdrop-blur-md focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sidebar-ring shadow-xs",
+          "fixed z-40 flex items-center justify-center transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] cursor-pointer select-none size-7 rounded-md active:scale-95 border backdrop-blur-md focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sidebar-ring shadow-xs",
           open
             ? "top-[44px] right-[calc(var(--sidebar-width)-42px)] border-sidebar-border/80 bg-sidebar/95 text-sidebar-foreground hover:bg-sidebar-accent hover:border-sidebar-primary/50"
             : "top-[34px] right-2 border-border/80 bg-background/95 text-muted-foreground hover:text-foreground shadow-xs hover:bg-accent hover:border-sidebar-primary/50"
         )}
       >
-        <div className="flex items-center justify-center size-5 rounded bg-sidebar-accent/50 dark:bg-sidebar-accent/30 transition-transform duration-200">
+        <div className="flex items-center justify-center size-5 rounded bg-sidebar-accent/50 dark:bg-sidebar-accent/30 transition-transform duration-220 ease-[cubic-bezier(0.16,1,0.3,1)]">
           {open ? (
             <PanelRight
               className={cn(
@@ -81,7 +81,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 onClick={() => setActiveTab("explorer")}
                 title="File Explorer"
                 className={cn(
-                  "group flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium cursor-pointer transition-all duration-120 ease-out shrink-0 active:scale-97",
+                  "group flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium cursor-pointer transition-all duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] shrink-0 active:scale-97",
                   activeTab === "explorer"
                     ? "bg-sidebar text-sidebar-foreground shadow-2xs font-semibold"
                     : "text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/50"

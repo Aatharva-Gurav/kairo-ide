@@ -14,9 +14,9 @@ export function EditorEmptyState() {
   };
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center p-8 text-center select-none bg-background animate-in fade-in-50 zoom-in-95 duration-200 delay-subtle">
+    <div className="h-full w-full flex flex-col items-center justify-center p-8 text-center select-none bg-background animate-in fade-in-50 zoom-in-[0.98] duration-220 ease-[cubic-bezier(0.16,1,0.3,1)]">
       <div className="animate-kairo-float mb-3">
-        <KairoBrandIcon size={48} className="rounded-xl shadow-lg hover:scale-105 transition-transform duration-200" />
+        <KairoBrandIcon size={48} className="rounded-xl shadow-lg hover:scale-105 transition-transform duration-220 ease-[cubic-bezier(0.16,1,0.3,1)]" />
       </div>
 
       <h2 className="text-base font-semibold tracking-tight text-foreground">No File Open</h2>
@@ -29,7 +29,7 @@ export function EditorEmptyState() {
         <button
           type="button"
           onClick={handleOpenFile}
-          className="group flex items-center justify-between px-3 py-1.5 cursor-pointer hover:bg-muted/40 rounded-lg text-muted-foreground hover:text-foreground transition-colors duration-120 ease-out active:scale-[0.98] text-left"
+          className="group flex items-center justify-between px-3 py-1.5 cursor-pointer hover:bg-muted/40 rounded-lg text-muted-foreground hover:text-foreground transition-colors duration-140 ease-[cubic-bezier(0.16,1,0.3,1)] active:scale-[0.98] text-left"
         >
           <div className="flex items-center gap-2">
             <File className="size-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />

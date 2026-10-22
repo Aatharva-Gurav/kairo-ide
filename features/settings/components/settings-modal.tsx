@@ -72,11 +72,11 @@ export function SettingsModal() {
   return (
     <div
       onClick={closeSettings}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in-0 duration-200 ease-out"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in-0 duration-180 ease-out"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-4xl h-[84vh] rounded-2xl md:rounded-3xl border border-border/70 dark:border-white/10 bg-card/98 dark:bg-[#1f1f1f]/98 shadow-2xl ring-1 ring-black/5 dark:ring-white/10 backdrop-blur-xl flex flex-col overflow-hidden text-card-foreground animate-in zoom-in-95 duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]"
+        className="w-full max-w-4xl h-[84vh] rounded-2xl md:rounded-3xl border border-border/70 dark:border-white/10 bg-card/98 dark:bg-[#1f1f1f]/98 shadow-2xl ring-1 ring-black/5 dark:ring-white/10 backdrop-blur-xl flex flex-col overflow-hidden text-card-foreground animate-in zoom-in-[0.98] duration-180 ease-[cubic-bezier(0.16,1,0.3,1)]"
       >
         {/* Top Header */}
         <div className="flex items-center justify-between px-6 py-3.5 border-b border-border/60 bg-transparent">
@@ -94,7 +94,7 @@ export function SettingsModal() {
                 type="button"
                 onClick={() => setActiveScope("user")}
                 className={cn(
-                  "px-3 py-1 text-xs font-medium rounded-lg transition-all duration-120 cursor-pointer active:scale-95",
+                  "px-3 py-1 text-xs font-medium rounded-lg transition-all duration-140 ease-[cubic-bezier(0.16,1,0.3,1)] cursor-pointer active:scale-95",
                   activeScope === "user"
                     ? "bg-card text-foreground shadow-xs font-semibold"
                     : "text-muted-foreground hover:text-foreground"
