@@ -71,7 +71,9 @@ export class FormatterService {
       const result = await provider.format(content, options);
       return result;
     } catch (error) {
-      console.warn(`[FormatterService] Error formatting ${language}:`, error);
+      if (process.env.NODE_ENV !== "test") {
+        console.warn(`[FormatterService] Error formatting ${language}:`, error);
+      }
       throw error;
     }
   }

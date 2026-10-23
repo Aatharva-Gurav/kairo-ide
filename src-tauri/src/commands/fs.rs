@@ -45,7 +45,10 @@ fn is_descendant(parent: &Path, child: &Path) -> bool {
         .map(|p| normalize_path_for_compare(&p))
         .unwrap_or_else(|_| normalize_path_for_compare(parent));
 
-    let child_norm = normalize_path_for_compare(child);
+    let child_norm = child
+        .canonicalize()
+        .map(|p| normalize_path_for_compare(&p))
+        .unwrap_or_else(|_| normalize_path_for_compare(child));
 
     if child_norm.starts_with(&parent_norm) {
         return true;
@@ -367,6 +370,9 @@ pub fn fs_reveal(path: String) -> Result<(), String> {
     {
         use std::os::windows::process::CommandExt;
         let formatted = p.to_string_lossy().replace('/', "\\");
+        if formatted.contains('"') {
+            return Err("Path contains invalid characters.".to_string());
+        }
 
         let mut cmd = std::process::Command::new("explorer");
         if p.is_dir() {
@@ -780,7 +786,12 @@ fn find_matches_in_line(
             matches.push((abs_start, query_len));
         }
 
-        start = abs_start + 1;
+        let advance = search_line[abs_start..]
+            .chars()
+            .next()
+            .map(|c| c.len_utf8())
+            .unwrap_or(1);
+        start = abs_start + advance;
         if start >= search_line.len() {
             break;
         }
@@ -789,8 +800,8 @@ fn find_matches_in_line(
     matches
 }
 
-fn walk_workspace_files(dir: &Path, files: &mut Vec<PathBuf>, max_count: usize) {
-    if files.len() >= max_count {
+fn walk_workspace_files(dir: &Path, files: &mut Vec<PathBuf>, max_count: usize, depth: usize) {
+    if files.len() >= max_count || depth > 32 {
         return;
     }
 
@@ -810,7 +821,7 @@ fn walk_workspace_files(dir: &Path, files: &mut Vec<PathBuf>, max_count: usize) 
 
         let path = entry.path();
         if path.is_dir() {
-            walk_workspace_files(&path, files, max_count);
+            walk_workspace_files(&path, files, max_count, depth + 1);
         } else if path.is_file() {
             if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
                 if is_binary_extension(ext) {
@@ -839,7 +850,7 @@ pub fn fs_search_workspace(
 
     let max_results = options.max_results.unwrap_or(5000);
     let mut files = Vec::new();
-    walk_workspace_files(p, &mut files, 20_000);
+    walk_workspace_files(p, &mut files, 20_000, 0);
 
     let mut results = Vec::new();
 
@@ -952,7 +963,10 @@ pub fn fs_replace_in_files(
                 let col_idx = (rep.column.saturating_sub(1)) as usize;
                 let match_len = rep.match_length as usize;
 
-                if col_idx + match_len <= line.len() {
+                if col_idx + match_len <= line.len()
+                    && line.is_char_boundary(col_idx)
+                    && line.is_char_boundary(col_idx + match_len)
+                {
                     let mut new_line = String::with_capacity(line.len() + rep.replacement.len());
                     new_line.push_str(&line[..col_idx]);
                     new_line.push_str(&rep.replacement);
@@ -992,7 +1006,7 @@ pub fn fs_list_workspace_files(
 
     let limit = max_files.unwrap_or(15_000);
     let mut files = Vec::new();
-    walk_workspace_files(p, &mut files, limit);
+    walk_workspace_files(p, &mut files, limit, 0);
 
     let result = files
         .into_iter()
@@ -1197,6 +1211,38 @@ mod tests {
         );
         assert!(move_err.is_err());
         assert!(move_err.unwrap_err().contains("already exists"));
+
+        let _ = fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_find_matches_unicode_and_emojis() {
+        let line = "const 🚀 = 'apple'; const 🍎 = 'apple';";
+        let matches = find_matches_in_line(line, "apple", true, false);
+        assert_eq!(matches.len(), 2);
+    }
+
+    #[test]
+    fn test_replace_char_boundary_safety() {
+        let temp_dir = std::env::temp_dir().join("kairo_fs_test_unicode_rep");
+        let _ = fs::create_dir_all(&temp_dir);
+        let test_file = temp_dir.join("unicode.txt");
+        fs::write(&test_file, "Hello 🌍 world! 🚀").unwrap();
+
+        let replacements = vec![FileReplacementPayload {
+            file_path: test_file.to_string_lossy().to_string(),
+            line_number: 1,
+            column: 1,
+            match_length: 5,
+            replacement: "Greetings".to_string(),
+        }];
+
+        let summary = fs_replace_in_files(replacements).unwrap();
+        assert_eq!(summary.files_modified, 1);
+        assert_eq!(summary.occurrences_replaced, 1);
+
+        let content = fs::read_to_string(&test_file).unwrap();
+        assert!(content.starts_with("Greetings 🌍 world!"));
 
         let _ = fs::remove_dir_all(&temp_dir);
     }

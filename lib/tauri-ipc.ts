@@ -112,6 +112,48 @@ export function normalizePath(pathStr: string): string {
   if (/^[a-z]:\//.test(normalized)) {
     normalized = normalized.charAt(0).toUpperCase() + normalized.slice(1);
   }
+
+  // Resolve relative segments '.' and '..'
+  const isWindowsAbsolute = /^[A-Z]:(?:\/|$)/.test(normalized);
+  const isPosixAbsolute = normalized.startsWith("/");
+
+  let prefix = "";
+  let remainder = normalized;
+
+  if (isWindowsAbsolute) {
+    prefix = normalized.slice(0, 3);
+    if (!prefix.endsWith("/")) prefix += "/";
+    remainder = normalized.slice(prefix.length);
+  } else if (isPosixAbsolute) {
+    prefix = "/";
+    remainder = normalized.slice(1);
+  }
+
+  const rawSegments = remainder.split("/");
+  const resolvedSegments: string[] = [];
+
+  for (const seg of rawSegments) {
+    if (!seg || seg === ".") continue;
+    if (seg === "..") {
+      if (resolvedSegments.length > 0 && resolvedSegments[resolvedSegments.length - 1] !== "..") {
+        resolvedSegments.pop();
+      } else if (!isWindowsAbsolute && !isPosixAbsolute) {
+        resolvedSegments.push("..");
+      }
+    } else {
+      resolvedSegments.push(seg);
+    }
+  }
+
+  if (isWindowsAbsolute || isPosixAbsolute) {
+    normalized = prefix + resolvedSegments.join("/");
+    if (normalized.length > prefix.length && normalized.endsWith("/")) {
+      normalized = normalized.slice(0, -1);
+    }
+  } else {
+    normalized = resolvedSegments.join("/") || (normalized.startsWith(".") ? "." : "");
+  }
+
   // Remove redundant trailing slashes unless it's root like "C:/" or "/"
   if (normalized.length > 1 && normalized.endsWith("/")) {
     if (!/^[a-zA-Z]:\/$/.test(normalized)) {

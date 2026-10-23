@@ -21,6 +21,13 @@ describe("Tauri IPC & Path Utilities", () => {
     expect(normalizePath("file:///C:/Users/User/Project")).toBe("C:/Users/User/Project");
     expect(normalizePath("c:/users/user/project")).toBe("C:/users/user/project");
     expect(normalizePath("C:/Users/Aatharva%20Gurav/Project")).toBe("C:/Users/Aatharva Gurav/Project");
+    expect(normalizePath("C:/Projects/App/../OtherApp")).toBe("C:/Projects/OtherApp");
+    expect(normalizePath("/var/log/../lib/./app.log")).toBe("/var/lib/app.log");
+  });
+
+  it("prevents directory traversal in descendant checks", () => {
+    expect(isDescendant("C:/Projects/App", "C:/Projects/App/../OtherApp")).toBe(false);
+    expect(isDescendant("C:/Projects/App", "C:/Projects/App/src/../components")).toBe(true);
   });
 
   it("extracts basename correctly", () => {

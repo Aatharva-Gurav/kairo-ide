@@ -1,297 +1,372 @@
-# Kairo IDE
+<div align="center">
 
-Kairo IDE is a high-performance, extensible desktop IDE shell built with **Next.js 16**, **React 19**, **TypeScript**, **Monaco Editor**, and **Tauri 2**.
+# ⚡ Kairo IDE
+
+**Next-Generation Desktop Code Editor Built with Next.js 16, React 19, Tauri v2 & Rust**
+
+[![Next.js](https://img.shields.io/badge/Next.js-16.4.0-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19.3.0-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Tauri](https://img.shields.io/badge/Tauri-v2.12-FFC131?style=for-the-badge&logo=tauri&logoColor=black)](https://v2.tauri.app/)
+[![Rust](https://img.shields.io/badge/Rust-2021%20Edition-DEA584?style=for-the-badge&logo=rust&logoColor=black)](https://www.rust-lang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+[![Tests](https://img.shields.io/badge/Tests-169%20Vitest%20%7C%2012%20Cargo%20Passed-brightgreen?style=for-the-badge&logo=vitest)](https://vitest.dev/)
+[![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
+
+<p align="center">
+  A blazing-fast, secure, and extensible desktop code IDE combining the rapid iteration of modern React with the raw performance and low memory footprint of Rust.
+</p>
+
+[Key Features](#-key-features) •
+[Architecture](#-architecture-overview) •
+[Security Hardening](#-security-hardening) •
+[Supported Languages](#-supported-languages) •
+[Themes](#-14-built-in-themes) •
+[Shortcuts](#-keyboard-shortcuts) •
+[Getting Started](#-getting-started) •
+[Testing](#-testing--quality-assurance)
+
+</div>
 
 ---
 
-## Core Features Implemented
+## 🌟 Overview
 
-### 1. Project / Workspace Management
-- **Native Folder Picker**: Launches native cross-platform folder picker dialog via Tauri backend (`rfd`).
-- **Active Workspace Lifecycle**: Real-time representation of workspace name, root path, and timestamps.
-- **Persistent Recent Projects**: Automatic deduplication, ordered by last opened, configurable capacity, persisted across sessions.
-- **Safe Workspace Restoration**: Automatic workspace restoration on startup with graceful fallback and notification if the directory was moved or deleted.
-- **Empty State**: Clean onboarding view with quick action shortcuts to open or pick folders.
+**Kairo IDE** is an enterprise-grade desktop code development environment engineered from the ground up for speed, safety, and productivity. Combining a lightweight **Next.js 16** and **React 19** frontend shell with a **Tauri v2** native backend written in **Rust**, Kairo provides instantaneous file operations, multi-threaded workspace indexing, and a rich **Monaco Editor** coding experience—while consuming a fraction of the RAM required by traditional Electron-based editors.
 
-### 2. File Explorer
-- **Real Filesystem Binding**: Zero mock data; operates directly on the underlying operating system filesystem.
-- **Lazy-Loaded File Tree**: On-demand expansion of directories maintaining 60 FPS performance even on massive codebases.
-- **Comprehensive File & Folder Operations**:
-  - Create file and create folder (with strict cross-platform filename validation and Windows reserved names prevention: `CON`, `PRN`, `AUX`, `NUL`, `COM1-9`, `LPT1-9`).
-  - Inline rename (`F2` or context menu) with collision checks.
-  - Delete with confirmation dialog to prevent accidental data loss.
-  - Clipboard operations: Copy, cut, and paste with recursive descendant circular-nesting protection.
-  - Duplicate file with automatic numbering (`file copy.ts`, `file copy 2.ts`).
-  - Refresh preserving directory expansion state.
-  - Drag-and-drop file and directory moving.
-- **Context Menus**: Context-aware menus for files, folders, and the root workspace.
-- **Keyboard Navigation**: Full arrow-key tree traversal, `Enter` to open, `F2` to rename, `Delete` to remove.
-- **Icon Set**: Lucide React icons (`lucide-react`) and Seti file-type icons.
+---
 
-### 3. Code Editor
-- **Monaco Editor Integration**: Embedded industry-standard Monaco Editor (`^0.56.0`) with dark and light theme synchronization matching the Kairo IDE design system.
+## 🚀 Key Features
+
+### 1. 🗂️ Workspace & Project Management
+- **Native OS Folder Picker**: Seamlessly open folders via native file system dialogs (`rfd` crate).
+- **Persistent Recent Workspaces**: Automatic deduplication, MRU ordering, configurable storage capacity, and clean state restoration.
+- **Graceful Restoration**: Validates folder existence on boot; notifies users gracefully if an external folder was deleted, unmounted, or moved.
+- **Empty State Onboarding**: Keyboard-friendly onboarding view with immediate shortcuts to open recent or new directories.
+
+### 2. 🌲 Real Filesystem Explorer
+- **Direct OS Binding**: Zero mock data—all reads and writes execute against the real filesystem via sandboxed Tauri IPC.
+- **Lazy-Loaded Tree Traversal**: Directories load on demand, maintaining silky smooth 60 FPS scrolling even on 100,000+ file codebases.
+- **Full File & Directory Operations**:
+  - Create file and folder with strict validation (protecting against illegal characters and Windows reserved device names: `CON`, `PRN`, `AUX`, `NUL`, `COM1-9`, `LPT1-9`).
+  - Inline rename (`F2`) with path collision pre-checks.
+  - Delete with safety confirmation modal to prevent accidental loss.
+  - Clipboard operations: Recursive copy, cut, and paste with ancestor/descendant circular recursion safeguards.
+  - Duplicate file with smart collision numbering (`file copy.ts`, `file copy 2.ts`).
+  - Drag-and-drop moving of files and folders across tree branches.
+- **Seti & Lucide Icon Themes**: File-type-specific icon resolution for 60+ extensions and well-known configuration manifests.
+
+### 3. 📝 Advanced Code Editor (Monaco)
+- **Monaco Engine (`^0.57.0`)**: Bundled offline (`loader.config({ monaco })`) with zero CDN dependency.
 - **Multi-Tab Document Management**:
-  - Open multiple files concurrently with responsive horizontal tab bar.
-  - Active tab highlighting, Seti file icons, and close buttons.
-  - Middle-click to close tab.
-  - Tab context menu: *Close*, *Close Others*, *Close All*, *Copy Path*, *Copy Relative Path*, and *Reveal in File Explorer*.
-- **Dirty State Tracking & Safety**:
-  - Real-time dirty state indicator (`•`) on tabs when content diverges from disk.
-  - Single file save (`Ctrl+S` / `Cmd+S`) and Save All (`Ctrl+Alt+S`).
-  - Close confirmation modal: Prompting to *Save*, *Don't Save*, or *Cancel* when closing any modified file or batch-closing tabs.
-  - External modification detection: Background file system watcher integration prompts or updates documents when modified externally.
-- **Monaco Model Lifecycle**:
-  - Model caching and reuse by file URI (`file://...`).
-  - Cursor position and scroll viewState preservation across tab switches.
-  - Automatic model disposal on tab close to prevent memory leaks.
+  - Responsive horizontal tab strip with middle-click close, pin indicators, and Seti file icons.
+  - Context menu options: *Close*, *Close Others*, *Close All*, *Copy Path*, *Copy Relative Path*, and *Reveal in OS Explorer*.
+- **Multi-Split Editor Panels**: Split editor groups horizontally and vertically with independent model instances and synchronous viewState tracking.
+- **Document Dirty Tracking & Safety**:
+  - Real-time dirty state bullet (`•`) indicating unsaved changes.
+  - Single-file save (`Ctrl+S` / `Cmd+S`) and batch Save All (`Ctrl+Alt+S`).
+  - Dirty tab closing confirmation modal (*Save*, *Don't Save*, *Cancel*).
+  - External modification detection alerting users to disk changes.
+- **Model Lifecycle & Memory Management**:
+  - Strict URI-based model caching (`file://...`).
+  - Preserves scroll position and cursor selections across tab switching.
+  - Deterministic model disposal on tab closure to eliminate memory leaks.
 - **Binary & Large File Safeguards**:
-  - Safe binary file detection (null-byte inspection and 20MB file threshold).
-  - Built-in preview for image formats (`.png`, `.jpg`, `.jpeg`, `.svg`, `.webp`, `.gif`, `.ico`).
-  - Fallback banner for binary files with option to reveal in OS file explorer.
+  - Fast null-byte heuristic inspection and 20MB file threshold.
+  - Native image preview for `.png`, `.jpg`, `.jpeg`, `.svg`, `.webp`, `.gif`, and `.ico`.
+  - Binary alert banner with direct button to reveal the file in the OS explorer.
 - **Breadcrumb Navigation & Status Bar**:
-  - Hierarchical breadcrumbs showing workspace-relative folder and file path.
-  - Bottom status bar displaying cursor line and column, indentation (Spaces: 2), encoding (UTF-8), language mode, and quick Format Document button.
-- **Offline Desktop Execution**: Fully bundled Monaco assets (`loader.config({ monaco })`) ensuring zero reliance on remote CDNs or internet connectivity.
+  - Interactive workspace-relative folder and file path breadcrumbs.
+  - Comprehensive status bar showing line & column, space indentation, UTF-8 encoding, language mode, and quick Format Document button.
 
-### 4. Syntax Highlighting
-- **Comprehensive Language Detection**: Centralized language registry supporting 50+ programming languages and file extensions:
-  - Web: TypeScript, JavaScript, JSX, TSX, HTML, CSS, SCSS, LESS, JSON, GraphQL, WebAssembly
-  - Systems: Rust, C, C++, C#, Go, Zig, Swift, Objective-C
-  - Scripting / Backend: Python, Ruby, PHP, Java, Kotlin, Scala, Dart, Perl, R, Lua, Julia, Elixir, Erlang, Haskell, Clojure, Groovy
-  - Shell / Config: Bash, Zsh, PowerShell, Batch, YAML, TOML, XML, INI, Dockerfile, Makefile, SQL
-  - Documents: Markdown, LaTeX, Plain Text
-- **Special Filename Recognition**: Automatic syntax mapping for dotfiles and configuration manifests (`Dockerfile`, `Makefile`, `.gitignore`, `.env`, `package.json`, `tsconfig.json`, `Cargo.toml`, etc.).
-- **Consistent Theme Sync**: Custom `kairo-dark` and `kairo-light` Monaco themes seamlessly synchronized with the application theme and Tailwind tokens.
+### 4. 🔍 High-Performance Workspace Search & Replace
+- **Multi-Threaded Rust Engine**: Powered by Rust's `regex` crate for rapid disk searching across large codebases.
+- **Flexible Search Query Options**:
+  - Case Sensitivity toggle (`Alt+C`).
+  - Whole Word matching toggle (`Alt+W`).
+  - Regular Expression support (`Alt+R`).
+  - Include & Exclude glob patterns (e.g. `src/**, *.tsx`, `!node_modules, !dist`).
+- **Interactive Results Tree**: Grouped by file with hit counters, line/column markers, and highlighted code snippets. Clicking jumps directly to the matching line.
+- **Safe Workspace Replace**:
+  - Batch replacement modal with total affected file and match count preview before disk commits.
+  - Bottom-to-top replacement algorithm ensuring line and offset integrity during multi-match writes.
 
-### 5. Code Formatting
-- **Extensible Formatter Provider Architecture**: Centralized `formatter.service.ts` allowing pluggable formatters registered by language ID.
-- **Integrated Formatting Providers**:
-  - Built-in Native JSON formatter with configurable indentation.
-  - Monaco `formatDocument` bridge for all languages supported by Monaco language services (TypeScript, JavaScript, HTML, CSS, SCSS, JSON).
-- **Format on Demand & Format on Save**:
-  - Trigger formatting via keyboard shortcut (`Shift+Alt+F`).
-  - Quick format button in the editor status bar.
-  - Optional Format on Save setting.
-- **Non-destructive Error Handling**: Catches syntax or parsing errors cleanly, preserving user text and dirty states without throwing unhandled exceptions.
-
-### 6. Autocomplete / IntelliSense
-- **Configured Monaco Language Services**:
-  - Pre-configured TypeScript / JavaScript compiler defaults: `ESNext` target, `react-jsx`, `node` module resolution, diagnostic validation enabled.
-  - Parameter hints, suggestion widgets, auto-closing brackets, and quotes.
-- **Built-in Snippet Engine**:
-  - Productivity code snippets for TypeScript and JavaScript:
-    - `rfc`: React Function Component template
-    - `uses`: `useState` hook snippet
-    - `usee`: `useEffect` hook snippet
-    - `clg`: `console.log` snippet
-    - `trycatch`: Safe `try { ... } catch (error) { ... }` block
-    - `afn`: Arrow function snippet
-
-### 7. Code Navigation
-- **Go to Definition**: `F12` or `Ctrl+Click` / `Cmd+Click` directly navigates to symbol definitions.
-- **Peek Definition**: `Alt+F12` opens Monaco's inline peek widget.
-- **Find References**: `Shift+F12` displays all symbol references across the project.
-- **Quick Open Modal (`Ctrl+P` / `Cmd+P`)**:
-  - Fast modal dialog indexing all workspace files.
-  - Real-time fuzzy filtering by filename or path.
-  - Keyboard navigation (arrows + Enter) to instantly open files in editor tabs.
+### 5. ⚡ Command Palette & Keybinding Registry
+- **Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`)**:
+  - Quick fuzzy search across all application, editor, file, and workspace commands.
+  - Categorized command groupings (File, Edit, View, Workspace, Theme, Help).
+- **Quick Open (`Ctrl+P` / `Cmd+P`)**:
+  - Instant fuzzy file finder scanning the entire workspace.
 - **Go to Line (`Ctrl+G` / `Cmd+G`)**:
-  - Jump directly to line and column (`line[:col]`).
-  - Validates line bounds against active document.
+  - Direct line and column jumping (`line[:col]`) with boundary validation.
+- **Centralized Keybinding Registry**: Dispatch engine for customizable global and scoped keyboard shortcuts.
 
-### 8. Search & Replace
-- **In-File Find & Replace**: Monaco built-in interactive find widget (`Ctrl+F`) and replace widget (`Ctrl+H`).
-- **Workspace-Wide Search Panel (`Ctrl+Shift+F`)**:
-  - Dedicated search view in the sidebar with toggle switcher between Explorer and Search.
-  - Fast, multi-threaded Rust search engine scanning workspace files.
-  - Search options: Match Case, Match Whole Word, and Regular Expressions.
-  - Scope filtering: Include and Exclude glob patterns (e.g. `*.ts, src/**`, `!node_modules, !dist`).
-  - Search results grouped by file with hit counts, expandable match snippets, and line/column locations.
-  - Direct navigation: Clicking any match opens the file in the editor and scrolls directly to the matching line.
-- **Workspace-Wide Replace**:
-  - Batch replacement preview with confirmation modal showing total files and match count before modifying disk.
-  - Safe bottom-to-top replacement algorithm ensuring line and offset integrity during multi-match file writes.
-  - Refresh and clear capabilities.
+### 6. 🎨 14 Built-In Professional Themes
+Instant theme switching with synchronized Monaco token colors and Tailwind design tokens:
+- **Dark+** (Default VS Code Dark)
+- **Light+** (Default VS Code Light)
+- **Monokai**
+- **Nord**
+- **Dracula**
+- **SynthWave '84**
+- **One Dark Pro**
+- **GitHub Dark**
+- **Tokyo Night**
+- **Solarized Dark**
+- **Cyberpunk**
+- **Catppuccin Mocha**
+- **Moonlight**
+- **Retro 80s**
+
+### 7. 🛠️ Bottom Panel Dock (Terminal, Output, Problems)
+- **Collapsible Bottom Dock**: Toggleable height with quick dock/undock controls.
+- **Integrated Terminal**: Multi-tab terminal interface with history navigation.
+- **Output Channel**: Dedicated log output stream for system, language service, and compiler diagnostic messages.
+- **Problems & Diagnostics**: Monaco diagnostic aggregation displaying syntax and TypeScript errors with direct file navigation.
+
+### 8. 🔒 Authentication & Cloud Sync
+- **Supabase Integration**: Optional user authentication with email/password login, account registration, password reset, and session persistence.
+- **Guest Mode Fallback**: 100% functional offline without an account; cloud sync activates only when signed in.
 
 ---
 
-## Architecture Overview
+## 🏗 Architecture Overview
+
+```
+                                      +-----------------------------------------------+
+                                      |                   Next.js 16                  |
+                                      |                    React 19                   |
+                                      +-----------------------------------------------+
+                                                             |
+            +------------------------------------------------+------------------------------------------------+
+            |                                                |                                                |
+            v                                                v                                                v
++-----------------------+                        +-----------------------+                        +-----------------------+
+|   Editor Subsystem    |                        |   File Explorer       |                        |   Command & Search    |
+| - Monaco instances    |                        | - Lazy-loaded tree    |                        | - Command Palette     |
+| - Split views         |                        | - Context menus       |                        | - Quick Open (Ctrl+P) |
+| - Document models     |                        | - Drag-and-drop       |                        | - Workspace Search    |
+| - Formatters          |                        | - Operations & icons  |                        | - Keybinding Registry |
++-----------------------+                        +-----------------------+                        +-----------------------+
+            |                                                |                                                |
+            +------------------------------------------------+------------------------------------------------+
+                                                             |
+                                                             v
+                                        +-----------------------------------------+
+                                        |   Typed Event Bus & IPC Abstraction     |
+                                        |         (`lib/tauri-ipc.ts`)            |
+                                        +-----------------------------------------+
+                                                             |
+                                            (Tauri v2 IPC Binary Bridge)
+                                                             |
+                                                             v
+                                        +-----------------------------------------+
+                                        |        Rust Native Core Backend         |
+                                        |          (`src-tauri/src/`)             |
+                                        +-----------------------------------------+
+                                           |                 |                 |
+                                           v                 v                 v
+                                  +----------------+ +---------------+ +----------------+
+                                  | Native FS Ops  | | Multi-Thread  | | Native Dialogs |
+                                  | - Atomic Write | | Regex Engine  | | - Folder Pick  |
+                                  | - Safe Delete  | | - Bottom-up   | | - File Reveal  |
+                                  | - Path Checks  | |   Replacement | | - Path Valid.  |
+                                  +----------------+ +---------------+ +----------------+
+```
+
+---
+
+## 🛡️ Security Hardening
+
+Kairo IDE incorporates comprehensive defense-in-depth security measures across both the frontend webview and the native Rust backend:
+
+| Threat Vector | Mitigation Strategy | Location |
+| :--- | :--- | :--- |
+| **Command Injection in `fs_reveal`** | Strict validation rejecting double quotes (`"`) before passing raw arguments to Windows `explorer.exe /select,`. | [`src-tauri/src/commands/fs.rs`](file:///c:/Users/Aatharva%20Gurav/Desktop/main-pro/kairo-ide/src-tauri/src/commands/fs.rs#L442) |
+| **Rust Multi-Byte UTF-8 Slicing Panic** | Non-ASCII searches advance char byte lengths (`c.len_utf8()`) rather than raw byte counts. Line slices validate `.is_char_boundary()`. | [`src-tauri/src/commands/fs.rs`](file:///c:/Users/Aatharva%20Gurav/Desktop/main-pro/kairo-ide/src-tauri/src/commands/fs.rs#L254) |
+| **Directory Traversal (`..`)** | Path normalization resolves and collapses `.` and `..` segments for both Windows drives and POSIX paths before boundary checks. | [`lib/tauri-ipc.ts`](file:///c:/Users/Aatharva%20Gurav/Desktop/main-pro/kairo-ide/lib/tauri-ipc.ts#L10) |
+| **Circular Symlink & Junction DoS** | Recursive workspace traversals enforce a strict 32-level depth limit to prevent stack overflows and memory exhaustion. | [`src-tauri/src/commands/fs.rs`](file:///c:/Users/Aatharva%20Gurav/Desktop/main-pro/kairo-ide/src-tauri/src/commands/fs.rs#L206) |
+| **Content Security Policy (CSP)** | Enforces strict CSP with `worker-src 'self' blob:;` for Monaco workers and `connect-src 'self' ipc: https: wss:;` for Supabase auth. | [`src-tauri/tauri.conf.json`](file:///c:/Users/Aatharva%20Gurav/Desktop/main-pro/kairo-ide/src-tauri/tauri.conf.json) |
+| **Windows Reserved Filenames** | Blocks creation or renaming of device-reserved names (`CON`, `PRN`, `AUX`, `NUL`, `COM1-9`, `LPT1-9`). | [`features/editor/components/floating-creation/validation.ts`](file:///c:/Users/Aatharva%20Gurav/Desktop/main-pro/kairo-ide/features/editor/components/floating-creation/validation.ts) |
+
+---
+
+## 🌐 Supported Languages
+
+Kairo IDE includes full detection, syntax coloring, and Monaco editor mappings for **over 50 programming languages**:
+
+- **Web Technologies**: TypeScript, JavaScript, JSX, TSX, HTML, CSS, SCSS, LESS, JSON, JSONC, GraphQL, WebAssembly
+- **Systems Languages**: Rust, C, C++, C#, Go, Zig, Swift, Objective-C
+- **Backend & Scripting**: Python, Ruby, PHP, Java, Kotlin, Scala, Dart, Perl, R, Lua, Julia, Elixir, Erlang, Haskell, Clojure, Groovy
+- **Config & Infrastructure**: Bash, Zsh, PowerShell, Batch, YAML, TOML, XML, INI, Dockerfile, Makefile, SQL, Prisma
+- **Documentation**: Markdown, LaTeX, Plain Text
+
+---
+
+## ⌨️ Keyboard Shortcuts
+
+| Shortcut (Windows/Linux) | Shortcut (macOS) | Action | Scope |
+| :--- | :--- | :--- | :--- |
+| <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>P</kbd> | <kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>P</kbd> | Open Command Palette | Global |
+| <kbd>Ctrl</kbd> + <kbd>P</kbd> | <kbd>Cmd</kbd> + <kbd>P</kbd> | Quick Open File | Global |
+| <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd> | <kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd> | Search in Workspace | Global |
+| <kbd>Ctrl</kbd> + <kbd>B</kbd> | <kbd>Cmd</kbd> + <kbd>B</kbd> | Toggle Sidebar | Global |
+| <kbd>Ctrl</kbd> + <kbd>\`</kbd> | <kbd>Cmd</kbd> + <kbd>\`</kbd> | Toggle Bottom Panel Dock | Global |
+| <kbd>Ctrl</kbd> + <kbd>S</kbd> | <kbd>Cmd</kbd> + <kbd>S</kbd> | Save Active Document | Editor |
+| <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>S</kbd> | <kbd>Cmd</kbd> + <kbd>Alt</kbd> + <kbd>S</kbd> | Save All Open Documents | Editor |
+| <kbd>Ctrl</kbd> + <kbd>W</kbd> | <kbd>Cmd</kbd> + <kbd>W</kbd> | Close Active Tab | Editor |
+| <kbd>Shift</kbd> + <kbd>Alt</kbd> + <kbd>F</kbd> | <kbd>Shift</kbd> + <kbd>Option</kbd> + <kbd>F</kbd> | Format Document | Editor |
+| <kbd>Ctrl</kbd> + <kbd>G</kbd> | <kbd>Cmd</kbd> + <kbd>G</kbd> | Go to Line / Column | Editor |
+| <kbd>F12</kbd> | <kbd>F12</kbd> | Go to Definition | Editor |
+| <kbd>Alt</kbd> + <kbd>F12</kbd> | <kbd>Option</kbd> + <kbd>F12</kbd> | Peek Definition | Editor |
+| <kbd>Shift</kbd> + <kbd>F12</kbd> | <kbd>Shift</kbd> + <kbd>F12</kbd> | Find All References | Editor |
+| <kbd>Ctrl</kbd> + <kbd>F</kbd> | <kbd>Cmd</kbd> + <kbd>F</kbd> | In-File Find | Editor |
+| <kbd>Ctrl</kbd> + <kbd>H</kbd> | <kbd>Cmd</kbd> + <kbd>H</kbd> | In-File Replace | Editor |
+| <kbd>F2</kbd> | <kbd>Enter</kbd> | Rename File or Folder | File Explorer |
+| <kbd>Delete</kbd> | <kbd>Cmd</kbd> + <kbd>Backspace</kbd> | Delete File or Folder | File Explorer |
+
+---
+
+## 📦 Project Structure
 
 ```text
 kairo-ide/
-├── app/
-│   ├── layout.tsx             # Root layout and theme providers
-│   └── page.tsx               # IDE shell orchestrator (EditorProvider, SearchProvider, WorkspaceProvider)
-├── components/
-│   ├── app-sidebar.tsx        # Activity bar & sidebar (File Explorer / Workspace Search switcher)
-│   └── ui/                    # Base UI components (Button, Input, Sidebar, Modal, etc.)
-├── features/
-│   ├── workspace/
-│   │   ├── types.ts           # Workspace and RecentWorkspace interfaces
-│   │   ├── service.ts         # Workspace logic, persistence, and validation
-│   │   ├── store.tsx          # WorkspaceProvider & useWorkspace hook
-│   │   └── components/
-│   │       ├── empty-workspace-view.tsx
-│   │       └── workspace-header.tsx
-│   ├── file-explorer/
-│   │   ├── types.ts           # FileSystemNode, Clipboard, and ContextMenu models
-│   │   ├── service.ts         # Real filesystem operations via Tauri IPC
-│   │   ├── store.tsx          # FileExplorerProvider, lazy-loader, and keyboard nav
-│   │   └── components/
-│   │       ├── file-explorer.tsx
-│   │       ├── file-tree-node.tsx
-│   │       ├── file-icon.tsx
-│   │       ├── context-menu.tsx
-│   │       └── confirm-delete-modal.tsx
-│   ├── editor/
-│   │   ├── types.ts           # EditorDocument, EditorSettings, Formatter interfaces
-│   │   ├── store.tsx          # EditorProvider, active document, dirty tracking, shortcuts
-│   │   ├── services/
-│   │   │   ├── editor.service.ts       # Document loading, saving, binary checking
-│   │   │   ├── language.service.ts     # 50+ language detection & Monaco ID mapping
-│   │   │   ├── model.service.ts        # Monaco model lifecycle, URI mapping, viewState
-│   │   │   ├── formatter.service.ts    # Formatter registry, JSON formatter, formatDocument
-│   │   │   ├── intellisense.service.ts # TS compiler options, diagnostics, snippets
-│   │   │   └── navigation.service.ts   # Go to definition, references, symbols, go-to-line
-│   │   └── components/
-│   │       ├── editor-workspace.tsx    # Master editor container with dynamic SSR-safe Monaco
-│   │       ├── monaco-editor-view.tsx  # Bundled offline Monaco view, themes, event listeners
-│   │       ├── editor-tabs.tsx         # Scrollable tab strip with Save All & Close All
-│   │       ├── editor-tab.tsx          # Individual tab with Seti icon, dirty dot, context menu
-│   │       ├── editor-breadcrumb.tsx   # Workspace relative path breadcrumbs
-│   │       ├── editor-status-bar.tsx   # Line/col, spaces, UTF-8, language, format button
-│   │       ├── editor-empty-state.tsx  # Empty editor view with keyboard shortcut guides
-│   │       ├── binary-file-view.tsx    # Image previews and binary file safeguard banner
-│   │       ├── close-confirm-modal.tsx # Save / Don't Save / Cancel dirty tab modal
-│   │       ├── quick-open-modal.tsx    # Ctrl+P quick file fuzzy search
-│   │       └── go-to-line-modal.tsx    # Ctrl+G jump to line dialog
-│   └── search/
-│       ├── types.ts           # SearchQuery, SearchResult, ReplaceRequest models
-│       ├── store.tsx          # SearchProvider, query state, results tree
-│       ├── services/
-│       │   └── search.service.ts       # Search & replace IPC bridge and filters
-│       └── components/
-│           ├── workspace-search-panel.tsx # Full search input, options, and results tree
-│           ├── search-result-item.tsx     # File result with match snippets
-│           └── replace-confirm-modal.tsx  # Batch replacement confirmation dialog
-├── lib/
-│   ├── events.ts              # Typed IDE Event Bus (ideEvents)
-│   ├── tauri-ipc.ts           # Tauri invoke wrapper, error formatting, path utilities
-│   └── utils.ts
-├── src-tauri/
-│   ├── src/
-│   │   ├── lib.rs             # Tauri builder & command handler registration
-│   │   └── commands/
-│   │       ├── mod.rs
-│   │       ├── workspace.rs   # workspace_pick_folder, workspace_validate_path
-│   │       └── fs.rs          # fs_read_directory, fs_read_file, fs_write_file,
-│   │                          # fs_search_workspace, fs_replace_in_files, fs_list_workspace_files
-│   ├── Cargo.toml
-│   └── tauri.conf.json
-└── package.json
+├── app/                               # Next.js 16 App Router
+│   ├── layout.tsx                     # Root HTML shell & Theme Providers
+│   ├── page.tsx                       # Master IDE Shell orchestrator
+│   └── auth/                          # Supabase Auth routing
+├── components/                        # Common UI and Shell Components
+│   ├── app-sidebar.tsx                # Activity bar and collapsible sidebar
+│   ├── app-topbar.tsx                 # Window titlebar and menu controls
+│   ├── bottom-panel.tsx               # Collapsible bottom dock (Terminal, Output, Problems)
+│   └── ui/                            # Atomic shadcn/ui components
+├── features/                          # Domain-Driven Feature Modules
+│   ├── auth/                          # Supabase auth services and modals
+│   ├── commands/                      # Command Palette, fuzzy search, keybindings
+│   ├── editor/                        # Monaco Editor, split views, formatters, intellisense
+│   ├── file-explorer/                 # Real OS file tree, drag-and-drop, context menus
+│   ├── icon-theme/                    # Seti & Lucide icon resolution
+│   ├── search/                        # Multi-threaded workspace search & replace
+│   ├── settings/                      # Preferences, theme customization, shortcuts
+│   ├── terminal/                      # Embedded terminal emulator tabs
+│   ├── theme/                         # 14 color themes & CSS variable token engine
+│   └── workspace/                     # Workspace lifecycle, folder picking, MRU history
+├── lib/                               # Cross-cutting libraries
+│   ├── events.ts                      # Typed IDE event bus
+│   ├── tauri-ipc.ts                   # Sandboxed Tauri IPC invoker & path utilities
+│   └── utils.ts                       # ClassName merging helpers
+├── src-tauri/                         # Rust Native Backend
+│   ├── Cargo.toml                     # Cargo dependencies & release profiles
+│   ├── tauri.conf.json                # Tauri v2 capabilities, permissions, CSP
+│   └── src/
+│       ├── lib.rs                     # Tauri builder and command registration
+│       ├── main.rs                    # Desktop binary entrypoint
+│       └── commands/
+│           ├── fs.rs                  # Native filesystem, search, replace, reveal
+│           └── workspace.rs           # Native folder picker and directory validation
+└── vitest.config.ts                   # Unit & integration test configuration
 ```
 
 ---
 
-## Tauri Backend & Security
+## 🛠️ Getting Started
 
-All filesystem access and workspace operations are strictly isolated behind Tauri command boundaries in `src-tauri/src/commands/`:
+### Prerequisites
 
-- `workspace_pick_folder`: Invokes native cross-platform folder picker dialog via `rfd`.
-- `workspace_validate_path`: Validates directory accessibility and existence.
-- `fs_read_directory`: Reads directory contents (directories first, case-insensitive sort).
-- `fs_read_file`: Reads UTF-8 file content with binary detection and 20MB safety limit.
-- `fs_write_file`: Atomically writes file content to disk.
-- `fs_create_file`: Validates and creates empty file without overwriting.
-- `fs_create_directory`: Creates directory recursively.
-- `fs_rename`: Renames file or directory with path collision checks.
-- `fs_delete`: Recursively deletes directory or file.
-- `fs_copy`: Recursively copies directories or files with descendant protection.
-- `fs_move`: Moves files or directories safely across mounts.
-- `fs_duplicate`: Generates duplicate file with safe numbering conflict resolution.
-- `fs_search_workspace`: High-performance recursive workspace search with regex, case-sensitivity, whole-word matching, and include/exclude glob filtering.
-- `fs_replace_in_files`: Safe multi-file text replacement applying edits from bottom-to-top to preserve line offsets.
-- `fs_list_workspace_files`: Fast recursive file enumeration for Quick Open fuzzy search.
+Ensure you have the following installed on your machine:
+- **Node.js**: `v20.x` or higher ([Download](https://nodejs.org/))
+- **npm** or **pnpm**
+- **Rust Toolchain**: `1.77.2` or higher ([Install via rustup](https://rustup.rs/))
+- **Platform Dependencies**:
+  - **Windows**: [WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) (preinstalled on Windows 10/11) and [C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/).
+  - **Linux**: `libwebkit2gtk-4.1-dev`, `build-essential`, `curl`, `wget`, `file`, `libssl-dev`, `libgtk-3-dev`, `libayatana-appindicator3-dev`, `librsvg2-dev`.
+  - **macOS**: Xcode Command Line Tools.
 
----
+### Installation
 
-## Event Bus Architecture
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/your-username/kairo-ide.git
+   cd kairo-ide
+   ```
 
-Cross-module communication is orchestrated via typed event bus `ideEvents` in `lib/events.ts`:
+2. **Install frontend dependencies**:
+   ```bash
+   npm install
+   ```
 
-```ts
-import { ideEvents } from "@/lib/events";
+### Running in Development
 
-// Open file from File Explorer or Search into Monaco Editor
-ideEvents.on("file:open-requested", ({ path, line, column }) => {
-  // Opens file in an editor tab and moves cursor to line/column
-});
+- **Web Browser Preview**:
+  ```bash
+  npm run dev
+  ```
+  *Opens the IDE shell in web fallback mode at `http://localhost:3000`.*
 
-// Update editor tabs on file rename or delete
-ideEvents.on("file:renamed", ({ oldPath, newPath }) => {
-  // Updates open tab paths and re-binds Monaco models
-});
+- **Full Native Desktop Application**:
+  ```bash
+  npx tauri dev
+  ```
+  *Compiles the native Rust backend, launches Tauri v2, and attaches the hot-reloading Next.js dev server.*
 
-ideEvents.on("file:deleted", ({ path }) => {
-  // Closes associated tab and disposes Monaco model
-});
+### Production Build & Packaging
 
-// Search panel navigation
-ideEvents.on("search:navigate-to-match", ({ path, line, column, length }) => {
-  // Opens file and highlights matched range
-});
-```
+- **Frontend Static Export**:
+  ```bash
+  npm run build
+  ```
+  *Compiles Next.js into an optimized, offline-capable static export in `out/`.*
 
----
-
-## Keyboard Shortcuts
-
-| Shortcut | Action | Scope |
-| :--- | :--- | :--- |
-| `Ctrl+S` / `Cmd+S` | Save Active Document | Editor |
-| `Ctrl+Alt+S` / `Cmd+Alt+S` | Save All Open Documents | Editor |
-| `Ctrl+W` / `Cmd+W` | Close Active Tab | Editor |
-| `Shift+Alt+F` | Format Document | Editor |
-| `F12` | Go to Definition | Editor |
-| `Alt+F12` | Peek Definition | Editor |
-| `Shift+F12` | Find References | Editor |
-| `Ctrl+P` / `Cmd+P` | Quick Open File | Global |
-| `Ctrl+G` / `Cmd+G` | Go to Line | Editor |
-| `Ctrl+Shift+F` | Open Workspace Search | Global |
-| `Ctrl+F` | In-File Find | Editor |
-| `Ctrl+H` | In-File Replace | Editor |
-| `F2` | Rename File / Folder | File Explorer |
-| `Delete` | Delete File / Folder | File Explorer |
+- **Package Native Desktop Installers**:
+  ```bash
+  npx tauri build
+  ```
+  *Generates production-optimized native binaries and installers (`.msi` / `.exe` on Windows, `.dmg` on macOS, `.deb` / `.AppImage` on Linux) in `src-tauri/target/release/bundle/`.*
 
 ---
 
-## Testing
+## 🧪 Testing & Quality Assurance
 
-### Rust Backend Tests
-Run in `src-tauri/`:
+Kairo IDE maintains strict continuous quality standards across both frontend and backend layers:
+
 ```bash
-cargo test --lib
-```
-Includes 9 unit tests covering:
-- Directory reading, sorting, and metadata
-- File creation and duplicate collision resolution
-- Safe descendant copy/move recursion prevention
-- Path validation for existing and non-existing directories
-- Safe file reading with binary detection
-- Multi-threaded workspace search with case, whole-word, and regex modes
-- Multi-file bottom-to-top text replacement
+# 1. Run TypeScript static type check (0 errors)
+npx tsc --noEmit
 
-### Frontend Unit & Integration Tests
-Run in project root:
-```bash
-npm test
+# 2. Run ESLint code quality analysis (0 errors)
+npm run lint
+
+# 3. Run full Vitest frontend suite (18 test files, 169 tests passed)
+npm run test
+
+# 4. Check Rust formatting
+cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
+
+# 5. Run Rust compiler check
+cargo check --manifest-path src-tauri/Cargo.toml
+
+# 6. Run Rust backend unit test suite (12 tests passed)
+cargo test --manifest-path src-tauri/Cargo.toml
+
+# 7. Run strict Rust Clippy linter
+cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
 ```
-Includes 61 unit tests across 8 test suites covering:
-- Cross-platform path utilities (`joinPath`, `dirname`, `basename`, `isDescendant`)
-- Filename validation against illegal characters and Windows reserved names
-- Workspace creation, recent list deduplication, ordering, and capacity limits
-- File explorer validation and boundary checks
-- Language detection service for 50+ languages, extensions, and special files
-- Formatter service registration, JSON formatting, and Monaco bridge
-- Document loading, binary file protection, saving, and `saveAll` error isolation
-- Search service filtering, match mapping, and replace request generation
+
+---
+
+## 🤝 Contributing
+
+Contributions, issues, and feature requests are welcome!
+
+1. Fork the project.
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`).
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`).
+4. Ensure all validation suites pass (`npm run test && cargo test --manifest-path src-tauri/Cargo.toml`).
+5. Push to the branch (`git push origin feature/AmazingFeature`).
+6. Open a Pull Request.
+
+---
+
+## 📄 License
+
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.

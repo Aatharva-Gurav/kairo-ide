@@ -30,15 +30,20 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { openSettings } = useSettings();
   const [activeTab, setActiveTab] = React.useState<"explorer" | "search">("explorer");
 
+  const openRef = React.useRef(open);
+  React.useEffect(() => {
+    openRef.current = open;
+  }, [open]);
+
   // Switch sidebar tab via event bus (e.g. from search command)
   React.useEffect(() => {
     return ideEvents.on("sidebar:switch-tab", (tab) => {
       setActiveTab(tab);
-      if (!open) {
+      if (!openRef.current) {
         setOpen(true);
       }
     });
-  }, [open, setOpen]);
+  }, [setOpen]);
 
   return (
     <>
