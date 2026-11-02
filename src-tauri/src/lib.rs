@@ -1,9 +1,12 @@
+pub mod agent;
 pub mod commands;
 pub mod menu;
 
 use commands::fs::*;
 use commands::workspace::*;
 use menu::*;
+use agent::commands::*;
+use std::sync::Arc;
 use tauri::Manager;
 
 pub fn run() {
@@ -20,6 +23,19 @@ pub fn run() {
             let menus = menu::init_menus(app.handle())?;
             app.manage(std::sync::Mutex::new(Some(menus)));
 
+            let workspace_root =
+                std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
+            let backend_state = Arc::new(agent::DesktopBackendState::new(workspace_root));
+            app.manage(Arc::clone(&backend_state));
+
+            let backend_state_warmup = Arc::clone(&backend_state);
+            tauri::async_runtime::spawn(async move {
+                let _ = tauri::async_runtime::spawn_blocking(move || {
+                    let _ = agent::ensure_desktop_backend_started(&backend_state_warmup);
+                })
+                .await;
+            });
+
             // Default to maximized window on launch
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.maximize();
@@ -28,6 +44,13 @@ pub fn run() {
             Ok(())
         })
         .on_menu_event(menu::handle_menu_event)
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::Destroyed = event {
+                if let Some(state) = window.try_state::<Arc<agent::DesktopBackendState>>() {
+                    state.stop();
+                }
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             workspace_pick_folder,
             workspace_pick_file,
@@ -57,6 +80,8 @@ pub fn run() {
             window_close,
             window_is_maximized,
             window_set_theme,
+            get_desktop_backend_endpoint,
+            restart_desktop_backend,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
