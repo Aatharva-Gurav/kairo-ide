@@ -1,13 +1,15 @@
 pub mod agent;
 pub mod commands;
 pub mod menu;
+pub mod terminal;
 
+use agent::commands::*;
 use commands::fs::*;
 use commands::workspace::*;
 use menu::*;
-use agent::commands::*;
 use std::sync::Arc;
 use tauri::Manager;
+use terminal::commands::*;
 
 pub fn run() {
     tauri::Builder::default()
@@ -25,8 +27,12 @@ pub fn run() {
 
             let workspace_root =
                 std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
-            let backend_state = Arc::new(agent::DesktopBackendState::new(workspace_root));
+            let backend_state = Arc::new(agent::DesktopBackendState::new(workspace_root.clone()));
             app.manage(Arc::clone(&backend_state));
+
+            let terminal_manager = Arc::new(terminal::TerminalManager::new());
+            terminal_manager.set_workspace_root(workspace_root);
+            app.manage(Arc::clone(&terminal_manager));
 
             let backend_state_warmup = Arc::clone(&backend_state);
             tauri::async_runtime::spawn(async move {
@@ -48,6 +54,9 @@ pub fn run() {
             if let tauri::WindowEvent::Destroyed = event {
                 if let Some(state) = window.try_state::<Arc<agent::DesktopBackendState>>() {
                     state.stop();
+                }
+                if let Some(terminal_state) = window.try_state::<Arc<terminal::TerminalManager>>() {
+                    let _ = terminal_state.kill_all();
                 }
             }
         })
@@ -82,6 +91,13 @@ pub fn run() {
             window_set_theme,
             get_desktop_backend_endpoint,
             restart_desktop_backend,
+            terminal_detect_shells,
+            terminal_create,
+            terminal_write,
+            terminal_resize,
+            terminal_kill,
+            terminal_list_sessions,
+            terminal_get_session,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
