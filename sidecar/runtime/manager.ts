@@ -1,6 +1,7 @@
 import { ClineCore, type ClineCoreOptions } from "@cline/sdk";
 import { Logger } from "../utils/logger";
 import { ApprovalCoordinator } from "../permissions/approval-coordinator";
+import { PermissionManager } from "../permissions/permission-manager";
 
 export type RuntimeLifecycleStatus =
   | "uninitialized"
@@ -14,6 +15,7 @@ export interface RuntimeManagerOptions {
   clientName?: string;
   fetchImpl?: typeof fetch;
   approvalCoordinator: ApprovalCoordinator;
+  permissionManager?: PermissionManager;
 }
 
 export class RuntimeManager {
@@ -22,6 +24,7 @@ export class RuntimeManager {
   private initPromise: Promise<ClineCore> | null = null;
   private readonly logger: Logger;
   private readonly approvalCoordinator: ApprovalCoordinator;
+  private readonly permissionManager?: PermissionManager;
   private readonly clientName: string;
   private readonly fetchImpl?: typeof fetch;
   private readonly startedAt: number = Date.now();
@@ -29,6 +32,7 @@ export class RuntimeManager {
   constructor(logger: Logger, options: RuntimeManagerOptions) {
     this.logger = logger.child("runtime-manager");
     this.approvalCoordinator = options.approvalCoordinator;
+    this.permissionManager = options.permissionManager;
     this.clientName = options.clientName ?? "kairo-ide";
     this.fetchImpl = options.fetchImpl;
   }
@@ -53,7 +57,10 @@ export class RuntimeManager {
           backendMode: "local",
           automation: false,
           capabilities: {
-            requestToolApproval: (req) => this.approvalCoordinator.requestApproval(req),
+            requestToolApproval: (req) =>
+              this.permissionManager
+                ? this.permissionManager.handleToolApprovalRequest(req)
+                : this.approvalCoordinator.requestApproval(req),
           },
           fetch: this.fetchImpl,
         };

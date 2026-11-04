@@ -1,15 +1,6 @@
+export * from "./types";
 export * from "./approval-coordinator";
-
-export type AgentMode = "plan" | "act";
-
-export interface PermissionPolicy {
-  mode: AgentMode;
-  autoApproveReadOnly: boolean;
-  autoApproveMutations: boolean;
-}
-
-export interface IPermissionManager {
-  getMode(): AgentMode;
-  setMode(mode: AgentMode): void;
-  canExecuteTool(toolName: string, isReadOnly: boolean): boolean;
-}
+export * from "./permission-manager";
+export { PathValidator } from "../security/path-validator";
+export { CommandGuard } from "../security/command-guard";
+export { AuditLogger } from "../security/audit-logger";

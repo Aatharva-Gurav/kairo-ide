@@ -1,29 +1,16 @@
-import { BUILT_IN_PROVIDER_IDS } from "@cline/sdk";
+export * from "./types";
+export * from "./registry";
+export * from "./settings-store";
+export * from "./connectivity";
+export * from "./sdk-adapter";
+export * from "./service";
 
-export interface ResolvedProviderSettings {
-  providerId: string;
-  modelId: string;
-  apiKey?: string;
-  baseUrl?: string;
-}
-
-export const SUPPORTED_PROVIDERS = [
-  "anthropic",
-  "openai-compatible",
-  "openai-native",
-  "openrouter",
-  "ollama",
-  "gemini",
-  "deepseek",
-  "groq",
-] as const;
+// Backward compatibility helper for existing code
+import { ProviderRegistry } from "./registry";
 
 export class ProviderManager {
   public static isSupported(providerId: string): boolean {
-    return (
-      SUPPORTED_PROVIDERS.includes(providerId as (typeof SUPPORTED_PROVIDERS)[number]) ||
-      BUILT_IN_PROVIDER_IDS.includes(providerId as (typeof BUILT_IN_PROVIDER_IDS)[number])
-    );
+    return ProviderRegistry.isSupportedProvider(providerId);
   }
 
   public static resolveSettings(params: {
@@ -31,7 +18,7 @@ export class ProviderManager {
     modelId?: string;
     apiKey?: string;
     baseUrl?: string;
-  }): ResolvedProviderSettings {
+  }) {
     const providerId = params.providerId || "anthropic";
     const modelId =
       params.modelId ||

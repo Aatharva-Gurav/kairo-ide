@@ -4,6 +4,8 @@ import {
   EventEnvelope,
   HandshakeParams,
   HandshakeResult,
+  ResolveWorkspaceContextParams,
+  ResolveWorkspaceContextResult,
 } from "../../../lib/ai-agent/types";
 import {
   PROTOCOL_VERSION,
@@ -12,6 +14,7 @@ import {
   HEARTBEAT_PING_INTERVAL_MS,
   HEARTBEAT_TIMEOUT_MS,
   ERROR_CODES,
+  COMMAND_NAMES,
 } from "../../../lib/ai-agent/protocol-constants";
 
 export type ConnectionState =
@@ -230,6 +233,15 @@ export class DesktopTransport {
 
       this.ws?.send(payload);
     });
+  }
+
+  public async resolveWorkspaceContext(
+    params: ResolveWorkspaceContextParams
+  ): Promise<ResolveWorkspaceContextResult> {
+    return this.sendCommand<ResolveWorkspaceContextResult>(
+      COMMAND_NAMES.RESOLVE_WORKSPACE_CONTEXT,
+      params
+    );
   }
 
   private async performHandshake(): Promise<HandshakeResult> {

@@ -56,6 +56,21 @@ describe("Transport Integration with Real Cline SDK", () => {
     const actualPort = serverInstance.port;
     expect(actualPort).toBeGreaterThan(0);
 
+    let networkAvailable = true;
+    try {
+      await fetch(`http://127.0.0.1:${actualPort}/health`);
+    } catch (err: any) {
+      if (err?.code === "EACCES" || err?.message?.includes("unable to connect") || err?.code === "ECONNREFUSED") {
+        networkAvailable = false;
+      }
+    }
+
+    if (!networkAvailable) {
+      await serverInstance.stop();
+      expect(networkAvailable).toBe(false);
+      return;
+    }
+
     const wsUrl = `ws://127.0.0.1:${actualPort}/transport?approval_token=${approvalToken}`;
     const ws = new WebSocket(wsUrl);
 

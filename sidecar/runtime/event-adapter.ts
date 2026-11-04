@@ -195,6 +195,7 @@ export class EventAdapter {
           }
 
           case "usage": {
+            const rawEvent = event as unknown as Record<string, unknown>;
             return {
               type: "event",
               event: EVENT_NAMES.USAGE_UPDATE,
@@ -204,6 +205,8 @@ export class EventAdapter {
               payload: {
                 inputTokens: event.inputTokens,
                 outputTokens: event.outputTokens,
+                cacheReadTokens: (rawEvent.cacheReadTokens as number) ?? 0,
+                cacheWriteTokens: (rawEvent.cacheWriteTokens as number) ?? 0,
                 cost: event.cost,
                 totalInputTokens: event.totalInputTokens,
                 totalOutputTokens: event.totalOutputTokens,

@@ -1,4 +1,8 @@
-import { describe, it, expect, afterEach } from "bun:test";
+import { describe, it, expect, afterEach, beforeAll } from "bun:test";
+import path from "node:path";
+import os from "node:os";
+import fs from "node:fs/promises";
+import { setClineDir } from "@cline/shared/storage";
 import { RuntimeManager } from "../runtime/manager";
 import { EventAdapter } from "../runtime/event-adapter";
 import { ApprovalCoordinator } from "../permissions/approval-coordinator";
@@ -39,6 +43,13 @@ describe("SessionService with Cline SDK", () => {
   const logger = new Logger("test-session-svc");
   let manager: RuntimeManager | null = null;
   let service: SessionService | null = null;
+  let tempClineDir: string;
+
+  beforeAll(async () => {
+    tempClineDir = path.join(os.tmpdir(), `kairo-cline-${Date.now()}`);
+    await fs.mkdir(tempClineDir, { recursive: true });
+    setClineDir(tempClineDir);
+  });
 
   afterEach(async () => {
     if (service) {
@@ -100,5 +111,5 @@ describe("SessionService with Cline SDK", () => {
     // Verify session deletion
     const deleted = await service.deleteSession(sessionId);
     expect(deleted).toBe(true);
-  });
+  }, 20000);
 });

@@ -11,6 +11,14 @@ import {
   ListSessionsParamsSchema,
   LoadSessionParamsSchema,
   DeleteSessionParamsSchema,
+  ConfigureProviderParamsSchema,
+  GetProviderParamsSchema,
+  DeleteProviderParamsSchema,
+  SetActiveProviderParamsSchema,
+  ListProviderModelsParamsSchema,
+  ValidateProviderCredentialsParamsSchema,
+  TestProviderConnectivityParamsSchema,
+  ResolveWorkspaceContextParamsSchema,
 } from "../../lib/ai-agent/transport-schema";
 import type {
   ResponseEnvelope,
@@ -26,8 +34,12 @@ import {
 } from "../../lib/ai-agent/protocol-constants";
 import { SessionService } from "../sessions";
 import { ApprovalCoordinator } from "../permissions/approval-coordinator";
+import { PermissionManager } from "../permissions/permission-manager";
 import { RuntimeManager } from "../runtime/manager";
 import { AgentErrorHandler } from "../runtime/error-handler";
+import { ProviderService } from "../providers/service";
+import { VERIFIED_PROVIDER_IDS } from "../providers/registry";
+import { ContextService } from "../context/context-service";
 
 export interface SocketData {
   id: string;
@@ -41,6 +53,9 @@ export interface ConnectionManagerOptions {
   sessionService?: SessionService;
   approvalCoordinator?: ApprovalCoordinator;
   runtimeManager?: RuntimeManager;
+  providerService?: ProviderService;
+  permissionManager?: PermissionManager;
+  contextService?: ContextService;
 }
 
 export class ConnectionManager {
@@ -50,6 +65,9 @@ export class ConnectionManager {
   private readonly sessionService?: SessionService;
   private readonly approvalCoordinator?: ApprovalCoordinator;
   private readonly runtimeManager?: RuntimeManager;
+  private readonly providerService?: ProviderService;
+  private readonly permissionManager?: PermissionManager;
+  private readonly contextService?: ContextService;
   private eventSeq = 0;
 
   constructor(logger: Logger, options: ConnectionManagerOptions = {}) {
@@ -57,6 +75,9 @@ export class ConnectionManager {
     this.sessionService = options.sessionService;
     this.approvalCoordinator = options.approvalCoordinator;
     this.runtimeManager = options.runtimeManager;
+    this.providerService = options.providerService;
+    this.permissionManager = options.permissionManager;
+    this.contextService = options.contextService;
 
     if (this.sessionService) {
       this.sessionService.registerBroadcaster((event) => {
@@ -209,17 +230,15 @@ export class ConnectionManager {
         return;
       }
 
+      const activeProvider = this.providerService
+        ? await this.providerService.getActiveProvider().catch(() => null)
+        : null;
+
       const result: HandshakeResult = {
         status: "ready",
         serverVersion: "0.1.0",
         protocolVersion: PROTOCOL_VERSION,
-        supportedProviders: [
-          "anthropic",
-          "openrouter",
-          "openai",
-          "ollama",
-          "gemini",
-        ],
+        supportedProviders: [...VERIFIED_PROVIDER_IDS],
         activeSessionId: null,
       };
 
@@ -382,18 +401,35 @@ export class ConnectionManager {
         return;
       }
 
-      const resolved = this.approvalCoordinator.resolveApproval(
-        parse.data.approvalId,
-        parse.data.approved,
-        parse.data.reason
-      );
+      try {
+        const handled = this.approvalCoordinator.resolveApproval(
+          parse.data.approvalId,
+          parse.data.approved,
+          parse.data.reason,
+          parse.data.sessionId
+        );
+        if (!handled) {
+          this.sendResponse(ws, {
+            type: "response",
+            id: command.id,
+            status: "error",
+            error: {
+              code: ERROR_CODES.ERR_NOT_FOUND,
+              message: `Pending tool approval '${parse.data.approvalId}' not found or already resolved`,
+            },
+          });
+          return;
+        }
 
-      this.sendResponse(ws, {
-        type: "response",
-        id: command.id,
-        status: "ok",
-        result: { resolved },
-      });
+        this.sendResponse(ws, {
+          type: "response",
+          id: command.id,
+          status: "ok",
+          result: { resolved: true },
+        });
+      } catch (err) {
+        this.sendSanitizedError(ws, command.id, err);
+      }
       return;
     }
 
@@ -404,7 +440,7 @@ export class ConnectionManager {
         return;
       }
 
-      const parse = ListSessionsParamsSchema.safeParse(command.params || {});
+      const parse = ListSessionsParamsSchema.safeParse(command.params ?? {});
       if (!parse.success) {
         this.sendInvalidParams(ws, command.id, parse.error.issues);
         return;
@@ -424,7 +460,7 @@ export class ConnectionManager {
       return;
     }
 
-    // Load Session (read messages) command
+    // Load Session command
     if (command.name === "load_session") {
       if (!this.sessionService) {
         this.sendNotImplemented(ws, command.id, command.name);
@@ -438,12 +474,25 @@ export class ConnectionManager {
       }
 
       try {
-        const messages = await this.sessionService.readMessages(parse.data.sessionId);
+        const session = await this.sessionService.loadSession(parse.data.sessionId);
+        if (!session) {
+          this.sendResponse(ws, {
+            type: "response",
+            id: command.id,
+            status: "error",
+            error: {
+              code: ERROR_CODES.ERR_SESSION_NOT_FOUND,
+              message: `Session '${parse.data.sessionId}' was not found`,
+            },
+          });
+          return;
+        }
+
         this.sendResponse(ws, {
           type: "response",
           id: command.id,
           status: "ok",
-          result: { messages },
+          result: { session },
         });
       } catch (err) {
         this.sendSanitizedError(ws, command.id, err);
@@ -471,6 +520,285 @@ export class ConnectionManager {
           id: command.id,
           status: "ok",
           result: { deleted },
+        });
+      } catch (err) {
+        this.sendSanitizedError(ws, command.id, err);
+      }
+      return;
+    }
+
+    // -------------------------------------------------------------
+    // Stage 06: Provider Management Commands
+    // -------------------------------------------------------------
+
+    // List Providers command
+    if (command.name === "list_providers") {
+      if (!this.providerService) {
+        this.sendNotImplemented(ws, command.id, command.name);
+        return;
+      }
+
+      try {
+        const providers = await this.providerService.listProviders();
+        this.sendResponse(ws, {
+          type: "response",
+          id: command.id,
+          status: "ok",
+          result: { providers },
+        });
+      } catch (err) {
+        this.sendSanitizedError(ws, command.id, err);
+      }
+      return;
+    }
+
+    // Get Provider command
+    if (command.name === "get_provider") {
+      if (!this.providerService) {
+        this.sendNotImplemented(ws, command.id, command.name);
+        return;
+      }
+
+      const parse = GetProviderParamsSchema.safeParse(command.params);
+      if (!parse.success) {
+        this.sendInvalidParams(ws, command.id, parse.error.issues);
+        return;
+      }
+
+      try {
+        const providerData = await this.providerService.getProvider(parse.data.providerId);
+        this.sendResponse(ws, {
+          type: "response",
+          id: command.id,
+          status: "ok",
+          result: providerData,
+        });
+      } catch (err) {
+        this.sendSanitizedError(ws, command.id, err);
+      }
+      return;
+    }
+
+    // Configure Provider command (Add / Update patch-style)
+    if (command.name === "configure_provider") {
+      if (!this.providerService) {
+        this.sendNotImplemented(ws, command.id, command.name);
+        return;
+      }
+
+      const parse = ConfigureProviderParamsSchema.safeParse(command.params);
+      if (!parse.success) {
+        this.sendInvalidParams(ws, command.id, parse.error.issues);
+        return;
+      }
+
+      try {
+        const provider = await this.providerService.configureProvider(parse.data);
+        this.sendResponse(ws, {
+          type: "response",
+          id: command.id,
+          status: "ok",
+          result: { provider },
+        });
+      } catch (err) {
+        this.sendSanitizedError(ws, command.id, err);
+      }
+      return;
+    }
+
+    // Delete Provider command
+    if (command.name === "delete_provider") {
+      if (!this.providerService) {
+        this.sendNotImplemented(ws, command.id, command.name);
+        return;
+      }
+
+      const parse = DeleteProviderParamsSchema.safeParse(command.params);
+      if (!parse.success) {
+        this.sendInvalidParams(ws, command.id, parse.error.issues);
+        return;
+      }
+
+      try {
+        const deleted = await this.providerService.removeProvider(parse.data.providerId);
+        this.sendResponse(ws, {
+          type: "response",
+          id: command.id,
+          status: "ok",
+          result: { deleted },
+        });
+      } catch (err) {
+        this.sendSanitizedError(ws, command.id, err);
+      }
+      return;
+    }
+
+    // Set Active Provider command
+    if (command.name === "set_active_provider") {
+      if (!this.providerService) {
+        this.sendNotImplemented(ws, command.id, command.name);
+        return;
+      }
+
+      const parse = SetActiveProviderParamsSchema.safeParse(command.params);
+      if (!parse.success) {
+        this.sendInvalidParams(ws, command.id, parse.error.issues);
+        return;
+      }
+
+      try {
+        const provider = await this.providerService.setActiveProvider(parse.data.providerId);
+        this.sendResponse(ws, {
+          type: "response",
+          id: command.id,
+          status: "ok",
+          result: { provider },
+        });
+      } catch (err) {
+        this.sendSanitizedError(ws, command.id, err);
+      }
+      return;
+    }
+
+    // Get Active Provider command
+    if (command.name === "get_active_provider") {
+      if (!this.providerService) {
+        this.sendNotImplemented(ws, command.id, command.name);
+        return;
+      }
+
+      try {
+        const provider = await this.providerService.getActiveProvider();
+        this.sendResponse(ws, {
+          type: "response",
+          id: command.id,
+          status: "ok",
+          result: { provider },
+        });
+      } catch (err) {
+        this.sendSanitizedError(ws, command.id, err);
+      }
+      return;
+    }
+
+    // List Provider Models command
+    if (command.name === "list_provider_models") {
+      if (!this.providerService) {
+        this.sendNotImplemented(ws, command.id, command.name);
+        return;
+      }
+
+      const parse = ListProviderModelsParamsSchema.safeParse(command.params);
+      if (!parse.success) {
+        this.sendInvalidParams(ws, command.id, parse.error.issues);
+        return;
+      }
+
+      try {
+        const models = await this.providerService.listModels(parse.data.providerId, {
+          filter: parse.data.filter,
+        });
+        this.sendResponse(ws, {
+          type: "response",
+          id: command.id,
+          status: "ok",
+          result: { models },
+        });
+      } catch (err) {
+        this.sendSanitizedError(ws, command.id, err);
+      }
+      return;
+    }
+
+    // Validate Provider Credentials command
+    if (command.name === "validate_provider_credentials") {
+      if (!this.providerService) {
+        this.sendNotImplemented(ws, command.id, command.name);
+        return;
+      }
+
+      const parse = ValidateProviderCredentialsParamsSchema.safeParse(command.params);
+      if (!parse.success) {
+        this.sendInvalidParams(ws, command.id, parse.error.issues);
+        return;
+      }
+
+      try {
+        const validation = await this.providerService.validateCredentials(
+          parse.data.providerId,
+          {
+            apiKey: parse.data.apiKey,
+            baseUrl: parse.data.baseUrl,
+          }
+        );
+        this.sendResponse(ws, {
+          type: "response",
+          id: command.id,
+          status: "ok",
+          result: validation,
+        });
+      } catch (err) {
+        this.sendSanitizedError(ws, command.id, err);
+      }
+      return;
+    }
+
+    // Test Provider Connectivity command
+    if (command.name === "test_provider_connectivity") {
+      if (!this.providerService) {
+        this.sendNotImplemented(ws, command.id, command.name);
+        return;
+      }
+
+      const parse = TestProviderConnectivityParamsSchema.safeParse(command.params);
+      if (!parse.success) {
+        this.sendInvalidParams(ws, command.id, parse.error.issues);
+        return;
+      }
+
+      try {
+        const connectivity = await this.providerService.testConnectivity(parse.data.providerId);
+        this.sendResponse(ws, {
+          type: "response",
+          id: command.id,
+          status: "ok",
+          result: connectivity,
+        });
+      } catch (err) {
+        this.sendSanitizedError(ws, command.id, err);
+      }
+      return;
+    }
+
+    // Resolve Workspace Context command
+    if (command.name === "resolve_workspace_context") {
+      const parse = ResolveWorkspaceContextParamsSchema.safeParse(command.params);
+      if (!parse.success) {
+        this.sendInvalidParams(ws, command.id, parse.error.issues);
+        return;
+      }
+
+      try {
+        const contextSvc =
+          this.contextService ?? new ContextService(parse.data.workspaceRoot);
+        const assembled = await contextSvc.resolveContext({
+          workspaceRoot: parse.data.workspaceRoot,
+          prompt: parse.data.query || "",
+          context: parse.data.context,
+          budget: parse.data.maxTokens ? { maxTotalTokens: parse.data.maxTokens } : undefined,
+          searchQuery: parse.data.query,
+        });
+
+        this.sendResponse(ws, {
+          type: "response",
+          id: command.id,
+          status: "ok",
+          result: {
+            formattedContext: assembled.formattedPrompt,
+            estimatedTokens: assembled.totalEstimatedTokens,
+            includedFiles: assembled.includedFiles,
+            truncated: assembled.truncated,
+          },
         });
       } catch (err) {
         this.sendSanitizedError(ws, command.id, err);

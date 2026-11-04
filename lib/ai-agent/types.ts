@@ -14,6 +14,28 @@ import {
   LoadSessionParamsSchema,
   DeleteSessionParamsSchema,
   RuntimeStatusResultSchema,
+  ProviderContextLimitsSchema,
+  ProviderReasoningSettingsSchema,
+  AwsProviderSettingsSchema,
+  ProviderSummarySchema,
+  ConfigureProviderParamsSchema,
+  ConfigureProviderResultSchema,
+  GetProviderParamsSchema,
+  DeleteProviderParamsSchema,
+  SetActiveProviderParamsSchema,
+  ListProviderModelsParamsSchema,
+  ValidateProviderCredentialsParamsSchema,
+  TestProviderConnectivityParamsSchema,
+  ProviderConnectivityResultSchema,
+  TokenUsagePayloadSchema,
+  ToolApprovalRequestPayloadSchema,
+  CursorPositionSchema,
+  ActiveDocumentContextSchema,
+  OpenDocumentContextSchema,
+  DiagnosticItemSchema,
+  WorkspaceContextPayloadSchema,
+  ResolveWorkspaceContextParamsSchema,
+  ResolveWorkspaceContextResultSchema,
 } from "./transport-schema";
 
 export type CommandEnvelope<TName extends string = string, TParams = unknown> = {
@@ -70,3 +92,26 @@ export type ListSessionsParams = z.infer<typeof ListSessionsParamsSchema>;
 export type LoadSessionParams = z.infer<typeof LoadSessionParamsSchema>;
 export type DeleteSessionParams = z.infer<typeof DeleteSessionParamsSchema>;
 export type RuntimeStatusResult = z.infer<typeof RuntimeStatusResultSchema>;
+
+export type ProviderContextLimits = z.infer<typeof ProviderContextLimitsSchema>;
+export type ProviderReasoningSettings = z.infer<typeof ProviderReasoningSettingsSchema>;
+export type AwsProviderSettings = z.infer<typeof AwsProviderSettingsSchema>;
+export type ProviderSummary = z.infer<typeof ProviderSummarySchema>;
+export type ConfigureProviderParams = z.infer<typeof ConfigureProviderParamsSchema>;
+export type ConfigureProviderResult = z.infer<typeof ConfigureProviderResultSchema>;
+export type GetProviderParams = z.infer<typeof GetProviderParamsSchema>;
+export type DeleteProviderParams = z.infer<typeof DeleteProviderParamsSchema>;
+export type SetActiveProviderParams = z.infer<typeof SetActiveProviderParamsSchema>;
+export type ListProviderModelsParams = z.infer<typeof ListProviderModelsParamsSchema>;
+export type ValidateProviderCredentialsParams = z.infer<typeof ValidateProviderCredentialsParamsSchema>;
+export type TestProviderConnectivityParams = z.infer<typeof TestProviderConnectivityParamsSchema>;
+export type ProviderConnectivityResult = z.infer<typeof ProviderConnectivityResultSchema>;
+export type TokenUsagePayload = z.infer<typeof TokenUsagePayloadSchema>;
+export type ToolApprovalRequestPayload = z.infer<typeof ToolApprovalRequestPayloadSchema>;
+export type CursorPosition = z.infer<typeof CursorPositionSchema>;
+export type ActiveDocumentContext = z.infer<typeof ActiveDocumentContextSchema>;
+export type OpenDocumentContext = z.infer<typeof OpenDocumentContextSchema>;
+export type DiagnosticItem = z.infer<typeof DiagnosticItemSchema>;
+export type WorkspaceContextPayload = z.infer<typeof WorkspaceContextPayloadSchema>;
+export type ResolveWorkspaceContextParams = z.infer<typeof ResolveWorkspaceContextParamsSchema>;
+export type ResolveWorkspaceContextResult = z.infer<typeof ResolveWorkspaceContextResultSchema>;
