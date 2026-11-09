@@ -269,16 +269,45 @@ pub fn resolve_shell(profile_id: Option<&str>) -> Result<(String, Vec<String>), 
     ))
 }
 
-/// Validates that an executable requested directly by the frontend is permitted and exists.
+/// Validates that an executable requested directly by the frontend is permitted and exists,
+/// checking both direct file paths and system PATH directories.
 pub fn validate_executable(executable: &str) -> Result<PathBuf, TerminalError> {
     let p = Path::new(executable);
-    if !p.is_file() {
-        return Err(TerminalError::ShellNotFound(format!(
-            "Executable path does not exist or is not a file: {}",
-            executable
-        )));
+    if p.is_file() {
+        return Ok(p.to_path_buf());
     }
-    Ok(p.to_path_buf())
+
+    // Check system PATH
+    if let Ok(path_var) = env::var("PATH") {
+        #[cfg(windows)]
+        let separator = ';';
+        #[cfg(not(windows))]
+        let separator = ':';
+
+        #[cfg(windows)]
+        let extensions: &[&str] = &["", ".exe", ".cmd", ".bat", ".com"];
+        #[cfg(not(windows))]
+        let extensions: &[&str] = &[""];
+
+        for dir in path_var.split(separator) {
+            let dir_path = Path::new(dir);
+            for ext in extensions {
+                let candidate = if ext.is_empty() {
+                    dir_path.join(executable)
+                } else {
+                    dir_path.join(format!("{}{}", executable, ext))
+                };
+                if candidate.is_file() {
+                    return Ok(candidate);
+                }
+            }
+        }
+    }
+
+    Err(TerminalError::ShellNotFound(format!(
+        "Executable not found on filesystem or PATH: {}",
+        executable
+    )))
 }
 
 /// Validates and resolves the working directory for a new terminal session.

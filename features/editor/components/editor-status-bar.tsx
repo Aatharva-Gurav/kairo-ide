@@ -4,7 +4,9 @@ import React from "react";
 import { EditorDocument } from "../types";
 import { useEditor } from "../store";
 import { LanguageService } from "../services/language.service";
-import { Code } from "lucide-react";
+import { Code, Terminal } from "lucide-react";
+import { useTerminalOptional } from "@/features/terminal";
+import { cn } from "@/lib/utils";
 
 interface EditorStatusBarProps {
   document: EditorDocument | null;
@@ -26,6 +28,8 @@ export function EditorStatusBar({ document, cursorPosition }: EditorStatusBarPro
     zoomReset,
     setGoToLineVisible,
   } = useEditor();
+
+  const terminal = useTerminalOptional();
 
   if (!document) return null;
 
@@ -79,8 +83,29 @@ export function EditorStatusBar({ document, cursorPosition }: EditorStatusBarPro
         </span>
       </div>
 
-      {/* Right side: zoom controls, format document, language */}
+      {/* Right side: zoom controls, format document, language, terminal toggle */}
       <div className="flex items-center gap-2.5">
+        {/* Terminal Panel Toggle Pill */}
+        {terminal && (
+          <button
+            type="button"
+            onClick={terminal.toggleTerminal}
+            title={`Toggle Terminal (${terminal.sessions.length} active) (Ctrl+\`)`}
+            className={cn(
+              "group flex items-center gap-1.5 text-muted-foreground hover:text-foreground cursor-pointer transition-colors duration-120 active:scale-95 px-1.5 py-0.5 rounded hover:bg-sidebar-accent/80 font-sans",
+              terminal.isOpen && "bg-sidebar-accent/70 text-foreground font-medium"
+            )}
+          >
+            <Terminal className="size-3 transition-transform duration-140 group-hover:scale-105 text-primary" />
+            <span>Terminal</span>
+            {terminal.sessions.length > 0 && (
+              <span className="text-[10px] font-mono px-1 rounded-sm bg-muted text-muted-foreground">
+                {terminal.sessions.length}
+              </span>
+            )}
+          </button>
+        )}
+
         {/* Editor Zoom Controls */}
         <div className="flex items-center gap-0.5 font-sans text-[10px] text-muted-foreground bg-sidebar-accent/40 px-1 py-0.5 rounded border border-sidebar-border/60">
           <button

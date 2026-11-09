@@ -8,6 +8,7 @@ export interface TerminalViewProps {
   sessionId: string;
   settings: TerminalSettings;
   isActive: boolean;
+  isVisible?: boolean;
   onExit?: (code: number | null) => void;
   className?: string;
 }

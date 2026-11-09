@@ -25,6 +25,15 @@ export const DEFAULT_KEYBINDINGS: Keybinding[] = [
   { commandId: "editor.zoomIn", key: "ctrl+=", macKey: "cmd+=" },
   { commandId: "editor.zoomOut", key: "ctrl+-", macKey: "cmd+-" },
   { commandId: "editor.zoomReset", key: "ctrl+0", macKey: "cmd+0" },
+  { commandId: "workbench.action.terminal.toggleTerminal", key: "ctrl+`", macKey: "cmd+`" },
+  { commandId: "workbench.action.terminal.new", key: "ctrl+shift+`", macKey: "cmd+shift+`" },
+  { commandId: "workbench.action.terminal.split", key: "ctrl+shift+5", macKey: "cmd+shift+5" },
+  { commandId: "workbench.action.terminal.close", key: "ctrl+shift+w", macKey: "cmd+shift+w" },
+  { commandId: "workbench.action.terminal.focus", key: "ctrl+alt+t", macKey: "cmd+alt+t" },
+  { commandId: "workbench.action.terminal.focusNext", key: "ctrl+pagedown", macKey: "cmd+pagedown" },
+  { commandId: "workbench.action.terminal.focusPrevious", key: "ctrl+pageup", macKey: "cmd+pageup" },
+  { commandId: "workbench.action.terminal.toggleMaximize", key: "alt+f11", macKey: "alt+f11" },
+  { commandId: "workbench.action.terminal.clear", key: "ctrl+k", macKey: "cmd+k" },
 ];
 
 /**

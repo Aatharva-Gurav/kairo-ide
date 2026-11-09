@@ -23,52 +23,64 @@ import { IconThemeProvider } from "@/features/icon-theme";
 import { Folder, File } from "lucide-react";
 import { KairoBrandIcon } from "@/components/kairo-brand-icon";
 import { TauriDragDropListener } from "@/components/tauri-drag-drop-listener";
-
 import { AppTitleBar } from "@/components/app-titlebar";
+import { TerminalProvider, useTerminal, TerminalPanel } from "@/features/terminal";
+import { CommandProvider } from "@/features/commands/store";
+import { AuthGuard } from "@/components/auth-guard";
+import { cn } from "@/lib/utils";
 
 function PageContent() {
   const { activeWorkspace, openFolder } = useWorkspace();
   const { documents, openFileDialog } = useEditor();
+  const { isOpen, isMaximized } = useTerminal();
 
   const handleOpenFile = async () => {
     await openFileDialog();
   };
 
   return (
-    <SidebarInset className="h-full flex-1 min-w-0 min-h-0 overflow-hidden flex flex-col p-0 m-0 border-0">
-      {activeWorkspace || documents.length > 0 ? (
-        <EditorWorkspace />
-      ) : (
-        <div className="flex flex-1 items-center justify-center p-8 h-full w-full bg-background select-none">
-          <Empty className="max-w-sm w-full border-none bg-transparent gap-3 animate-in fade-in-50 zoom-in-[0.98] duration-220 ease-[cubic-bezier(0.16,1,0.3,1)]">
-            <EmptyHeader className="max-w-sm flex flex-col items-center">
-              <div className="animate-kairo-float mb-2.5">
-                <KairoBrandIcon size={54} className="rounded-2xl shadow-lg hover:scale-105 transition-transform duration-220 ease-[cubic-bezier(0.16,1,0.3,1)]" />
-              </div>
-              <EmptyTitle className="text-base font-semibold tracking-tight text-foreground">Welcome to Kairo IDE</EmptyTitle>
-              <EmptyDescription className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                Open a file or local project from your computer to begin editing.
-              </EmptyDescription>
-            </EmptyHeader>
-            <EmptyContent className="mt-2 flex items-center justify-center gap-2.5">
-              <Button onClick={handleOpenFile} variant="outline" className="w-36 justify-center cursor-pointer shadow-2xs font-medium interactive-hover" size="default">
-                <File className="size-4 mr-1.5 shrink-0 transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110" />
-                Open File
-              </Button>
-              <Button onClick={() => openFolder()} className="w-36 justify-center cursor-pointer shadow-2xs font-medium interactive-hover" size="default">
-                <Folder className="size-4 mr-1.5 shrink-0 transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110" />
-                Open Folder
-              </Button>
-            </EmptyContent>
-          </Empty>
-        </div>
-      )}
+    <SidebarInset className="h-full flex-1 min-w-0 min-h-0 overflow-hidden flex flex-col p-0 m-0 border-0 relative">
+      {/* Upper Editor Canvas or Welcome State */}
+      <div
+        className={cn(
+          "flex-1 min-h-0 w-full overflow-hidden flex flex-col relative",
+          isOpen && isMaximized && "hidden"
+        )}
+      >
+        {activeWorkspace || documents.length > 0 ? (
+          <EditorWorkspace />
+        ) : (
+          <div className="flex flex-1 items-center justify-center p-8 h-full w-full bg-background select-none">
+            <Empty className="max-w-sm w-full border-none bg-transparent gap-3 animate-in fade-in-50 zoom-in-[0.98] duration-220 ease-[cubic-bezier(0.16,1,0.3,1)]">
+              <EmptyHeader className="max-w-sm flex flex-col items-center">
+                <div className="animate-kairo-float mb-2.5">
+                  <KairoBrandIcon size={54} className="rounded-2xl shadow-lg hover:scale-105 transition-transform duration-220 ease-[cubic-bezier(0.16,1,0.3,1)]" />
+                </div>
+                <EmptyTitle className="text-base font-semibold tracking-tight text-foreground">Welcome to Kairo IDE</EmptyTitle>
+                <EmptyDescription className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                  Open a file or local project from your computer to begin editing.
+                </EmptyDescription>
+              </EmptyHeader>
+              <EmptyContent className="mt-2 flex items-center justify-center gap-2.5">
+                <Button onClick={handleOpenFile} variant="outline" className="w-36 justify-center cursor-pointer shadow-2xs font-medium interactive-hover" size="default">
+                  <File className="size-4 mr-1.5 shrink-0 transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110" />
+                  Open File
+                </Button>
+                <Button onClick={() => openFolder()} className="w-36 justify-center cursor-pointer shadow-2xs font-medium interactive-hover" size="default">
+                  <Folder className="size-4 mr-1.5 shrink-0 transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110" />
+                  Open Folder
+                </Button>
+              </EmptyContent>
+            </Empty>
+          </div>
+        )}
+      </div>
+
+      {/* Integrated Bottom Terminal Panel */}
+      <TerminalPanel />
     </SidebarInset>
   );
 }
-
-import { CommandProvider } from "@/features/commands/store";
-import { AuthGuard } from "@/components/auth-guard";
 
 export default function Page() {
   return (
@@ -76,31 +88,32 @@ export default function Page() {
       <IconThemeProvider>
         <FileExplorerProvider>
           <EditorProvider>
-            <SearchProvider>
-              <TauriDragDropListener />
-              <SidebarProvider
-                className="h-full w-full min-h-0 overflow-hidden flex flex-col"
-                style={
-                  {
-                    "--sidebar-width": "19rem",
-                  } as React.CSSProperties
-                }
-              >
-                <CommandProvider>
-                  <div className="flex flex-col h-full w-full min-h-0 overflow-hidden">
-                    <AppTitleBar />
-                    <div className="flex flex-1 overflow-hidden relative w-full h-[calc(100%-30px)] min-h-0 min-w-0">
-                      <PageContent />
-                      <AppSidebar />
+            <TerminalProvider>
+              <SearchProvider>
+                <TauriDragDropListener />
+                <SidebarProvider
+                  className="h-full w-full min-h-0 overflow-hidden flex flex-col"
+                  style={
+                    {
+                      "--sidebar-width": "19rem",
+                    } as React.CSSProperties
+                  }
+                >
+                  <CommandProvider>
+                    <div className="flex flex-col h-full w-full min-h-0 overflow-hidden">
+                      <AppTitleBar />
+                      <div className="flex flex-1 overflow-hidden relative w-full h-[calc(100%-30px)] min-h-0 min-w-0">
+                        <PageContent />
+                        <AppSidebar />
+                      </div>
                     </div>
-                  </div>
-                </CommandProvider>
-              </SidebarProvider>
-            </SearchProvider>
+                  </CommandProvider>
+                </SidebarProvider>
+              </SearchProvider>
+            </TerminalProvider>
           </EditorProvider>
         </FileExplorerProvider>
       </IconThemeProvider>
     </AuthGuard>
   );
 }
-

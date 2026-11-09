@@ -141,3 +141,72 @@ fn test_pty_session_direct_creation_and_teardown() {
     // Clean teardown
     let _ = child.kill();
 }
+
+#[test]
+fn test_validate_executable_path_lookup() {
+    #[cfg(windows)]
+    {
+        let res = validate_executable("cmd");
+        assert!(res.is_ok(), "Should resolve 'cmd' via PATH on Windows");
+    }
+
+    #[cfg(unix)]
+    {
+        let res = validate_executable("sh");
+        assert!(res.is_ok(), "Should resolve 'sh' via PATH on Unix");
+    }
+}
+
+#[test]
+fn test_ai_executor_sync_command() {
+    let executor = AiCommandExecutor::new();
+    let cmd = if cfg!(windows) { "echo hello" } else { "echo hello" };
+    let res = executor.execute_command(cmd, None, Some(5000), None);
+    assert!(res.is_ok());
+    let output = res.unwrap();
+    assert_eq!(output.exit_code, 0);
+    assert!(output.stdout.contains("hello"));
+}
+
+#[test]
+fn test_ai_executor_output_bounds() {
+    let executor = AiCommandExecutor::new();
+    let cmd = if cfg!(windows) { "echo 1234567890" } else { "echo 1234567890" };
+    let res = executor.execute_command(cmd, None, Some(5000), Some(5));
+    assert!(res.is_ok());
+    let output = res.unwrap();
+    assert!(output.stdout.len() <= 5, "Output should be bounded to 5 bytes");
+}
+
+#[test]
+fn test_ai_executor_background_lifecycle() {
+    let executor = AiCommandExecutor::new();
+    let cmd = if cfg!(windows) { "ping -n 3 127.0.0.1" } else { "sleep 2" };
+    let proc = executor.start_background_process(cmd, None, None);
+    assert!(proc.is_ok());
+    let proc_info = proc.unwrap();
+    assert_eq!(proc_info.status, AiProcessStatus::Running);
+
+    let active = executor.list_tracked_processes(true);
+    assert!(active.iter().any(|p| p.execution_id == proc_info.execution_id));
+
+    let stop_res = executor.stop_tracked_process(&proc_info.execution_id);
+    assert!(stop_res.is_ok());
+
+    let out = executor.get_process_output(&proc_info.execution_id).unwrap();
+    assert_eq!(out.status, AiProcessStatus::Killed);
+}
+
+#[test]
+fn test_ai_executor_stop_all() {
+    let executor = AiCommandExecutor::new();
+    let cmd = if cfg!(windows) { "ping -n 3 127.0.0.1" } else { "sleep 2" };
+    let proc = executor.start_background_process(cmd, None, None).unwrap();
+
+    let stop_all_res = executor.stop_all();
+    assert!(stop_all_res.is_ok());
+
+    let out = executor.get_process_output(&proc.execution_id).unwrap();
+    assert_eq!(out.status, AiProcessStatus::Killed);
+}
+

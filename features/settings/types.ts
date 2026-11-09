@@ -9,12 +9,14 @@ import type {
   DarkThemeId,
   LightThemeId,
 } from "../theme/types";
+import type { TerminalSettings } from "../terminal/types";
 
 export type {
   ThemePreference,
   ThemeId,
   DarkThemeId,
   LightThemeId,
+  TerminalSettings,
 };
 export type WordWrapPreference = "on" | "off" | "wordWrapColumn" | "bounded";
 export type LineNumbersPreference = "on" | "off" | "relative";
@@ -104,6 +106,7 @@ export interface IDESettings {
   search: SearchSettings;
   keyboard: KeyboardSettings;
   suggestions: SuggestionsSettings;
+  terminal: TerminalSettings;
 }
 
 export type SettingsCategory = keyof IDESettings;

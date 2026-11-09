@@ -11,6 +11,7 @@ interface TerminalViewInnerProps {
   sessionId: string;
   settings: TerminalSettings;
   isActive: boolean;
+  isVisible?: boolean;
   onExit?: (code: number | null) => void;
   className?: string;
 }
@@ -19,6 +20,7 @@ export function TerminalViewInner({
   sessionId,
   settings,
   isActive,
+  isVisible = true,
   onExit,
   className,
 }: TerminalViewInnerProps) {
@@ -33,10 +35,10 @@ export function TerminalViewInner({
   });
 
   useEffect(() => {
-    if (isActive) {
+    if (isActive && isVisible) {
       focus();
     }
-  }, [isActive, focus]);
+  }, [isActive, isVisible, focus]);
 
   return (
     <div
@@ -44,7 +46,7 @@ export function TerminalViewInner({
       onClick={focus}
       className={cn(
         "h-full w-full overflow-hidden px-2.5 py-1.5 bg-background font-mono select-text",
-        !isActive && "hidden",
+        !isVisible && "hidden",
         className
       )}
       style={{

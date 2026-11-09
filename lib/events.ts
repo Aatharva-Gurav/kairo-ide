@@ -70,6 +70,16 @@ export type IDEEventMap = {
   "search:navigate-to-match": { path: string; line: number; column: number; matchLength?: number };
   "sidebar:switch-tab": "explorer" | "search";
   "workbench:open-file": void;
+  "terminal:toggle": void;
+  "terminal:new": { shellId?: string } | void;
+  "terminal:close": void;
+  "terminal:focus": void;
+  "terminal:focus-next": void;
+  "terminal:focus-previous": void;
+  "terminal:split": "horizontal" | "vertical" | void;
+  "terminal:maximize": void;
+  "terminal:clear": void;
+  "terminal:find": void;
 };
 
 type EventHandler<T> = (data: T) => void;
@@ -89,7 +99,7 @@ class IDEEventBus {
     };
   }
 
-  emit<K extends keyof IDEEventMap>(event: K, data: IDEEventMap[K]): void {
+  emit<K extends keyof IDEEventMap>(event: K, data?: IDEEventMap[K]): void {
     const set = this.handlers.get(event);
     if (set) {
       set.forEach((handler) => {

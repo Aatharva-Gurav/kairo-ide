@@ -7,8 +7,12 @@ export interface ShellProfile {
   name: string;
   executable: string;
   args?: string[];
+  env?: Record<string, string>;
+  cwd?: string;
+  startupCommand?: string;
   icon: string;
   isDefault: boolean;
+  isCustom?: boolean;
   platform: string;
 }
 
@@ -51,22 +55,131 @@ export interface TerminalSessionState {
   exitCode?: number;
 }
 
+export type TerminalCursorStyle = "block" | "underline" | "bar";
+export type TerminalFontWeight =
+  | "normal"
+  | "bold"
+  | "100"
+  | "200"
+  | "300"
+  | "400"
+  | "500"
+  | "600"
+  | "700"
+  | "800"
+  | "900";
+export type TerminalRightClickBehavior = "contextMenu" | "paste" | "selectWord";
+
 export interface TerminalSettings {
   fontSize: number;
   fontFamily: string;
+  fontWeight: TerminalFontWeight;
   lineHeight: number;
-  cursorStyle: "block" | "underline" | "bar";
+  cursorStyle: TerminalCursorStyle;
   cursorBlink: boolean;
   scrollback: number;
+  theme: string;
+  defaultProfile: string;
+  defaultCwd: string;
+  panelHeight: number;
   copyOnSelect: boolean;
+  rightClickBehavior: TerminalRightClickBehavior;
+  confirmKillProcess: boolean;
+  customProfiles: ShellProfile[];
 }
 
 export const DEFAULT_TERMINAL_SETTINGS: TerminalSettings = {
   fontSize: 13,
   fontFamily: "var(--font-mono), 'Geist Mono', Consolas, monospace",
+  fontWeight: "normal",
   lineHeight: 1.25,
   cursorStyle: "block",
   cursorBlink: true,
   scrollback: 10000,
+  theme: "auto",
+  defaultProfile: "",
+  defaultCwd: "",
+  panelHeight: 260,
   copyOnSelect: false,
+  rightClickBehavior: "contextMenu",
+  confirmKillProcess: true,
+  customProfiles: [],
 };
+
+// ==========================================
+// AI Command Execution Contracts
+// ==========================================
+
+export type AiProcessStatus = "running" | "completed" | "timed_out" | "killed" | "failed";
+
+export interface RunCommandRequest {
+  command: string;
+  cwd?: string;
+  timeoutMs?: number;
+  maxOutputBytes?: number;
+  trusted?: boolean;
+}
+
+export interface RunCommandResponse {
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+  executionTimeMs: number;
+  truncated: boolean;
+}
+
+export interface RunBackgroundCommandRequest {
+  command: string;
+  cwd?: string;
+  maxOutputBytes?: number;
+  trusted?: boolean;
+}
+
+export interface RunBackgroundCommandResponse {
+  processId: number;
+  executionId: string;
+  command: string;
+  cwd: string;
+  startedAt: number;
+}
+
+export interface GetCommandOutputRequest {
+  executionId: string;
+}
+
+export interface GetCommandOutputResponse {
+  executionId: string;
+  status: AiProcessStatus;
+  exitCode?: number;
+  stdout: string;
+  stderr: string;
+}
+
+export interface ListProcessesRequest {
+  onlyActive?: boolean;
+}
+
+export interface TrackedAiProcess {
+  processId: number;
+  executionId: string;
+  command: string;
+  cwd: string;
+  status: AiProcessStatus;
+  startedAt: number;
+  finishedAt?: number;
+  exitCode?: number;
+}
+
+export interface ListProcessesResponse {
+  processes: TrackedAiProcess[];
+}
+
+export interface StopProcessRequest {
+  executionId: string;
+  force?: boolean;
+}
+
+export interface StopProcessResponse {
+  stopped: boolean;
+  reason?: string;
+}

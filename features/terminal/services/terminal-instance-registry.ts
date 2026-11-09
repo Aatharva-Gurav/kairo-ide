@@ -7,6 +7,8 @@ import { WebglAddon } from "@xterm/addon-webgl";
 import { TerminalSettings } from "../types";
 import { TerminalThemeService } from "./terminal-theme.service";
 import { TerminalIpcService } from "./terminal-ipc.service";
+import { TerminalLinkProvider } from "./terminal-link-provider";
+import { DevServerDetector } from "./dev-server-detector";
 import { UnlistenFn } from "@tauri-apps/api/event";
 
 export interface TerminalInstance {
@@ -67,6 +69,10 @@ export class TerminalInstanceRegistry {
     term.loadAddon(unicode11Addon);
     term.unicode.activeVersion = "11";
 
+    // Register custom clickable file path link provider
+    const linkProvider = new TerminalLinkProvider(term);
+    term.registerLinkProvider(linkProvider);
+
     // Forward user keystrokes directly to Rust PTY
     term.onData((data) => {
       TerminalIpcService.writeSession(sessionId, data).catch((err) => {
@@ -101,6 +107,7 @@ export class TerminalInstanceRegistry {
     TerminalIpcService.subscribeOutput(sessionId, (chunk) => {
       if (!instance.disposed) {
         term.write(chunk);
+        DevServerDetector.scanOutput(sessionId, chunk);
       }
     })
       .then((unlisten) => {
@@ -174,11 +181,23 @@ export class TerminalInstanceRegistry {
     }
   }
 
+  static focus(sessionId: string): void {
+    const instance = this.instances.get(sessionId);
+    if (instance && !instance.disposed) {
+      try {
+        instance.term.focus();
+      } catch {
+        // terminal not ready yet
+      }
+    }
+  }
+
   static dispose(sessionId: string): void {
     const instance = this.instances.get(sessionId);
     if (!instance) return;
 
     instance.disposed = true;
+    DevServerDetector.clearSession(sessionId);
     if (instance.unlistenData) instance.unlistenData();
     if (instance.unlistenExit) instance.unlistenExit();
     instance.fitAddon.dispose();

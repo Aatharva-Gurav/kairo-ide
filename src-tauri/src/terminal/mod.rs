@@ -1,3 +1,5 @@
+pub mod ai_commands;
+pub mod ai_executor;
 pub mod commands;
 pub mod error;
 pub mod manager;
@@ -8,11 +10,13 @@ pub mod types;
 #[cfg(test)]
 mod tests;
 
+pub use ai_commands::*;
+pub use ai_executor::AiCommandExecutor;
 pub use commands::*;
 pub use error::TerminalError;
 pub use manager::TerminalManager;
 pub use session::TerminalSession;
-pub use shells::{detect_shells, resolve_shell, resolve_working_directory};
+pub use shells::{detect_shells, resolve_shell, resolve_working_directory, validate_executable};
 pub use types::*;
 
 /// Architectural interface reserved for future Cline AI execution integration.

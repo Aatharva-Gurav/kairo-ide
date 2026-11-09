@@ -18,6 +18,7 @@ import {
   Settings,
   RotateCcw,
   Sparkles,
+  Terminal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +35,7 @@ const CATEGORIES: CategoryNavOption[] = [
   { id: "files", label: "Files & Autosave", icon: File },
   { id: "explorer", label: "File Explorer", icon: Folder },
   { id: "search", label: "Search", icon: FolderSearch },
+  { id: "terminal", label: "Terminal", icon: Terminal },
   { id: "shortcuts", label: "Keyboard Shortcuts", icon: Keyboard },
 ];
 

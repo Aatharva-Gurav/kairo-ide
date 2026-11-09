@@ -238,9 +238,15 @@ impl TerminalSession {
         Ok(())
     }
 
-    /// Forcefully terminates the process tree and signals shutdown.
+    /// Gracefully interrupts and then terminates the process tree, signaling shutdown.
     pub fn kill(&self) -> Result<(), TerminalError> {
         self.is_shutting_down.store(true, Ordering::Release);
+
+        // Attempt graceful interrupt signal (Ctrl+C / SIGINT) first
+        if let Ok(mut writer_guard) = self.writer.lock() {
+            let _ = writer_guard.write_all(b"\x03");
+            let _ = writer_guard.flush();
+        }
 
         let mut child_guard = self
             .child
@@ -260,6 +266,9 @@ impl TerminalSession {
 
             #[cfg(not(windows))]
             {
+                let _ = std::process::Command::new("kill")
+                    .args(["-TERM", &format!("-{}", pid)])
+                    .status();
                 let _ = child_guard.kill();
             }
         } else {

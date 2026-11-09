@@ -31,8 +31,12 @@ pub fn run() {
             app.manage(Arc::clone(&backend_state));
 
             let terminal_manager = Arc::new(terminal::TerminalManager::new());
-            terminal_manager.set_workspace_root(workspace_root);
+            terminal_manager.set_workspace_root(workspace_root.clone());
             app.manage(Arc::clone(&terminal_manager));
+
+            let ai_executor = Arc::new(terminal::AiCommandExecutor::new());
+            ai_executor.set_workspace_root(workspace_root);
+            app.manage(Arc::clone(&ai_executor));
 
             let backend_state_warmup = Arc::clone(&backend_state);
             tauri::async_runtime::spawn(async move {
@@ -57,6 +61,9 @@ pub fn run() {
                 }
                 if let Some(terminal_state) = window.try_state::<Arc<terminal::TerminalManager>>() {
                     let _ = terminal_state.kill_all();
+                }
+                if let Some(ai_state) = window.try_state::<Arc<terminal::AiCommandExecutor>>() {
+                    let _ = ai_state.stop_all();
                 }
             }
         })
@@ -98,6 +105,11 @@ pub fn run() {
             terminal_kill,
             terminal_list_sessions,
             terminal_get_session,
+            terminal::ai_commands::ai_terminal_run_command,
+            terminal::ai_commands::ai_terminal_run_background,
+            terminal::ai_commands::ai_terminal_get_output,
+            terminal::ai_commands::ai_terminal_list_processes,
+            terminal::ai_commands::ai_terminal_stop_process,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

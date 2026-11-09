@@ -529,6 +529,46 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
           const next = isDark ? "light-modern" : "dark-modern";
           settingsRef.current.updateSetting("appearance.theme", next);
         },
+      }),
+      CommandRegistry.register({
+        id: "workbench.action.terminal.toggleTerminal",
+        title: "Terminal: Toggle Integrated Terminal",
+        description: "Open or close the integrated terminal panel",
+        category: "workbench",
+        keywords: ["terminal", "bash", "powershell", "cmd", "pty", "console", "shell", "toggle"],
+        execute: () => {
+          ideEvents.emit("terminal:toggle");
+        },
+      }),
+      CommandRegistry.register({
+        id: "workbench.action.terminal.new",
+        title: "Terminal: Create New Terminal",
+        description: "Spawn a new terminal session in the bottom panel",
+        category: "workbench",
+        keywords: ["terminal", "new", "create", "shell", "bash", "powershell"],
+        execute: () => {
+          ideEvents.emit("terminal:new");
+        },
+      }),
+      CommandRegistry.register({
+        id: "workbench.action.terminal.split",
+        title: "Terminal: Split Terminal",
+        description: "Split the current terminal session side by side",
+        category: "workbench",
+        keywords: ["terminal", "split", "horizontal", "vertical", "columns"],
+        execute: () => {
+          ideEvents.emit("terminal:split", "horizontal");
+        },
+      }),
+      CommandRegistry.register({
+        id: "workbench.action.terminal.clear",
+        title: "Terminal: Clear Terminal",
+        description: "Clear active terminal viewport screen",
+        category: "workbench",
+        keywords: ["terminal", "clear", "cls", "reset"],
+        execute: () => {
+          ideEvents.emit("terminal:clear");
+        },
       })
     );
 
@@ -565,6 +605,9 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
         "search.findInWorkspace",
         "editor.save",
         "editor.saveAll",
+        "workbench.action.terminal.toggleTerminal",
+        "workbench.action.terminal.new",
+        "workbench.action.terminal.split",
       ].includes(commandId);
 
       const isMonacoEditor = Boolean(target?.closest?.(".monaco-editor"));

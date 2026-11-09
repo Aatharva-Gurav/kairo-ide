@@ -40,6 +40,10 @@ const CATEGORY_TITLES: Record<SettingsCategory, { title: string; description: st
     title: "Code Suggestions",
     description: "Configure code completions, quick suggestions, trigger characters, and preview behavior.",
   },
+  terminal: {
+    title: "Integrated Terminal",
+    description: "Customize terminal fonts, cursor styles, scrollback buffer, profiles, and shell execution.",
+  },
 };
 
 export function SettingsCategoryView() {

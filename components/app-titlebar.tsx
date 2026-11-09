@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { isTauriEnvironment, invokeCommand, basename, writeFileContent } from "@/lib/tauri-ipc";
 import { ideEvents } from "@/lib/events";
 import { isDarkTheme } from "@/features/theme";
+import { useTerminalOptional } from "@/features/terminal";
 import {
   X,
   Search,
@@ -62,6 +63,7 @@ export function AppTitleBar() {
   const { openCommandPalette, openQuickOpen } = useCommands();
   const { startCreateFile } = useFileExplorer();
   const { toggleSidebar } = useSidebar();
+  const terminal = useTerminalOptional();
 
   const router = useRouter();
   const { user, profile, isOffline, logout, exitOfflineMode } = useAuth();
@@ -536,6 +538,12 @@ export function AppTitleBar() {
       },
       { id: "sep-v1", label: "", separator: true },
       {
+        id: "view.terminal",
+        label: "Terminal",
+        shortcut: "Ctrl+`",
+        action: () => ideEvents.emit("terminal:toggle"),
+      },
+      {
         id: "view.appearance",
         label: "Appearance",
         submenu: [
@@ -660,6 +668,41 @@ export function AppTitleBar() {
         action: () => setIsAboutOpen(true),
       },
     ],
+    terminal: [
+      {
+        id: "terminal.new",
+        label: "New Terminal",
+        shortcut: "Ctrl+Shift+`",
+        action: () => ideEvents.emit("terminal:new"),
+      },
+      {
+        id: "terminal.split",
+        label: "Split Terminal",
+        shortcut: "Ctrl+Shift+5",
+        action: () => ideEvents.emit("terminal:split", "horizontal"),
+      },
+      {
+        id: "terminal.toggle",
+        label: "Toggle Terminal Panel",
+        shortcut: "Ctrl+`",
+        action: () => ideEvents.emit("terminal:toggle"),
+      },
+      { id: "sep-term-1", label: "", separator: true },
+      {
+        id: "terminal.clear",
+        label: "Clear Terminal",
+        action: () => ideEvents.emit("terminal:clear"),
+      },
+      {
+        id: "terminal.kill",
+        label: "Kill Active Terminal",
+        action: () => {
+          if (terminal && (terminal.activeSplitSessionId || terminal.activeSessionId)) {
+            terminal.killTerminal(terminal.activeSplitSessionId || terminal.activeSessionId!);
+          }
+        },
+      },
+    ],
   };
 
   const TOP_MENU_BUTTONS = [
@@ -667,6 +710,7 @@ export function AppTitleBar() {
     { id: "edit", label: "Edit" },
     { id: "selection", label: "Selection" },
     { id: "view", label: "View" },
+    { id: "terminal", label: "Terminal" },
     { id: "help", label: "Help" },
   ] as const;
 
@@ -732,6 +776,9 @@ export function AppTitleBar() {
     { cat: "Editing", keys: "Alt+Up", desc: "Move Line Up" },
     { cat: "Editing", keys: "Shift+Alt+Right", desc: "Expand Selection" },
     { cat: "Editing", keys: "Shift+Alt+Left", desc: "Shrink Selection" },
+    { cat: "Terminal", keys: "Ctrl+`", desc: "Toggle Terminal Panel" },
+    { cat: "Terminal", keys: "Ctrl+Shift+`", desc: "New Terminal Session" },
+    { cat: "Terminal", keys: "Ctrl+Shift+5", desc: "Split Terminal Horizontally" },
   ];
 
   const filteredShortcuts = CHEATSHEET_SHORTCUTS.filter((s) => {
