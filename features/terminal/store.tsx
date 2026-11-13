@@ -118,11 +118,17 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
   // Terminal Settings derived from IDE Settings
   const terminalSettings: TerminalSettings = useMemo(() => {
     const fromIde = ideSettings.terminal;
-    if (!fromIde) return DEFAULT_TERMINAL_SETTINGS;
-    return {
+    const base: TerminalSettings = {
       ...DEFAULT_TERMINAL_SETTINGS,
-      ...fromIde,
+      ...(fromIde || {}),
     };
+    if (base.fontFamily && (base.fontFamily.includes("var(") || base.fontFamily.includes("var(--font-mono)"))) {
+      base.fontFamily = DEFAULT_TERMINAL_SETTINGS.fontFamily;
+    }
+    if (typeof base.fontSize === "number" && base.fontSize < 14) {
+      base.fontSize = 14;
+    }
+    return base;
   }, [ideSettings.terminal]);
 
   // Load host shell profiles on mount

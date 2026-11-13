@@ -682,7 +682,7 @@ export const SETTINGS_REGISTRY: SettingDefinition<any>[] = [
     label: "Terminal Font Size",
     description: "Controls the font size in pixels of the integrated terminal.",
     type: "number",
-    defaultValue: 13,
+    defaultValue: 14,
     scope: "both",
     min: 9,
     max: 32,

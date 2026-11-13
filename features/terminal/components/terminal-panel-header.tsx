@@ -4,9 +4,10 @@ import React, { useState, useRef, useEffect } from "react";
 import { useTerminal } from "../store";
 import { useSettings } from "@/features/settings/store";
 import { TerminalShellDropdown } from "./terminal-shell-dropdown";
+import { ShellIcon } from "./shell-icon";
+import { SiGnometerminal } from "@icons-pack/react-simple-icons";
 import {
   Terminal,
-  Command,
   Plus,
   SplitSquareHorizontal,
   Maximize2,
@@ -76,28 +77,22 @@ export function TerminalPanelHeader({
     };
   }, [isOverflowOpen]);
 
-  const getShellIcon = (name?: string) => {
-    const lower = (name || "").toLowerCase();
-    if (lower.includes("cmd") || lower.includes("command prompt")) {
-      return <Command className="size-3 text-amber-500 shrink-0" />;
-    }
-    return <Terminal className="size-3 text-primary shrink-0" />;
-  };
-
   return (
     <TooltipProvider delay={250}>
       <header
         className={cn(
-          "relative z-20 shrink-0 flex h-9 w-full items-center justify-between border-b border-border/70 bg-sidebar/95 px-3 select-none backdrop-blur-xs",
+          "relative z-20 shrink-0 flex h-9 w-full items-center justify-between border-b border-border/70 bg-sidebar/95 px-2.5 select-none backdrop-blur-xs",
           className
         )}
       >
-        {/* Left Section: Terminal Title & Active Session Badge */}
-        <div className="flex items-center gap-2 min-w-0">
-          {/* Section Title */}
-          <div className="flex items-center gap-1.5 text-foreground font-semibold text-xs tracking-tight">
-            <Terminal className="size-3.5 text-primary shrink-0" />
-            <span className="font-mono text-[11px] font-medium uppercase tracking-wider">
+        {/* Left Section: Terminal Label & Active Session Info */}
+        <div className="flex items-center gap-2 min-w-0 select-none">
+          {/* Section Brand / Title */}
+          <div className="flex items-center gap-1.5 text-foreground font-semibold text-xs tracking-tight shrink-0 select-none">
+            <div className="size-5 rounded bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+              <SiGnometerminal size={12} className="text-primary" />
+            </div>
+            <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-foreground/90">
               Terminal
             </span>
           </div>
@@ -105,53 +100,72 @@ export function TerminalPanelHeader({
           {currentSession && (
             <>
               <div className="h-3 w-px bg-border/60 shrink-0" />
-
-              {/* Active Session Pill */}
-              <div
-                className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-accent/70 border border-border/60 text-foreground text-[11px] font-sans max-w-[200px] truncate shadow-2xs"
-                title={`Active: ${currentSession.title}${currentSession.isExited ? " (exited)" : ""}`}
-              >
-                <span
-                  className={cn(
-                    "size-1.5 rounded-full shrink-0",
-                    currentSession.isExited ? "bg-muted-foreground/60" : "bg-emerald-500"
-                  )}
+              <div className="flex items-center gap-1.5 min-w-0">
+                <ShellIcon
+                  name={currentSession.shellProfile?.name || currentSession.title}
+                  size={13}
                 />
-                {getShellIcon(currentSession.shellProfile?.name || currentSession.title)}
-                <span className="truncate font-medium">{currentSession.title}</span>
+                <span className="text-[11px] font-mono text-muted-foreground truncate max-w-[220px]">
+                  {currentSession.title}
+                </span>
+                {currentSession.isExited && (
+                  <span className="text-[9px] font-mono text-muted-foreground/80 uppercase">
+                    (exited)
+                  </span>
+                )}
               </div>
             </>
           )}
 
           {/* Split indicator when split mode active */}
           {splitDirection && (
-            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-muted/60 text-muted-foreground border border-border/50">
-              split
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-muted/70 text-muted-foreground border border-border/60 shrink-0 select-none font-medium">
+              split: {splitDirection}
             </span>
           )}
         </div>
 
         {/* Right Section: Toolbar Controls */}
-        <div className="flex items-center gap-1 shrink-0">
-          {/* New Terminal Button */}
+        <div className="flex items-center gap-1 shrink-0 ml-2">
+          {/* Grouped New Terminal & Shell Dropdown */}
+          <div className="flex items-center rounded-md border border-border/70 bg-muted/20 hover:border-border transition-colors">
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <button
+                    type="button"
+                    onClick={() => createTerminal()}
+                    aria-label="New Terminal (Ctrl+Shift+`)"
+                    className="h-6 px-1.5 flex items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer transition-colors active:scale-95"
+                  >
+                    <Plus className="size-3.5 text-primary" />
+                  </button>
+                }
+              />
+              <TooltipContent side="top">New Terminal (Ctrl+Shift+`)</TooltipContent>
+            </Tooltip>
+            <div className="h-3 w-px bg-border/60" />
+            <TerminalShellDropdown buttonClassName="h-6 w-5" />
+          </div>
+
+          {/* Quick Clear Terminal Action */}
           <Tooltip>
             <TooltipTrigger
               render={
                 <button
                   type="button"
-                  onClick={() => createTerminal()}
-                  aria-label="New Terminal (Ctrl+Shift+`)"
+                  onClick={() => {
+                    if (currentSessionId) clearTerminal(currentSessionId);
+                  }}
+                  aria-label="Clear Terminal (Ctrl+K)"
                   className="size-6 flex items-center justify-center rounded-md hover:bg-muted/70 text-muted-foreground hover:text-foreground cursor-pointer transition-colors active:scale-95"
                 >
-                  <Plus className="size-3.5" />
+                  <Eraser className="size-3.5" />
                 </button>
               }
             />
-            <TooltipContent side="top">New Terminal (Ctrl+Shift+`)</TooltipContent>
+            <TooltipContent side="top">Clear Terminal (Ctrl+K)</TooltipContent>
           </Tooltip>
-
-          {/* Shell Selection Dropdown */}
-          <TerminalShellDropdown />
 
           {/* Split Terminal Button */}
           <Tooltip>
@@ -191,48 +205,6 @@ export function TerminalPanelHeader({
               }
             />
             <TooltipContent side="top">Find (Ctrl+F)</TooltipContent>
-          </Tooltip>
-
-          <div className="h-3 w-px bg-border/60 mx-0.5 shrink-0" />
-
-          {/* Maximize / Restore Button */}
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <button
-                  type="button"
-                  onClick={toggleMaximize}
-                  aria-label={isMaximized ? "Restore Terminal Panel Size" : "Maximize Terminal Panel"}
-                  className="size-6 flex items-center justify-center rounded-md hover:bg-muted/70 text-muted-foreground hover:text-foreground cursor-pointer transition-colors active:scale-95"
-                >
-                  {isMaximized ? (
-                    <Minimize2 className="size-3.5" />
-                  ) : (
-                    <Maximize2 className="size-3.5" />
-                  )}
-                </button>
-              }
-            />
-            <TooltipContent side="top">
-              {isMaximized ? "Restore Panel Size" : "Maximize Panel"}
-            </TooltipContent>
-          </Tooltip>
-
-          {/* Close Terminal Panel Button */}
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <button
-                  type="button"
-                  onClick={() => setTerminalOpen(false)}
-                  aria-label="Close Terminal Panel (Ctrl+`)"
-                  className="size-6 flex items-center justify-center rounded-md hover:bg-muted/70 text-muted-foreground hover:text-foreground cursor-pointer transition-colors active:scale-95"
-                >
-                  <X className="size-3.5" />
-                </button>
-              }
-            />
-            <TooltipContent side="top">Close Panel (Ctrl+`)</TooltipContent>
           </Tooltip>
 
           {/* Overflow Menu Button */}
@@ -337,6 +309,48 @@ export function TerminalPanelHeader({
               </div>
             )}
           </div>
+
+          <div className="h-3 w-px bg-border/60 mx-0.5 shrink-0" />
+
+          {/* Maximize / Restore Button */}
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <button
+                  type="button"
+                  onClick={toggleMaximize}
+                  aria-label={isMaximized ? "Restore Terminal Panel Size" : "Maximize Terminal Panel"}
+                  className="size-6 flex items-center justify-center rounded-md hover:bg-muted/70 text-muted-foreground hover:text-foreground cursor-pointer transition-colors active:scale-95"
+                >
+                  {isMaximized ? (
+                    <Minimize2 className="size-3.5" />
+                  ) : (
+                    <Maximize2 className="size-3.5" />
+                  )}
+                </button>
+              }
+            />
+            <TooltipContent side="top">
+              {isMaximized ? "Restore Panel Size" : "Maximize Panel"}
+            </TooltipContent>
+          </Tooltip>
+
+          {/* Close Terminal Panel Button */}
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <button
+                  type="button"
+                  onClick={() => setTerminalOpen(false)}
+                  aria-label="Close Terminal Panel (Ctrl+`)"
+                  className="size-6 flex items-center justify-center rounded-md hover:bg-muted/70 text-muted-foreground hover:text-foreground cursor-pointer transition-colors active:scale-95"
+                >
+                  <X className="size-3.5" />
+                </button>
+              }
+            />
+            <TooltipContent side="top">Close Panel (Ctrl+`)</TooltipContent>
+          </Tooltip>
         </div>
       </header>
     </TooltipProvider>

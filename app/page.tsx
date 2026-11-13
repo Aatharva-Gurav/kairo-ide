@@ -19,6 +19,7 @@ import { FileExplorerProvider } from "@/features/file-explorer/store";
 import { EditorProvider, useEditor } from "@/features/editor/store";
 import { SearchProvider } from "@/features/search/store";
 import { EditorWorkspace } from "@/features/editor/components/editor-workspace";
+import { EditorStatusBar } from "@/features/editor/components/editor-status-bar";
 import { IconThemeProvider } from "@/features/icon-theme";
 import { Folder, File } from "lucide-react";
 import { KairoBrandIcon } from "@/components/kairo-brand-icon";
@@ -31,7 +32,7 @@ import { cn } from "@/lib/utils";
 
 function PageContent() {
   const { activeWorkspace, openFolder } = useWorkspace();
-  const { documents, openFileDialog } = useEditor();
+  const { documents, openFileDialog, focusedDocument, focusedCursorPos } = useEditor();
   const { isOpen, isMaximized } = useTerminal();
 
   const handleOpenFile = async () => {
@@ -78,6 +79,11 @@ function PageContent() {
 
       {/* Integrated Bottom Terminal Panel */}
       <TerminalPanel />
+
+      {/* Editor Status Bar Locked at the Bottom */}
+      {focusedDocument && (
+        <EditorStatusBar document={focusedDocument} cursorPosition={focusedCursorPos} />
+      )}
     </SidebarInset>
   );
 }

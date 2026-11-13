@@ -5,7 +5,6 @@ import { useEditor } from "../store";
 import dynamic from "next/dynamic";
 import { EditorTabs } from "./editor-tabs";
 import { EditorBreadcrumb } from "./editor-breadcrumb";
-import { EditorStatusBar } from "./editor-status-bar";
 import { EditorEmptyState } from "./editor-empty-state";
 import { BinaryFileView } from "./binary-file-view";
 import { CloseConfirmModal } from "./close-confirm-modal";
@@ -42,48 +41,12 @@ export function EditorWorkspace() {
     splitDocument,
     splitRatio,
     setSplitRatio,
+    handleCursorChange,
+    setFocusedDocPath,
   } = useEditor();
 
-  const [cursorMap, setCursorMap] = useState<
-    Record<
-      string,
-      { lineNumber: number; column: number; selectionCount?: number; totalLines?: number }
-    >
-  >({});
-  const [focusedDocPath, setFocusedDocPath] = useState<string | null>(null);
   const [isDraggingDivider, setIsDraggingDivider] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  const handleCursorChange = React.useCallback(
-    (
-      docPath: string,
-      pos: { lineNumber: number; column: number; selectionCount?: number; totalLines?: number }
-    ) => {
-      setFocusedDocPath(docPath);
-      setCursorMap((prev) => ({
-        ...prev,
-        [docPath]: pos,
-      }));
-    },
-    []
-  );
-
-  const focusedDocument = React.useMemo(() => {
-    if (isSplit && splitDocument && focusedDocPath === splitDocument.path) {
-      return splitDocument;
-    }
-    return activeDocument;
-  }, [isSplit, splitDocument, activeDocument, focusedDocPath]);
-
-  const focusedCursorPos = focusedDocument
-    ? cursorMap[focusedDocument.path] || {
-        lineNumber: 1,
-        column: 1,
-        totalLines: focusedDocument.content
-          ? focusedDocument.content.split(/\r\n|\r|\n/).length
-          : 1,
-      }
-    : undefined;
 
   const isDragging = isDraggingDivider;
 
@@ -241,13 +204,8 @@ export function EditorWorkspace() {
         <EditorEmptyState />
       )}
 
-      {/* Unified Status Bar across the bottom of the editor workspace */}
-      {focusedDocument && (
-        <EditorStatusBar document={focusedDocument} cursorPosition={focusedCursorPos} />
-      )}
-
       {/* Floating File & Folder Creation Feature */}
-      <FloatingCreationFeature hasStatusBar={Boolean(focusedDocument)} />
+      <FloatingCreationFeature hasStatusBar={false} />
 
       {/* Global Modals */}
       <CloseConfirmModal />

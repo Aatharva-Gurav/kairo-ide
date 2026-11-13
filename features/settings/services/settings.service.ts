@@ -46,6 +46,14 @@ function sanitizeValue(key: string, value: unknown, defaultValue: unknown): unkn
   if (key === "appearance.theme" && typeof value === "string") {
     value = migrateLegacyTheme(value);
   }
+  if (key === "terminal.fontFamily" && typeof value === "string") {
+    if (value.includes("var(") || value.includes("var(--font-mono)")) {
+      value = DEFAULT_SETTINGS.terminal.fontFamily;
+    }
+  }
+  if (key === "terminal.fontSize" && (value === 13 || value === 12 || value === 10 || value === 11)) {
+    value = DEFAULT_SETTINGS.terminal.fontSize;
+  }
   const def = getSettingDefinition(key);
   if (!def) return value ?? defaultValue;
 

@@ -17,7 +17,7 @@ export function TerminalPanel({ className }: TerminalPanelProps) {
   const { isOpen, isMaximized, panelHeight, setPanelHeight, sessions } = useTerminal();
   const [isFindOpen, setIsFindOpen] = useState(false);
 
-  // Trigger resize event when sessions length crosses 1 (sidebar shown/hidden)
+  // Trigger resize event when sessions length changes to adjust terminal canvas
   useEffect(() => {
     const timer = setTimeout(() => {
       if (typeof window !== "undefined") {
@@ -40,8 +40,8 @@ export function TerminalPanel({ className }: TerminalPanelProps) {
       className={cn(
         "relative flex flex-col w-full shrink-0 bg-background z-20 select-none transition-[height] duration-75 ease-out",
         isMaximized
-          ? "border-0 absolute inset-0 z-40 h-full rounded-none"
-          : "rounded-t-xl border-t border-x border-border/80 shadow-[0_-4px_16px_rgba(0,0,0,0.12)] overflow-hidden",
+          ? "border-0 flex-1 min-h-0 h-full rounded-none"
+          : "border-t border-border/70 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] overflow-hidden",
         className
       )}
     >
@@ -59,7 +59,7 @@ export function TerminalPanel({ className }: TerminalPanelProps) {
         isFindOpen={isFindOpen}
       />
 
-      {/* Terminal Content Area (Workspace + Conditional Right Vertical Sessions Sidebar) */}
+      {/* Terminal Content Area (Workspace + Conditional Floating Sessions Sidebar) */}
       <div className="relative flex flex-1 min-h-0 w-full overflow-hidden bg-background">
         {/* Terminal Canvas Workspace (Single or Split Views) */}
         <div className="flex-1 min-w-0 h-full overflow-hidden relative">
@@ -67,11 +67,14 @@ export function TerminalPanel({ className }: TerminalPanelProps) {
 
           {/* Floating In-Terminal Find Widget */}
           {isFindOpen && (
-            <TerminalFindWidget onClose={() => setIsFindOpen(false)} />
+            <TerminalFindWidget
+              onClose={() => setIsFindOpen(false)}
+              className={sessions.length > 1 ? "right-14" : "right-4"}
+            />
           )}
         </div>
 
-        {/* Right-Side Vertical Session Sidebar (Only visible when >1 terminal) */}
+        {/* Floating Session Sidebar (Only visible when >1 terminal) */}
         {sessions.length > 1 && <TerminalSessionSidebar />}
       </div>
     </aside>

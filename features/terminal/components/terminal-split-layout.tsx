@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { useTerminal } from "../store";
 import { TerminalView } from "./terminal-view";
 import { TerminalContextMenu, ContextMenuPosition } from "./terminal-context-menu";
+import { ShellIcon } from "./shell-icon";
 import { Terminal, X, Plus } from "lucide-react";
 import { TerminalInstanceRegistry } from "../services/terminal-instance-registry";
 import { cn } from "@/lib/utils";
@@ -135,7 +136,6 @@ export function TerminalSplitLayout({ onOpenFind, className }: TerminalSplitLayo
                     setActiveSplitTerminal(sid);
                     TerminalInstanceRegistry.focus(sid);
                   }}
-                  onContextMenu={(e) => handleViewportContextMenu(e, sid)}
                   style={
                     isFirst
                       ? splitDirection === "vertical"
@@ -157,6 +157,10 @@ export function TerminalSplitLayout({ onOpenFind, className }: TerminalSplitLayo
                 >
                   {/* Split Pane Mini Header */}
                   <div
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
                     className={cn(
                       "flex items-center justify-between px-2.5 py-0.5 h-6 shrink-0 border-b select-none transition-colors",
                       isCurrentFocused
@@ -165,7 +169,10 @@ export function TerminalSplitLayout({ onOpenFind, className }: TerminalSplitLayo
                     )}
                   >
                     <div className="flex items-center gap-1.5 min-w-0">
-                      <Terminal className="size-3 text-primary shrink-0" />
+                      <ShellIcon
+                        name={session?.shellProfile?.name || session?.title}
+                        size={12}
+                      />
                       <span className="text-[11px] font-mono font-medium truncate">
                         {session?.title || "Terminal"}
                       </span>
@@ -193,7 +200,10 @@ export function TerminalSplitLayout({ onOpenFind, className }: TerminalSplitLayo
                   </div>
 
                   {/* Terminal Canvas */}
-                  <div className="flex-1 min-h-0 w-full overflow-hidden relative">
+                  <div
+                    className="flex-1 min-h-0 w-full overflow-hidden relative"
+                    onContextMenu={(e) => handleViewportContextMenu(e, sid)}
+                  >
                     <TerminalView
                       sessionId={sid}
                       settings={settings}

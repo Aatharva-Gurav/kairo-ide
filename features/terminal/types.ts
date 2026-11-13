@@ -89,10 +89,10 @@ export interface TerminalSettings {
 }
 
 export const DEFAULT_TERMINAL_SETTINGS: TerminalSettings = {
-  fontSize: 13,
-  fontFamily: "var(--font-mono), 'Geist Mono', Consolas, monospace",
+  fontSize: 14,
+  fontFamily: "'Cascadia Code', 'Cascadia Mono', Consolas, 'Fira Code', 'JetBrains Mono', 'Segoe UI Mono', 'Courier New', monospace",
   fontWeight: "normal",
-  lineHeight: 1.25,
+  lineHeight: 1.35,
   cursorStyle: "block",
   cursorBlink: true,
   scrollback: 10000,

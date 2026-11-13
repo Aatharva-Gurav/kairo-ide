@@ -75,6 +75,20 @@ export interface EditorContextValue {
   setGoToLineVisible: (visible: boolean) => void;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   monacoEditorRef: React.MutableRefObject<any>;
+
+  // Focused Document & Cursor tracking for workbench status bar
+  focusedDocument: EditorDocument | null;
+  focusedCursorPos: {
+    lineNumber: number;
+    column: number;
+    selectionCount?: number;
+    totalLines?: number;
+  } | undefined;
+  handleCursorChange: (
+    docPath: string,
+    pos: { lineNumber: number; column: number; selectionCount?: number; totalLines?: number }
+  ) => void;
+  setFocusedDocPath: (path: string | null) => void;
 }
 
 const EditorContext = createContext<EditorContextValue | null>(null);
@@ -147,6 +161,49 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     if (!splitDocumentId) return null;
     return documents.find((doc) => doc.id === splitDocumentId) || null;
   }, [documents, splitDocumentId]);
+
+  // Cursor and focus state tracked centrally for workbench status bar
+  const [cursorMap, setCursorMap] = useState<
+    Record<
+      string,
+      { lineNumber: number; column: number; selectionCount?: number; totalLines?: number }
+    >
+  >({});
+  const [focusedDocPath, setFocusedDocPath] = useState<string | null>(null);
+
+  const handleCursorChange = useCallback(
+    (
+      docPath: string,
+      pos: { lineNumber: number; column: number; selectionCount?: number; totalLines?: number }
+    ) => {
+      setFocusedDocPath(docPath);
+      setCursorMap((prev) => ({
+        ...prev,
+        [docPath]: pos,
+      }));
+    },
+    []
+  );
+
+  const focusedDocument = useMemo(() => {
+    if (isSplit && splitDocument && focusedDocPath === splitDocument.path) {
+      return splitDocument;
+    }
+    return activeDocument;
+  }, [isSplit, splitDocument, activeDocument, focusedDocPath]);
+
+  const focusedCursorPos = useMemo(() => {
+    if (!focusedDocument) return undefined;
+    return (
+      cursorMap[focusedDocument.path] || {
+        lineNumber: 1,
+        column: 1,
+        totalLines: focusedDocument.content
+          ? focusedDocument.content.split(/\r\n|\r|\n/).length
+          : 1,
+      }
+    );
+  }, [focusedDocument, cursorMap]);
 
   // Split view actions
   const openSplitView = useCallback((filePath?: string, direction: SplitDirection = "horizontal") => {
@@ -1011,6 +1068,11 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
       setQuickOpenVisible,
       setGoToLineVisible,
       monacoEditorRef,
+
+      focusedDocument,
+      focusedCursorPos,
+      handleCursorChange,
+      setFocusedDocPath,
     }),
     [
       documents,
@@ -1057,6 +1119,10 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
       setQuickOpenVisible,
       setGoToLineVisible,
       monacoEditorRef,
+      focusedDocument,
+      focusedCursorPos,
+      handleCursorChange,
+      setFocusedDocPath,
     ]
   );
 

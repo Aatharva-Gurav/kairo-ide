@@ -22,5 +22,6 @@ export * from "./components/terminal-tabs";
 export * from "./components/terminal-session-sidebar";
 export * from "./components/terminal-split-layout";
 export * from "./components/terminal-shell-dropdown";
+export * from "./components/shell-icon";
 export * from "./components/terminal-context-menu";
 export * from "./components/terminal-find-widget";

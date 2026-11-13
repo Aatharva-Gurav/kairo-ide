@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import * as monaco from "monaco-editor";
+import type * as monaco from "monaco-editor";
 import {
   Replace as ReplaceIcon,
   ChevronDown,
@@ -187,7 +187,13 @@ export function EditorFindReplace({
     }
 
     try {
-      const wordSeparators = editor.getOption(monaco.editor.EditorOption.wordSeparators);
+      // Safely access EditorOption enum without requiring top-level monaco runtime bundle
+      const wordSeparatorsOption =
+        typeof window !== "undefined"
+          ? (window as unknown as { monaco?: typeof monaco }).monaco?.editor?.EditorOption
+              ?.wordSeparators ?? 148
+          : 148;
+      const wordSeparators = editor.getOption(wordSeparatorsOption);
       const found = model.findMatches(
         findText,
         false, // searchOnlyEditableRange (false = entire file)
@@ -278,17 +284,24 @@ export function EditorFindReplace({
       decorationsCollectionRef.current = editor.createDecorationsCollection([]);
     }
 
+    const monacoGlobal =
+      typeof window !== "undefined"
+        ? (window as unknown as { monaco?: typeof monaco }).monaco
+        : undefined;
+    const overviewRulerLaneRight = monacoGlobal?.editor?.OverviewRulerLane?.Right ?? 4;
+    const minimapPositionInline = monacoGlobal?.editor?.MinimapPosition?.Inline ?? 1;
+
     const decs = matches.map((m, idx) => ({
       range: m.range,
       options: {
         className: idx === activeIndex ? "kairo-find-match-current" : "kairo-find-match",
         overviewRuler: {
           color: idx === activeIndex ? "#f59e0b" : "#eab30880",
-          position: monaco.editor.OverviewRulerLane.Right,
+          position: overviewRulerLaneRight,
         },
         minimap: {
           color: idx === activeIndex ? "#f59e0b" : "#eab30880",
-          position: monaco.editor.MinimapPosition.Inline,
+          position: minimapPositionInline,
         },
       },
     }));

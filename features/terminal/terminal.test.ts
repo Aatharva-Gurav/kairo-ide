@@ -10,6 +10,9 @@ import { CommandRegistry } from "@/features/commands/command-registry";
 import { KeybindingService } from "@/features/commands/keybinding.service";
 import { ideEvents } from "@/lib/events";
 import { THEME_DEFINITIONS, ThemeId } from "@/features/theme";
+import React from "react";
+import ReactDOMServer from "react-dom/server";
+import { ShellIcon } from "./components/shell-icon";
 
 describe("Integrated Terminal Subsystem - Stage 4", () => {
   describe("Theme Integration Across All Kairo Themes", () => {
@@ -366,6 +369,46 @@ describe("Integrated Terminal Subsystem - Stage 4", () => {
       expect(redacted).not.toContain("ghp_123456789012345678901234567890123456");
       expect(redacted).not.toContain("SuperSecretPassword!");
       expect(redacted).toContain("[REDACTED_SECRET]");
+    });
+  });
+
+  describe("ShellIcon Simple Icons Integration", () => {
+    it("renders appropriate icons based on shell profile names", () => {
+      const pwshMarkup = ReactDOMServer.renderToStaticMarkup(
+        React.createElement(ShellIcon, { name: "PowerShell 7" })
+      );
+      expect(pwshMarkup).toContain("svg");
+      expect(pwshMarkup).toContain("text-[#5391FE]");
+
+      const cmdMarkup = ReactDOMServer.renderToStaticMarkup(
+        React.createElement(ShellIcon, { name: "Command Prompt" })
+      );
+      expect(cmdMarkup).toContain("svg");
+      expect(cmdMarkup).toContain("text-[#F59E0B]");
+
+      const gitMarkup = ReactDOMServer.renderToStaticMarkup(
+        React.createElement(ShellIcon, { name: "Git Bash" })
+      );
+      expect(gitMarkup).toContain("svg");
+      expect(gitMarkup).toContain("text-[#F05032]");
+
+      const bashMarkup = ReactDOMServer.renderToStaticMarkup(
+        React.createElement(ShellIcon, { name: "bash" })
+      );
+      expect(bashMarkup).toContain("svg");
+      expect(bashMarkup).toContain("text-[#4EAA25]");
+
+      const wslMarkup = ReactDOMServer.renderToStaticMarkup(
+        React.createElement(ShellIcon, { name: "Ubuntu WSL" })
+      );
+      expect(wslMarkup).toContain("svg");
+      expect(wslMarkup).toContain("text-[#E95420]");
+
+      const fallbackMarkup = ReactDOMServer.renderToStaticMarkup(
+        React.createElement(ShellIcon, { name: "custom-shell" })
+      );
+      expect(fallbackMarkup).toContain("svg");
+      expect(fallbackMarkup).toContain("text-primary");
     });
   });
 });

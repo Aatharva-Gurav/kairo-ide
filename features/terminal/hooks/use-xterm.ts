@@ -78,6 +78,12 @@ export function useXterm({
     TerminalInstanceRegistry.applyTheme(sessionId, theme);
   }, [sessionId, theme]);
 
+  // Sync settings changes (font size, font family, line height, cursor, etc.)
+  useEffect(() => {
+    TerminalInstanceRegistry.applySettings(sessionId, settings);
+    handleResize();
+  }, [sessionId, settings, handleResize]);
+
   const focus = useCallback(() => {
     const instance = TerminalInstanceRegistry.get(sessionId);
     if (instance && !instance.disposed) {

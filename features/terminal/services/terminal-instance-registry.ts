@@ -161,6 +161,45 @@ export class TerminalInstanceRegistry {
     }
   }
 
+  static applySettings(sessionId: string, settings: TerminalSettings): void {
+    const instance = this.instances.get(sessionId);
+    if (!instance || instance.disposed) return;
+
+    let needsFit = false;
+    if (instance.term.options.fontSize !== settings.fontSize) {
+      instance.term.options.fontSize = settings.fontSize;
+      needsFit = true;
+    }
+    if (instance.term.options.fontFamily !== settings.fontFamily) {
+      instance.term.options.fontFamily = settings.fontFamily;
+      needsFit = true;
+    }
+    if (instance.term.options.lineHeight !== settings.lineHeight) {
+      instance.term.options.lineHeight = settings.lineHeight;
+      needsFit = true;
+    }
+    if (instance.term.options.fontWeight !== settings.fontWeight) {
+      instance.term.options.fontWeight = settings.fontWeight;
+    }
+    if (instance.term.options.cursorStyle !== settings.cursorStyle) {
+      instance.term.options.cursorStyle = settings.cursorStyle;
+    }
+    if (instance.term.options.cursorBlink !== settings.cursorBlink) {
+      instance.term.options.cursorBlink = settings.cursorBlink;
+    }
+    if (instance.term.options.scrollback !== settings.scrollback) {
+      instance.term.options.scrollback = settings.scrollback;
+    }
+
+    if (needsFit) {
+      try {
+        instance.fitAddon.fit();
+      } catch {
+        // Container may not be fully measured yet
+      }
+    }
+  }
+
   static applyAllThemes(theme: string): void {
     for (const instance of this.instances.values()) {
       if (!instance.disposed) {
