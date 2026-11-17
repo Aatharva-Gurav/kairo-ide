@@ -25,11 +25,37 @@ describe("ModelService", () => {
         createModel: (content: string, language: string, uri: { toString: () => string }) => {
           let currentContent = content;
           let isDisposed = false;
+          let versionId = 1;
+          const undoStack: string[] = [];
           const mockModel = {
             getValue: () => currentContent,
             setValue: (val: string) => {
               currentContent = val;
+              versionId++;
             },
+            getFullModelRange: () => ({
+              startLineNumber: 1,
+              startColumn: 1,
+              endLineNumber: 10,
+              endColumn: 1,
+            }),
+            pushEditOperations: (
+              _beforeCursorState: unknown,
+              editOperations: Array<{ range: unknown; text: string }>
+            ) => {
+              undoStack.push(currentContent);
+              if (editOperations.length > 0) {
+                currentContent = editOperations[0].text;
+              }
+              versionId++;
+            },
+            undo: () => {
+              if (undoStack.length > 0) {
+                currentContent = undoStack.pop()!;
+                versionId++;
+              }
+            },
+            getVersionId: () => versionId,
             getLanguageId: () => language,
             isDisposed: () => isDisposed,
             dispose: () => {
@@ -136,6 +162,38 @@ describe("ModelService", () => {
 
     ModelService.disposeModel("C:/test/file.ts");
     expect(ModelService.getModel("C:/test/file.ts")).toBeNull();
+  });
+
+  it("applies edits via applyEdit and preserves undo stack", () => {
+    const monaco = createMockMonaco();
+    const model = ModelService.createOrReuseModel(
+      monaco,
+      "C:/test/file.ts",
+      "const x = 1;",
+      "typescript"
+    );
+    expect(ModelService.hasModel("C:/test/file.ts")).toBe(true);
+    expect(ModelService.getVersionId("C:/test/file.ts")).toBe(1);
+
+    const edited = ModelService.applyEdit("C:/test/file.ts", "const x = 2;", true);
+    expect(edited).toBe(true);
+    expect(ModelService.getModel("C:/test/file.ts")?.getValue()).toBe("const x = 2;");
+    expect(ModelService.getVersionId("C:/test/file.ts")).toBe(2);
+
+    // Undo should restore previous content
+    model.undo();
+    expect(ModelService.getModel("C:/test/file.ts")?.getValue()).toBe("const x = 1;");
+  });
+
+  it("lists all active open model paths correctly", () => {
+    const monaco = createMockMonaco();
+    ModelService.createOrReuseModel(monaco, "C:/test/a.ts", "a", "typescript");
+    ModelService.createOrReuseModel(monaco, "C:/test/b.ts", "b", "typescript");
+
+    const openPaths = ModelService.getOpenModelPaths();
+    expect(openPaths.length).toBe(2);
+    expect(openPaths.some((p) => p.includes("a.ts"))).toBe(true);
+    expect(openPaths.some((p) => p.includes("b.ts"))).toBe(true);
   });
 });
 

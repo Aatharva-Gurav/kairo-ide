@@ -10,3 +10,10 @@ export type { CustomSnippet, SuggestionItem } from "./intellisense.service";
 export { LanguageService } from "./language.service";
 export { ModelService } from "./model.service";
 export { NavigationService } from "./navigation.service";
+export { BufferSyncService } from "./buffer-sync.service";
+export type {
+  CompareResult,
+  PrepareChangeResult,
+  ApplyChangeOptions,
+  ApplyChangeResult,
+} from "./buffer-sync.service";

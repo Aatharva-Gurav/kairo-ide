@@ -100,6 +100,14 @@ export class PermissionManager {
       return { action: "modify_file", risk: "moderate" };
     }
 
+    // Direct file creation and write tools
+    if (name === "create_file" || name === "createfile") {
+      return { action: "create_file", risk: "moderate" };
+    }
+    if (name === "write_to_file" || name === "writetofile") {
+      return { action: "modify_file", risk: "moderate" };
+    }
+
     // Canonical patch application
     if (name === "apply_patch" || name === "applypatch") {
       return { action: "modify_file", risk: "moderate" };
@@ -160,6 +168,8 @@ export class PermissionManager {
     if (typeof typed.file_path === "string") paths.push(typed.file_path);
     if (typeof typed.sourcePath === "string") paths.push(typed.sourcePath);
     if (typeof typed.destinationPath === "string") paths.push(typed.destinationPath);
+    if (typeof typed.oldPath === "string") paths.push(typed.oldPath);
+    if (typeof typed.newPath === "string") paths.push(typed.newPath);
 
     if (Array.isArray(typed.paths)) {
       for (const p of typed.paths) {

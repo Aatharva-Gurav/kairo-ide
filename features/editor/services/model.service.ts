@@ -61,6 +61,84 @@ export class ModelService {
   }
 
   /**
+   * Checks whether a registered, non-disposed model exists for the given path.
+   */
+  static hasModel(path: string): boolean {
+    const norm = normalizePath(path);
+    const model = activeModels.get(norm);
+    return !!model && (typeof model.isDisposed !== "function" || !model.isDisposed());
+  }
+
+  /**
+   * Retrieves the current Monaco model version ID (increments on every edit).
+   */
+  static getVersionId(path: string): number | null {
+    const norm = normalizePath(path);
+    const model = activeModels.get(norm);
+    if (
+      model &&
+      typeof model.getVersionId === "function" &&
+      (typeof model.isDisposed !== "function" || !model.isDisposed())
+    ) {
+      return model.getVersionId();
+    }
+    return null;
+  }
+
+  /**
+   * Returns a list of all normalized file paths with active models.
+   */
+  static getOpenModelPaths(): string[] {
+    const paths: string[] = [];
+    activeModels.forEach((model, path) => {
+      if (model && (typeof model.isDisposed !== "function" || !model.isDisposed())) {
+        paths.push(path);
+      }
+    });
+    return paths;
+  }
+
+  /**
+   * Applies an edit to an existing Monaco model.
+   * If preserveUndo is true, pushes an edit operation over the full model range
+   * to preserve the undo/redo stack so users can Ctrl+Z agent changes.
+   */
+  static applyEdit(path: string, newContent: string, preserveUndo = true): boolean {
+    const norm = normalizePath(path);
+    const model = activeModels.get(norm);
+    if (!model || (typeof model.isDisposed === "function" && model.isDisposed())) {
+      return false;
+    }
+    if (typeof model.getValue === "function" && model.getValue() === newContent) {
+      return true;
+    }
+
+    if (
+      preserveUndo &&
+      typeof model.pushEditOperations === "function" &&
+      typeof model.getFullModelRange === "function"
+    ) {
+      try {
+        const fullRange = model.getFullModelRange();
+        model.pushEditOperations(
+          [],
+          [{ range: fullRange, text: newContent }],
+          () => null
+        );
+        return true;
+      } catch (err) {
+        console.warn(`[ModelService] Failed to pushEditOperations for ${path}, falling back to setValue:`, err);
+      }
+    }
+
+    if (typeof model.setValue === "function") {
+      model.setValue(newContent);
+      return true;
+    }
+    return false;
+  }
+
+  /**
    * Updates an existing Monaco model's content live without losing view state or editor binding.
    */
   static updateContent(path: string, newContent: string): boolean {
@@ -147,8 +225,10 @@ export class ModelService {
           const newModel = monacoInstance.editor.createModel(content, language, newUri);
           activeModels.set(normNew, newModel);
         } catch {
-          // Fallback
+          activeModels.set(normNew, oldModel);
         }
+      } else if (oldModel) {
+        activeModels.set(normNew, oldModel);
       }
     }
     if (viewStates.has(normOld)) {
@@ -175,8 +255,10 @@ export class ModelService {
           const newModel = monacoInstance.editor.createModel(content, language, newUri);
           activeModels.set(updated, newModel);
         } catch {
-          // Fallback
+          activeModels.set(updated, model);
         }
+      } else if (model) {
+        activeModels.set(updated, model);
       }
     }
 

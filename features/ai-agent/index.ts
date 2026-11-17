@@ -1,5 +1,6 @@
 export * from "./services/desktop-transport";
 export * from "./services/workspace-context-collector";
+export * from "./services/checkpoint.service";
 export * from "./hooks/useDesktopTransport";
 export * from "../../lib/ai-agent/types";
 export * from "../../lib/ai-agent/transport-schema";
