@@ -395,3 +395,37 @@ export const TaskStatePayloadSchema = z.object({
 });
 export type TaskStatePayload = z.infer<typeof TaskStatePayloadSchema>;
 
+/**
+ * Stage 12: Session Persistence, History, and Recovery Schemas
+ */
+
+export const RenameSessionParamsSchema = z.object({
+  sessionId: z.string().min(1),
+  title: z.string().min(1),
+});
+export type RenameSessionParams = z.infer<typeof RenameSessionParamsSchema>;
+
+export const RestoreSessionParamsSchema = z.object({
+  sessionId: z.string().min(1),
+  workspacePath: z.string().optional(),
+});
+export type RestoreSessionParams = z.infer<typeof RestoreSessionParamsSchema>;
+
+export const SearchSessionsParamsSchema = z.object({
+  query: z.string().min(1),
+  limit: z.number().int().positive().optional(),
+});
+export type SearchSessionsParams = z.infer<typeof SearchSessionsParamsSchema>;
+
+export const ReconcileSessionsParamsSchema = z.object({
+  dryRun: z.boolean().optional(),
+});
+export type ReconcileSessionsParams = z.infer<typeof ReconcileSessionsParamsSchema>;
+
+export const ReconcileSessionsResultSchema = z.object({
+  reconciledCount: z.number(),
+  interruptedSessionIds: z.array(z.string()),
+});
+export type ReconcileSessionsResult = z.infer<typeof ReconcileSessionsResultSchema>;
+
+

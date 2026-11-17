@@ -117,4 +117,5 @@ export type ResolveWorkspaceContextParams = z.infer<typeof ResolveWorkspaceConte
 export type ResolveWorkspaceContextResult = z.infer<typeof ResolveWorkspaceContextResultSchema>;
 
 export * from "./plan-schema";
+export * from "./persistence-schema";
 

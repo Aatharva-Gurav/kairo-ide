@@ -29,6 +29,15 @@ import {
   VerificationEngine,
   VerificationReport,
 } from "../planning";
+import {
+  SessionMetadataStore,
+  RecoveryService,
+  RecoveryReconciliationReport,
+} from "../persistence";
+import {
+  KairoSessionMetadata,
+  SessionSearchResult,
+} from "../../lib/ai-agent/persistence-schema";
 
 export interface ActiveSessionContext {
   sessionId: string;
@@ -53,6 +62,8 @@ export class SessionService implements SessionContextProvider {
   private readonly logger: Logger;
   private readonly activeSessions = new Map<string, ActiveSessionContext>();
   private readonly globalSubscriptions = new Set<SessionEventBroadcaster>();
+  private readonly metadataStore: SessionMetadataStore;
+  private readonly recoveryService: RecoveryService;
   private coreSubscriptionUnsubscribe: (() => void) | null = null;
   private eventSeq = 0;
 
@@ -62,7 +73,9 @@ export class SessionService implements SessionContextProvider {
     eventAdapter: EventAdapter,
     approvalCoordinator: ApprovalCoordinator,
     providerService?: ProviderService,
-    contextService?: ContextService
+    contextService?: ContextService,
+    metadataStore?: SessionMetadataStore,
+    recoveryService?: RecoveryService
   ) {
     this.logger = logger.child("session-service");
     this.runtimeManager = runtimeManager;
@@ -70,6 +83,15 @@ export class SessionService implements SessionContextProvider {
     this.approvalCoordinator = approvalCoordinator;
     this.providerService = providerService;
     this.contextService = contextService;
+    this.metadataStore =
+      metadataStore ?? new SessionMetadataStore({ logger: this.logger });
+    this.recoveryService =
+      recoveryService ??
+      new RecoveryService({
+        metadataStore: this.metadataStore,
+        runtimeManager: this.runtimeManager,
+        logger: this.logger,
+      });
   }
 
   public registerBroadcaster(broadcaster: SessionEventBroadcaster): () => void {
@@ -235,6 +257,31 @@ export class SessionService implements SessionContextProvider {
       executionEngine,
     });
 
+    // Persist initial Kairo session metadata atomically
+    const initialMeta: KairoSessionMetadata = {
+      version: 1,
+      conversationId: sessionId,
+      clineSessionId: sessionId,
+      taskId: sessionId,
+      workspaceId: "default",
+      workspacePath: workspaceRoot,
+      providerId: providerSettings.providerId,
+      modelId: providerSettings.modelId,
+      title: (params.prompt || "").slice(0, 60).trim() || "New Conversation",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      lastActivityAt: Date.now(),
+      status: "active",
+      taskState: initialTaskState,
+      mode,
+      tags: [],
+    };
+    try {
+      await this.metadataStore.saveMetadata(initialMeta);
+    } catch (err) {
+      this.logger.warn(`Failed to persist initial metadata for session ${sessionId}`, err);
+    }
+
     this.logger.info(`Session created successfully: ${sessionId}`);
     return sessionId;
   }
@@ -254,6 +301,20 @@ export class SessionService implements SessionContextProvider {
       ) {
         existing.stateMachine.transition("planning", "Switched to Plan Mode");
       }
+    }
+
+    // Update metadata last activity & status
+    try {
+      const meta = await this.metadataStore.getMetadata(params.sessionId);
+      if (meta) {
+        meta.lastActivityAt = Date.now();
+        meta.updatedAt = Date.now();
+        meta.status = "active";
+        meta.mode = targetMode;
+        await this.metadataStore.saveMetadata(meta);
+      }
+    } catch (err) {
+      this.logger.warn(`Failed to update metadata for session ${params.sessionId}`, err);
     }
 
     const workspaceRoot = existing?.workspacePath || process.cwd();
@@ -301,11 +362,22 @@ export class SessionService implements SessionContextProvider {
       await cline.stop(sessionId);
     }
     this.activeSessions.delete(sessionId);
+    try {
+      const meta = await this.metadataStore.getMetadata(sessionId);
+      if (meta) {
+        meta.status = "idle";
+        meta.updatedAt = Date.now();
+        await this.metadataStore.saveMetadata(meta);
+      }
+    } catch (err) {
+      this.logger.warn(`Failed to update metadata on stopSession for ${sessionId}`, err);
+    }
   }
 
   public async deleteSession(sessionId: string): Promise<boolean> {
     this.logger.info(`Deleting session: ${sessionId}`);
     this.activeSessions.delete(sessionId);
+    await this.metadataStore.deleteMetadata(sessionId);
 
     if (this.runtimeManager.isReady()) {
       const cline = this.runtimeManager.getInstance();
@@ -321,7 +393,35 @@ export class SessionService implements SessionContextProvider {
 
   public async listSessions(limit: number = 50): Promise<SessionHistoryRecord[]> {
     const cline = await this.runtimeManager.initialize();
-    return await cline.list(limit);
+    const clineList = await cline.list(limit);
+
+    // Enrich with Kairo metadata
+    try {
+      const kairoList = await this.metadataStore.listMetadata();
+      const kairoMap = new Map<string, KairoSessionMetadata>();
+      for (const m of kairoList) {
+        kairoMap.set(m.clineSessionId, m);
+      }
+
+      for (const record of clineList) {
+        const meta = kairoMap.get(record.sessionId);
+        if (meta) {
+          if (!record.metadata) record.metadata = {};
+          if (meta.customTitle) {
+            record.metadata.title = meta.customTitle;
+          }
+          (record.metadata as any).workspacePath = meta.workspacePath;
+          (record.metadata as any).taskState = meta.taskState;
+          (record.metadata as any).mode = meta.mode;
+          (record.metadata as any).isInterrupted = meta.status === "interrupted";
+          (record.metadata as any).hasPlan = !!meta.plan;
+        }
+      }
+    } catch (err) {
+      this.logger.warn("Failed to enrich session list with Kairo metadata", err);
+    }
+
+    return clineList;
   }
 
   public async loadSession(sessionId: string): Promise<{
@@ -390,6 +490,18 @@ export class SessionService implements SessionContextProvider {
       session.executionEngine.loadPlan(plan);
     }
 
+    try {
+      const meta = await this.metadataStore.getMetadata(sessionId);
+      if (meta) {
+        meta.plan = plan;
+        meta.taskState = "awaiting_plan_approval";
+        meta.updatedAt = Date.now();
+        await this.metadataStore.saveMetadata(meta);
+      }
+    } catch (err) {
+      this.logger.warn(`Failed to update metadata with plan for session ${sessionId}`, err);
+    }
+
     this.broadcastCustomEvent({
       type: "event",
       event: EVENT_NAMES.PLAN_CREATED,
@@ -424,6 +536,18 @@ export class SessionService implements SessionContextProvider {
           feedback ? `Plan approved with feedback: ${feedback}` : "Plan approved by user"
         );
       }
+    }
+
+    try {
+      const meta = await this.metadataStore.getMetadata(sessionId);
+      if (meta) {
+        meta.mode = "act";
+        meta.taskState = "executing";
+        meta.updatedAt = Date.now();
+        await this.metadataStore.saveMetadata(meta);
+      }
+    } catch (err) {
+      this.logger.warn(`Failed to update metadata on plan approval for session ${sessionId}`, err);
     }
 
     this.broadcastCustomEvent({
@@ -464,6 +588,18 @@ export class SessionService implements SessionContextProvider {
           );
         }
       }
+    }
+
+    try {
+      const meta = await this.metadataStore.getMetadata(sessionId);
+      if (meta) {
+        meta.taskState = adjustOnly ? "planning" : "cancelled";
+        meta.status = adjustOnly ? "active" : "cancelled";
+        meta.updatedAt = Date.now();
+        await this.metadataStore.saveMetadata(meta);
+      }
+    } catch (err) {
+      this.logger.warn(`Failed to update metadata on rejectPlan for session ${sessionId}`, err);
     }
 
     this.broadcastCustomEvent({
@@ -550,6 +686,18 @@ export class SessionService implements SessionContextProvider {
       }
     }
 
+    try {
+      const meta = await this.metadataStore.getMetadata(sessionId);
+      if (meta) {
+        meta.taskState = report.passed ? "completed" : "failed";
+        meta.status = report.passed ? "completed" : "failed";
+        meta.updatedAt = Date.now();
+        await this.metadataStore.saveMetadata(meta);
+      }
+    } catch (err) {
+      this.logger.warn(`Failed to update metadata on verification for session ${sessionId}`, err);
+    }
+
     this.broadcastCustomEvent({
       type: "event",
       event: EVENT_NAMES.VERIFICATION_COMPLETED,
@@ -560,6 +708,211 @@ export class SessionService implements SessionContextProvider {
     });
 
     return report;
+  }
+
+  public getMetadataStore(): SessionMetadataStore {
+    return this.metadataStore;
+  }
+
+  public getRecoveryService(): RecoveryService {
+    return this.recoveryService;
+  }
+
+  public async renameSession(
+    sessionId: string,
+    newTitle: string
+  ): Promise<{ sessionId: string; title: string }> {
+    this.logger.info(`Renaming session ${sessionId} to: "${newTitle}"`);
+
+    // 1. Update Cline canonical session metadata if supported
+    if (this.runtimeManager.isReady()) {
+      try {
+        const cline = this.runtimeManager.getInstance();
+        if (typeof cline.update === "function") {
+          await cline.update(sessionId, { title: newTitle });
+        }
+      } catch (err) {
+        this.logger.warn(`Failed to update title in Cline core for ${sessionId}`, err);
+      }
+    }
+
+    // 2. Update Kairo session metadata store
+    await this.metadataStore.renameMetadata(sessionId, newTitle);
+
+    // 3. Broadcast rename event
+    this.broadcastCustomEvent({
+      type: "event",
+      event: EVENT_NAMES.SESSION_RENAMED,
+      sessionId,
+      seq: this.eventSeq++,
+      timestamp: Date.now(),
+      payload: { sessionId, title: newTitle },
+    });
+
+    return { sessionId, title: newTitle };
+  }
+
+  public async restoreSession(
+    sessionId: string,
+    targetWorkspacePath?: string
+  ): Promise<{
+    sessionId: string;
+    restored: boolean;
+    metadata: KairoSessionMetadata;
+    messages: SessionDisplayMessage[];
+    workspaceWarning?: string;
+  }> {
+    this.logger.info(`Restoring session ${sessionId}...`);
+
+    // 1. Read messages from Cline canonical source of truth
+    const messages = await this.readMessages(sessionId);
+
+    // 2. Fetch Kairo metadata (or build fallback if missing)
+    let meta = await this.metadataStore.getMetadata(sessionId);
+    if (!meta) {
+      meta = {
+        version: 1,
+        conversationId: sessionId,
+        clineSessionId: sessionId,
+        taskId: sessionId,
+        workspaceId: "default",
+        workspacePath: targetWorkspacePath || process.cwd(),
+        providerId: "unknown",
+        modelId: "unknown",
+        title: "Restored Session",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        lastActivityAt: Date.now(),
+        status: "idle",
+        taskState: "idle",
+        mode: "act",
+        tags: [],
+      };
+      await this.metadataStore.saveMetadata(meta);
+    }
+
+    // 3. Check workspace association if target workspace provided
+    let workspaceWarning: string | undefined;
+    if (targetWorkspacePath && meta.workspacePath) {
+      const validation = this.recoveryService.validateWorkspaceAssociation(
+        meta.workspacePath,
+        targetWorkspacePath
+      );
+      if (!validation.matches) {
+        workspaceWarning = validation.warning;
+      }
+    }
+
+    // 4. Rehydrate in-memory session context
+    const effectiveWorkspace = targetWorkspacePath || meta.workspacePath || process.cwd();
+    const stateMachine = new TaskStateMachine(sessionId, meta.taskState ?? "idle");
+    const executionEngine = new TaskExecutionEngine({
+      sessionId,
+      workspaceRoot: effectiveWorkspace,
+      stateMachine,
+      logger: this.logger,
+      onStepProgress: (payload) => {
+        this.broadcastCustomEvent({
+          type: "event",
+          event: EVENT_NAMES.PLAN_STEP_PROGRESS,
+          sessionId,
+          seq: this.eventSeq++,
+          timestamp: Date.now(),
+          payload,
+        });
+      },
+      onStateChange: (payload) => {
+        this.broadcastCustomEvent({
+          type: "event",
+          event: EVENT_NAMES.TASK_STATE_CHANGED,
+          sessionId,
+          seq: this.eventSeq++,
+          timestamp: Date.now(),
+          payload,
+        });
+      },
+    });
+
+    if (meta.plan) {
+      try {
+        executionEngine.loadPlan(meta.plan);
+      } catch (err) {
+        this.logger.warn(`Failed to set stored plan on restore for ${sessionId}`, err);
+      }
+    }
+
+    this.activeSessions.set(sessionId, {
+      sessionId,
+      providerId: meta.providerId,
+      modelId: meta.modelId,
+      workspacePath: effectiveWorkspace,
+      mode: meta.mode ?? "act",
+      startedAt: meta.createdAt,
+      stateMachine,
+      currentPlan: meta.plan,
+      executionEngine,
+    });
+
+    // 5. Broadcast restore event
+    this.broadcastCustomEvent({
+      type: "event",
+      event: EVENT_NAMES.SESSION_RESTORED,
+      sessionId,
+      seq: this.eventSeq++,
+      timestamp: Date.now(),
+      payload: { sessionId, metadata: meta, workspaceWarning },
+    });
+
+    return {
+      sessionId,
+      restored: true,
+      metadata: meta,
+      messages,
+      workspaceWarning,
+    };
+  }
+
+  public async searchSessions(
+    query: string,
+    limit: number = 50
+  ): Promise<SessionSearchResult[]> {
+    const matched = await this.metadataStore.searchMetadata(query, limit);
+    const q = query.toLowerCase();
+
+    return matched.map((meta) => {
+      let matchField: SessionSearchResult["matchField"] = "title";
+      let snippet = meta.customTitle || meta.title;
+
+      if (meta.plan) {
+        if (meta.plan.objective.toLowerCase().includes(q)) {
+          matchField = "plan_objective";
+          snippet = meta.plan.objective;
+        } else if (meta.plan.understanding.toLowerCase().includes(q)) {
+          matchField = "plan_understanding";
+          snippet = meta.plan.understanding;
+        } else if (meta.plan.relevantFiles.some((f) => f.toLowerCase().includes(q))) {
+          matchField = "file_path";
+          snippet = meta.plan.relevantFiles.find((f) => f.toLowerCase().includes(q)) || "";
+        }
+      }
+
+      return {
+        sessionId: meta.clineSessionId,
+        conversationId: meta.conversationId,
+        title: meta.customTitle || meta.title,
+        snippet,
+        matchField,
+        workspacePath: meta.workspacePath,
+        lastActivityAt: meta.lastActivityAt,
+        status: meta.status,
+      };
+    });
+  }
+
+  public async reconcileStartupState(
+    currentWorkspaceRoot?: string
+  ): Promise<RecoveryReconciliationReport> {
+    return await this.recoveryService.reconcileStartupState(currentWorkspaceRoot);
   }
 
   public dispose(): void {

@@ -229,6 +229,20 @@ export function startSidecarServer(
   });
   console.log(readyLine);
 
+  // Trigger background startup reconciliation across session stores
+  sessionService
+    .reconcileStartupState()
+    .then((report) => {
+      if (report.interruptedCount > 0) {
+        logger.info(
+          `Startup reconciliation marked ${report.interruptedCount} session(s) as interrupted: ${report.interruptedSessionIds.join(", ")}`
+        );
+      }
+    })
+    .catch((err) => {
+      logger.warn("Failed to reconcile session startup state", err);
+    });
+
   let isStopping = false;
 
   const stop = async (): Promise<void> => {

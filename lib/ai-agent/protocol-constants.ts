@@ -35,6 +35,10 @@ export const COMMAND_NAMES = {
   REJECT_PLAN: "reject_plan",
   GET_TASK_STATE: "get_task_state",
   VERIFY_TASK: "verify_task",
+  RENAME_SESSION: "rename_session",
+  RESTORE_SESSION: "restore_session",
+  SEARCH_SESSIONS: "search_sessions",
+  RECONCILE_SESSIONS: "reconcile_sessions",
 } as const;
 
 export type CommandName = (typeof COMMAND_NAMES)[keyof typeof COMMAND_NAMES];
@@ -60,6 +64,9 @@ export const EVENT_NAMES = {
   PLAN_STEP_PROGRESS: "plan_step_progress",
   VERIFICATION_STARTED: "verification_started",
   VERIFICATION_COMPLETED: "verification_completed",
+  SESSION_RESTORED: "session_restored",
+  SESSION_RENAMED: "session_renamed",
+  SESSION_INTERRUPTED: "session_interrupted",
 } as const;
 
 export type EventName = (typeof EVENT_NAMES)[keyof typeof EVENT_NAMES];

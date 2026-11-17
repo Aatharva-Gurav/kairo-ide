@@ -24,6 +24,10 @@ import {
   RejectPlanParamsSchema,
   GetTaskStateParamsSchema,
   VerifyTaskParamsSchema,
+  RenameSessionParamsSchema,
+  RestoreSessionParamsSchema,
+  SearchSessionsParamsSchema,
+  ReconcileSessionsParamsSchema,
 } from "../../lib/ai-agent/transport-schema";
 import type {
   ResponseEnvelope,
@@ -525,6 +529,126 @@ export class ConnectionManager {
           id: command.id,
           status: "ok",
           result: { deleted },
+        });
+      } catch (err) {
+        this.sendSanitizedError(ws, command.id, err);
+      }
+      return;
+    }
+
+    // Rename Session command
+    if (command.name === "rename_session") {
+      if (!this.sessionService) {
+        this.sendNotImplemented(ws, command.id, command.name);
+        return;
+      }
+
+      const parse = RenameSessionParamsSchema.safeParse(command.params);
+      if (!parse.success) {
+        this.sendInvalidParams(ws, command.id, parse.error.issues);
+        return;
+      }
+
+      try {
+        const result = await this.sessionService.renameSession(
+          parse.data.sessionId,
+          parse.data.title
+        );
+        this.sendResponse(ws, {
+          type: "response",
+          id: command.id,
+          status: "ok",
+          result,
+        });
+      } catch (err) {
+        this.sendSanitizedError(ws, command.id, err);
+      }
+      return;
+    }
+
+    // Restore Session command
+    if (command.name === "restore_session") {
+      if (!this.sessionService) {
+        this.sendNotImplemented(ws, command.id, command.name);
+        return;
+      }
+
+      const parse = RestoreSessionParamsSchema.safeParse(command.params);
+      if (!parse.success) {
+        this.sendInvalidParams(ws, command.id, parse.error.issues);
+        return;
+      }
+
+      try {
+        const result = await this.sessionService.restoreSession(
+          parse.data.sessionId,
+          parse.data.workspacePath
+        );
+        this.sendResponse(ws, {
+          type: "response",
+          id: command.id,
+          status: "ok",
+          result,
+        });
+      } catch (err) {
+        this.sendSanitizedError(ws, command.id, err);
+      }
+      return;
+    }
+
+    // Search Sessions command
+    if (command.name === "search_sessions") {
+      if (!this.sessionService) {
+        this.sendNotImplemented(ws, command.id, command.name);
+        return;
+      }
+
+      const parse = SearchSessionsParamsSchema.safeParse(command.params);
+      if (!parse.success) {
+        this.sendInvalidParams(ws, command.id, parse.error.issues);
+        return;
+      }
+
+      try {
+        const results = await this.sessionService.searchSessions(
+          parse.data.query,
+          parse.data.limit
+        );
+        this.sendResponse(ws, {
+          type: "response",
+          id: command.id,
+          status: "ok",
+          result: { results },
+        });
+      } catch (err) {
+        this.sendSanitizedError(ws, command.id, err);
+      }
+      return;
+    }
+
+    // Reconcile Sessions command
+    if (command.name === "reconcile_sessions") {
+      if (!this.sessionService) {
+        this.sendNotImplemented(ws, command.id, command.name);
+        return;
+      }
+
+      const parse = ReconcileSessionsParamsSchema.safeParse(command.params ?? {});
+      if (!parse.success) {
+        this.sendInvalidParams(ws, command.id, parse.error.issues);
+        return;
+      }
+
+      try {
+        const report = await this.sessionService.reconcileStartupState();
+        this.sendResponse(ws, {
+          type: "response",
+          id: command.id,
+          status: "ok",
+          result: {
+            reconciledCount: report.interruptedCount,
+            interruptedSessionIds: report.interruptedSessionIds,
+          },
         });
       } catch (err) {
         this.sendSanitizedError(ws, command.id, err);
