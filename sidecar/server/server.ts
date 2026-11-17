@@ -13,6 +13,7 @@ import { RuntimeManager } from "../runtime/manager";
 import { SessionService } from "../sessions";
 import { ProviderService } from "../providers/service";
 import { ContextService } from "../context/context-service";
+import { SidecarTerminalManager } from "../terminal";
 import { PROTOCOL_VERSION, EVENT_NAMES } from "../../lib/ai-agent/protocol-constants";
 import { HealthResponse } from "../../lib/ai-agent/types";
 
@@ -27,6 +28,7 @@ export interface SidecarInstance {
   auditLogger: AuditLogger;
   providerService: ProviderService;
   contextService?: ContextService;
+  terminalManager?: SidecarTerminalManager;
   stop: () => Promise<void>;
 }
 
@@ -80,6 +82,14 @@ export function startSidecarServer(
   const eventAdapter = new EventAdapter();
   const providerService = new ProviderService({ logger });
   const contextService = new ContextService(process.cwd());
+  const terminalManager = new SidecarTerminalManager({
+    permissionManager,
+    approvalCoordinator,
+    pathValidator,
+    auditLogger,
+    logger,
+    defaultWorkspaceRoot: process.cwd(),
+  });
   const runtimeManager = new RuntimeManager(logger, {
     clientName: "kairo-ide",
     approvalCoordinator,
@@ -228,6 +238,7 @@ export function startSidecarServer(
 
     connectionManager.closeAll();
     sessionService.dispose();
+    await terminalManager.stopAll();
     await runtimeManager.dispose();
 
     if (bunServer) {
@@ -249,6 +260,7 @@ export function startSidecarServer(
     auditLogger,
     providerService,
     contextService,
+    terminalManager,
     stop,
   };
 }

@@ -30,6 +30,11 @@ export const COMMAND_NAMES = {
   VALIDATE_PROVIDER_CREDENTIALS: "validate_provider_credentials",
   TEST_PROVIDER_CONNECTIVITY: "test_provider_connectivity",
   RESOLVE_WORKSPACE_CONTEXT: "resolve_workspace_context",
+  SUBMIT_PLAN: "submit_plan",
+  APPROVE_PLAN: "approve_plan",
+  REJECT_PLAN: "reject_plan",
+  GET_TASK_STATE: "get_task_state",
+  VERIFY_TASK: "verify_task",
 } as const;
 
 export type CommandName = (typeof COMMAND_NAMES)[keyof typeof COMMAND_NAMES];
@@ -48,6 +53,13 @@ export const EVENT_NAMES = {
   TASK_COMPLETE: "task_complete",
   SESSION_STATUS: "session_status",
   AGENT_ERROR: "agent_error",
+  TASK_STATE_CHANGED: "task_state_changed",
+  PLAN_CREATED: "plan_created",
+  PLAN_APPROVED: "plan_approved",
+  PLAN_REJECTED: "plan_rejected",
+  PLAN_STEP_PROGRESS: "plan_step_progress",
+  VERIFICATION_STARTED: "verification_started",
+  VERIFICATION_COMPLETED: "verification_completed",
 } as const;
 
 export type EventName = (typeof EVENT_NAMES)[keyof typeof EVENT_NAMES];

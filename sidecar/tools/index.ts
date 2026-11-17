@@ -8,6 +8,8 @@ import { PermissionManager } from "../permissions/permission-manager";
 import { ApprovalCoordinator } from "../permissions/approval-coordinator";
 import { PathValidator } from "../security/path-validator";
 import { Logger } from "../utils/logger";
+import { ITerminalManager } from "../terminal";
+import { formatUntrustedOutput } from "../security/command-parser";
 
 export interface ToolDefinition {
   name: string;
@@ -37,6 +39,7 @@ export interface FileSystemToolCoordinatorOptions {
   pathValidator?: PathValidator;
   logger: Logger;
   defaultWorkspaceRoot?: string;
+  terminalManager?: ITerminalManager;
 }
 
 export class FileSystemToolCoordinator implements IToolCoordinator {
@@ -45,6 +48,7 @@ export class FileSystemToolCoordinator implements IToolCoordinator {
   private readonly pathValidator: PathValidator;
   private readonly logger: Logger;
   private readonly defaultWorkspaceRoot: string;
+  private readonly terminalManager?: ITerminalManager;
 
   constructor(options: FileSystemToolCoordinatorOptions) {
     this.permissionManager = options.permissionManager;
@@ -52,6 +56,7 @@ export class FileSystemToolCoordinator implements IToolCoordinator {
     this.pathValidator = options.pathValidator ?? options.permissionManager.getPathValidator();
     this.logger = options.logger.child("filesystem-tools");
     this.defaultWorkspaceRoot = options.defaultWorkspaceRoot || process.cwd();
+    this.terminalManager = options.terminalManager;
   }
 
   public listAvailableTools(): ToolDefinition[] {
@@ -90,6 +95,21 @@ export class FileSystemToolCoordinator implements IToolCoordinator {
         name: "search_files",
         description: "Searches for files matching a pattern within the workspace.",
         isReadOnly: true,
+      },
+      {
+        name: "execute_command",
+        description: "Safely executes a shell command within the workspace after policy checks.",
+        isReadOnly: false,
+      },
+      {
+        name: "run_commands",
+        description: "Runs one or more shell commands in sequence with output capture.",
+        isReadOnly: false,
+      },
+      {
+        name: "bash",
+        description: "Executes a shell command or script in the workspace.",
+        isReadOnly: false,
       },
     ];
   }
@@ -152,7 +172,62 @@ export class FileSystemToolCoordinator implements IToolCoordinator {
       return this.handleSearchFiles(args, workspaceRoot);
     }
 
+    if (
+      normName === "execute_command" ||
+      normName === "run_commands" ||
+      normName === "bash" ||
+      normName === "terminal" ||
+      normName === "shell"
+    ) {
+      return this.handleExecuteCommand(args, workspaceRoot, sessionId);
+    }
+
     throw new Error(`Unsupported tool: '${name}'`);
+  }
+
+  private async handleExecuteCommand(
+    args: Record<string, unknown>,
+    workspaceRoot: string,
+    sessionId: string
+  ): Promise<unknown> {
+    if (!this.terminalManager) {
+      throw new Error("Terminal manager is not configured for command execution.");
+    }
+
+    const commandStr =
+      typeof args.command === "string"
+        ? args.command
+        : typeof args.commandLine === "string"
+        ? args.commandLine
+        : Array.isArray(args.commands)
+        ? args.commands.join(" && ")
+        : "";
+
+    const requestedCwd = typeof args.cwd === "string" ? args.cwd : undefined;
+    const timeoutMs = typeof args.timeoutMs === "number" ? args.timeoutMs : undefined;
+    const maxOutputBytes = typeof args.maxOutputBytes === "number" ? args.maxOutputBytes : undefined;
+
+    const result = await this.terminalManager.executeCommand({
+      command: commandStr,
+      cwd: requestedCwd,
+      workspaceRoot,
+      timeoutMs,
+      maxOutputBytes,
+      sessionId,
+    });
+
+    const formattedOutput = formatUntrustedOutput(
+      result.stdout,
+      result.stderr,
+      result.exitCode,
+      commandStr,
+      result.truncated
+    );
+
+    return {
+      ...result,
+      formattedOutput,
+    };
   }
 
   private resolveValidPath(targetPath: string, workspaceRoot: string): string {
@@ -310,3 +385,6 @@ export class FileSystemToolCoordinator implements IToolCoordinator {
     return { matches };
   }
 }
+
+export { FileSystemToolCoordinator as ToolCoordinator };
+

@@ -98,6 +98,7 @@ impl AiCommandExecutor {
         command.current_dir(&work_dir);
         command.stdout(Stdio::piped());
         command.stderr(Stdio::piped());
+        Self::sanitize_command_env(&mut command);
 
         #[cfg(windows)]
         {
@@ -244,6 +245,7 @@ impl AiCommandExecutor {
         command.current_dir(&work_dir);
         command.stdout(Stdio::piped());
         command.stderr(Stdio::piped());
+        Self::sanitize_command_env(&mut command);
 
         #[cfg(windows)]
         {
@@ -472,6 +474,25 @@ impl AiCommandExecutor {
             let mut kill_cmd = Command::new("kill");
             kill_cmd.args(["-9", &pid.to_string()]);
             let _ = kill_cmd.status();
+        }
+    }
+
+    /// Strips sensitive credentials, API keys, and tokens from subprocess environment.
+    fn sanitize_command_env(command: &mut Command) {
+        for (k, _) in std::env::vars() {
+            let upper = k.to_uppercase();
+            if upper.contains("KEY")
+                || upper.contains("TOKEN")
+                || upper.contains("SECRET")
+                || upper.contains("PASSWORD")
+                || upper.contains("AUTH")
+                || upper.contains("CREDENTIAL")
+                || upper.contains("VAULT")
+                || upper.contains("KAIRO")
+                || upper.contains("SUPABASE")
+            {
+                command.env_remove(&k);
+            }
         }
     }
 }

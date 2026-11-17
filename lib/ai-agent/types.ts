@@ -115,3 +115,6 @@ export type DiagnosticItem = z.infer<typeof DiagnosticItemSchema>;
 export type WorkspaceContextPayload = z.infer<typeof WorkspaceContextPayloadSchema>;
 export type ResolveWorkspaceContextParams = z.infer<typeof ResolveWorkspaceContextParamsSchema>;
 export type ResolveWorkspaceContextResult = z.infer<typeof ResolveWorkspaceContextResultSchema>;
+
+export * from "./plan-schema";
+

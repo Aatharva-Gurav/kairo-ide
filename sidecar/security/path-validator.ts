@@ -270,4 +270,12 @@ export class PathValidator {
       relativePath: relativePath.replace(/\\/g, "/"),
     };
   }
+
+  /**
+   * Helper to verify if a path is contained within the workspace root.
+   */
+  public isWithinWorkspace(targetPath: string, workspaceRoot: string): boolean {
+    const res = this.validate(targetPath, workspaceRoot, { allowReadSensitive: true });
+    return res.valid;
+  }
 }

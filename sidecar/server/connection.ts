@@ -19,6 +19,11 @@ import {
   ValidateProviderCredentialsParamsSchema,
   TestProviderConnectivityParamsSchema,
   ResolveWorkspaceContextParamsSchema,
+  SubmitPlanParamsSchema,
+  ApprovePlanParamsSchema,
+  RejectPlanParamsSchema,
+  GetTaskStateParamsSchema,
+  VerifyTaskParamsSchema,
 } from "../../lib/ai-agent/transport-schema";
 import type {
   ResponseEnvelope,
@@ -520,6 +525,151 @@ export class ConnectionManager {
           id: command.id,
           status: "ok",
           result: { deleted },
+        });
+      } catch (err) {
+        this.sendSanitizedError(ws, command.id, err);
+      }
+      return;
+    }
+
+    // Submit Plan command
+    if (command.name === "submit_plan") {
+      if (!this.sessionService) {
+        this.sendNotImplemented(ws, command.id, command.name);
+        return;
+      }
+
+      const parse = SubmitPlanParamsSchema.safeParse(command.params);
+      if (!parse.success) {
+        this.sendInvalidParams(ws, command.id, parse.error.issues);
+        return;
+      }
+
+      try {
+        const plan = await this.sessionService.submitPlan(parse.data.sessionId, parse.data.plan);
+        this.sendResponse(ws, {
+          type: "response",
+          id: command.id,
+          status: "ok",
+          result: { plan },
+        });
+      } catch (err) {
+        this.sendSanitizedError(ws, command.id, err);
+      }
+      return;
+    }
+
+    // Approve Plan command
+    if (command.name === "approve_plan") {
+      if (!this.sessionService) {
+        this.sendNotImplemented(ws, command.id, command.name);
+        return;
+      }
+
+      const parse = ApprovePlanParamsSchema.safeParse(command.params);
+      if (!parse.success) {
+        this.sendInvalidParams(ws, command.id, parse.error.issues);
+        return;
+      }
+
+      try {
+        const result = await this.sessionService.approvePlan(
+          parse.data.sessionId,
+          parse.data.feedback
+        );
+        this.sendResponse(ws, {
+          type: "response",
+          id: command.id,
+          status: "ok",
+          result,
+        });
+      } catch (err) {
+        this.sendSanitizedError(ws, command.id, err);
+      }
+      return;
+    }
+
+    // Reject Plan command
+    if (command.name === "reject_plan") {
+      if (!this.sessionService) {
+        this.sendNotImplemented(ws, command.id, command.name);
+        return;
+      }
+
+      const parse = RejectPlanParamsSchema.safeParse(command.params);
+      if (!parse.success) {
+        this.sendInvalidParams(ws, command.id, parse.error.issues);
+        return;
+      }
+
+      try {
+        const result = await this.sessionService.rejectPlan(
+          parse.data.sessionId,
+          parse.data.reason,
+          parse.data.adjustOnly
+        );
+        this.sendResponse(ws, {
+          type: "response",
+          id: command.id,
+          status: "ok",
+          result,
+        });
+      } catch (err) {
+        this.sendSanitizedError(ws, command.id, err);
+      }
+      return;
+    }
+
+    // Get Task State command
+    if (command.name === "get_task_state") {
+      if (!this.sessionService) {
+        this.sendNotImplemented(ws, command.id, command.name);
+        return;
+      }
+
+      const parse = GetTaskStateParamsSchema.safeParse(command.params);
+      if (!parse.success) {
+        this.sendInvalidParams(ws, command.id, parse.error.issues);
+        return;
+      }
+
+      try {
+        const taskState = this.sessionService.getTaskState(parse.data.sessionId);
+        this.sendResponse(ws, {
+          type: "response",
+          id: command.id,
+          status: "ok",
+          result: taskState,
+        });
+      } catch (err) {
+        this.sendSanitizedError(ws, command.id, err);
+      }
+      return;
+    }
+
+    // Verify Task command
+    if (command.name === "verify_task") {
+      if (!this.sessionService) {
+        this.sendNotImplemented(ws, command.id, command.name);
+        return;
+      }
+
+      const parse = VerifyTaskParamsSchema.safeParse(command.params);
+      if (!parse.success) {
+        this.sendInvalidParams(ws, command.id, parse.error.issues);
+        return;
+      }
+
+      try {
+        const report = await this.sessionService.verifyTask(
+          parse.data.sessionId,
+          parse.data.customTestCommands
+        );
+        this.sendResponse(ws, {
+          type: "response",
+          id: command.id,
+          status: "ok",
+          result: { report },
         });
       } catch (err) {
         this.sendSanitizedError(ws, command.id, err);

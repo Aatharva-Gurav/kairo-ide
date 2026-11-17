@@ -249,27 +249,24 @@ export class PermissionManager {
         return { approved: false, reason };
       }
 
-      // Shell commands in Plan Mode: inspect for file modifications
+      // Shell commands in Plan Mode: command execution is completely blocked (read-only enforcement)
       if (action === "execute_command") {
         const cmdStr = typeof (input as any)?.command === "string"
           ? (input as any).command
           : "";
-        const inspection = this.commandGuard.inspect(cmdStr, "plan");
-        if (inspection.isPlanModeBlocked) {
-          const reason = inspection.reason || `Command '${cmdStr}' is blocked in Plan Mode.`;
-          this.logger.warn(`Plan mode blocked shell command for session ${sessionId}: ${reason}`);
-          await this.auditLogger.log({
-            sessionId,
-            agentId: request.agentId,
-            toolName,
-            action,
-            risk,
-            decision: "denied_by_policy",
-            target: cmdStr,
-            reason,
-          });
-          return { approved: false, reason };
-        }
+        const reason = `Tool execution denied: command execution ('${cmdStr || toolName}') is prohibited in Plan Mode. Plan Mode is strictly read-only.`;
+        this.logger.warn(`Plan mode blocked shell command for session ${sessionId}: ${reason}`);
+        await this.auditLogger.log({
+          sessionId,
+          agentId: request.agentId,
+          toolName,
+          action,
+          risk,
+          decision: "denied_by_policy",
+          target: cmdStr,
+          reason,
+        });
+        return { approved: false, reason };
       }
     }
 
@@ -368,5 +365,33 @@ export class PermissionManager {
     });
 
     return approvalResult;
+  }
+
+  /**
+   * Convenience permission check for tools and terminal managers.
+   */
+  public async checkPermission(options: {
+    sessionId?: string;
+    toolName: string;
+    toolInput: unknown;
+    agentId?: string;
+  }): Promise<{ allowed: boolean; risk: RiskLevel; action: PermissionAction; reason?: string }> {
+    const { action, risk } = this.classifyTool(options.toolName, options.toolInput);
+    const result = await this.handleToolApprovalRequest({
+      sessionId: options.sessionId || "default-session",
+      agentId: options.agentId || "lead-agent",
+      conversationId: options.sessionId || "default-session",
+      iteration: 1,
+      toolCallId: `call_${Date.now()}`,
+      toolName: options.toolName,
+      input: options.toolInput,
+      policy: { enabled: true },
+    });
+    return {
+      allowed: result.approved,
+      risk,
+      action,
+      reason: result.reason,
+    };
   }
 }

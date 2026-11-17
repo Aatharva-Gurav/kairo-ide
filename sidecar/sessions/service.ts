@@ -13,6 +13,22 @@ import {
   SendMessageParams,
   EventEnvelope,
 } from "../../lib/ai-agent/types";
+import { EVENT_NAMES } from "../../lib/ai-agent/protocol-constants";
+import {
+  StructuredTaskPlan,
+  TaskPlanStepStatus,
+  validateTaskPlan,
+} from "../../lib/ai-agent/plan-schema";
+import {
+  TaskStateMachine,
+  TaskState,
+  TaskStateTransitionRecord,
+} from "../state-machine";
+import {
+  TaskExecutionEngine,
+  VerificationEngine,
+  VerificationReport,
+} from "../planning";
 
 export interface ActiveSessionContext {
   sessionId: string;
@@ -21,6 +37,9 @@ export interface ActiveSessionContext {
   workspacePath: string;
   mode: "plan" | "act";
   startedAt: number;
+  stateMachine?: TaskStateMachine;
+  currentPlan?: StructuredTaskPlan;
+  executionEngine?: TaskExecutionEngine;
 }
 
 export type SessionEventBroadcaster = (event: EventEnvelope) => void;
@@ -35,6 +54,7 @@ export class SessionService implements SessionContextProvider {
   private readonly activeSessions = new Map<string, ActiveSessionContext>();
   private readonly globalSubscriptions = new Set<SessionEventBroadcaster>();
   private coreSubscriptionUnsubscribe: (() => void) | null = null;
+  private eventSeq = 0;
 
   constructor(
     logger: Logger,
@@ -57,6 +77,16 @@ export class SessionService implements SessionContextProvider {
     return () => {
       this.globalSubscriptions.delete(broadcaster);
     };
+  }
+
+  public broadcastCustomEvent(event: EventEnvelope): void {
+    for (const broadcast of this.globalSubscriptions) {
+      try {
+        broadcast(event);
+      } catch (err) {
+        this.logger.error("Error in custom event broadcaster", err);
+      }
+    }
   }
 
   private ensureCoreEventSubscription(): void {
@@ -165,6 +195,35 @@ export class SessionService implements SessionContextProvider {
     });
 
     const sessionId = startResult.sessionId;
+    const initialTaskState: TaskState = mode === "plan" ? "planning" : "idle";
+    const stateMachine = new TaskStateMachine(sessionId, initialTaskState);
+    const executionEngine = new TaskExecutionEngine({
+      sessionId,
+      workspaceRoot,
+      stateMachine,
+      logger: this.logger,
+      onStepProgress: (payload) => {
+        this.broadcastCustomEvent({
+          type: "event",
+          event: EVENT_NAMES.PLAN_STEP_PROGRESS,
+          sessionId,
+          seq: this.eventSeq++,
+          timestamp: Date.now(),
+          payload,
+        });
+      },
+      onStateChange: (payload) => {
+        this.broadcastCustomEvent({
+          type: "event",
+          event: EVENT_NAMES.TASK_STATE_CHANGED,
+          sessionId,
+          seq: this.eventSeq++,
+          timestamp: Date.now(),
+          payload,
+        });
+      },
+    });
+
     this.activeSessions.set(sessionId, {
       sessionId,
       providerId: providerSettings.providerId,
@@ -172,6 +231,8 @@ export class SessionService implements SessionContextProvider {
       workspacePath: workspaceRoot,
       mode,
       startedAt: Date.now(),
+      stateMachine,
+      executionEngine,
     });
 
     this.logger.info(`Session created successfully: ${sessionId}`);
@@ -186,6 +247,13 @@ export class SessionService implements SessionContextProvider {
     const existing = this.activeSessions.get(params.sessionId);
     if (existing) {
       existing.mode = targetMode;
+      if (
+        targetMode === "plan" &&
+        existing.stateMachine &&
+        existing.stateMachine.getState() === "idle"
+      ) {
+        existing.stateMachine.transition("planning", "Switched to Plan Mode");
+      }
     }
 
     const workspaceRoot = existing?.workspacePath || process.cwd();
@@ -294,6 +362,204 @@ export class SessionService implements SessionContextProvider {
 
   public getActiveCount(): number {
     return this.activeSessions.size;
+  }
+
+  public async submitPlan(sessionId: string, rawPlan: unknown): Promise<StructuredTaskPlan> {
+    const session = this.activeSessions.get(sessionId);
+    if (!session) {
+      throw new Error(`Session '${sessionId}' not found.`);
+    }
+
+    const planVal = validateTaskPlan(rawPlan);
+    if (!planVal.valid || !planVal.data) {
+      throw new Error(`Invalid plan format: ${planVal.errors?.join(", ")}`);
+    }
+    const plan = planVal.data;
+    session.currentPlan = plan;
+
+    if (session.stateMachine) {
+      if (session.stateMachine.canTransition("awaiting_plan_approval")) {
+        session.stateMachine.transition(
+          "awaiting_plan_approval",
+          `Plan submitted: ${plan.objective}`
+        );
+      }
+    }
+
+    if (session.executionEngine) {
+      session.executionEngine.loadPlan(plan);
+    }
+
+    this.broadcastCustomEvent({
+      type: "event",
+      event: EVENT_NAMES.PLAN_CREATED,
+      sessionId,
+      seq: this.eventSeq++,
+      timestamp: Date.now(),
+      payload: { sessionId, plan },
+    });
+
+    return plan;
+  }
+
+  public async approvePlan(
+    sessionId: string,
+    feedback?: string
+  ): Promise<{ approved: boolean; sessionId: string }> {
+    const session = this.activeSessions.get(sessionId);
+    if (!session) {
+      throw new Error(`Session '${sessionId}' not found.`);
+    }
+    if (!session.currentPlan) {
+      throw new Error(`No plan submitted for session '${sessionId}' to approve.`);
+    }
+
+    // Switch mode to "act"
+    session.mode = "act";
+
+    if (session.stateMachine) {
+      if (session.stateMachine.canTransition("executing")) {
+        session.stateMachine.transition(
+          "executing",
+          feedback ? `Plan approved with feedback: ${feedback}` : "Plan approved by user"
+        );
+      }
+    }
+
+    this.broadcastCustomEvent({
+      type: "event",
+      event: EVENT_NAMES.PLAN_APPROVED,
+      sessionId,
+      seq: this.eventSeq++,
+      timestamp: Date.now(),
+      payload: { sessionId, feedback },
+    });
+
+    return { approved: true, sessionId };
+  }
+
+  public async rejectPlan(
+    sessionId: string,
+    reason?: string,
+    adjustOnly?: boolean
+  ): Promise<{ rejected: boolean; adjustOnly: boolean }> {
+    const session = this.activeSessions.get(sessionId);
+    if (!session) {
+      throw new Error(`Session '${sessionId}' not found.`);
+    }
+
+    if (session.stateMachine) {
+      if (adjustOnly) {
+        if (session.stateMachine.canTransition("planning")) {
+          session.stateMachine.transition(
+            "planning",
+            `User requested plan revisions: ${reason || "adjust plan"}`
+          );
+        }
+      } else {
+        if (session.stateMachine.canTransition("cancelled")) {
+          session.stateMachine.transition(
+            "cancelled",
+            `Plan rejected by user: ${reason || "rejected"}`
+          );
+        }
+      }
+    }
+
+    this.broadcastCustomEvent({
+      type: "event",
+      event: EVENT_NAMES.PLAN_REJECTED,
+      sessionId,
+      seq: this.eventSeq++,
+      timestamp: Date.now(),
+      payload: { sessionId, reason, adjustOnly: !!adjustOnly },
+    });
+
+    return { rejected: true, adjustOnly: !!adjustOnly };
+  }
+
+  public getTaskState(sessionId: string): {
+    sessionId: string;
+    state: TaskState;
+    plan?: StructuredTaskPlan;
+    stepStatuses: Record<string, TaskPlanStepStatus>;
+    history: TaskStateTransitionRecord[];
+  } {
+    const session = this.activeSessions.get(sessionId);
+    if (!session) {
+      throw new Error(`Session '${sessionId}' not found.`);
+    }
+
+    const state = session.stateMachine?.getState() || "idle";
+    const history = session.stateMachine?.getHistory() || [];
+    const stepStatuses = session.executionEngine?.getStepStatuses() || {};
+
+    return {
+      sessionId,
+      state,
+      plan: session.currentPlan,
+      stepStatuses,
+      history,
+    };
+  }
+
+  public async verifyTask(
+    sessionId: string,
+    customTestCommands?: string[]
+  ): Promise<VerificationReport> {
+    const session = this.activeSessions.get(sessionId);
+    if (!session) {
+      throw new Error(`Session '${sessionId}' not found.`);
+    }
+    if (!session.currentPlan) {
+      throw new Error(`No plan associated with session '${sessionId}' to verify.`);
+    }
+
+    this.broadcastCustomEvent({
+      type: "event",
+      event: EVENT_NAMES.VERIFICATION_STARTED,
+      sessionId,
+      seq: this.eventSeq++,
+      timestamp: Date.now(),
+      payload: { sessionId, planId: session.currentPlan.id },
+    });
+
+    if (session.stateMachine && session.stateMachine.canTransition("verifying")) {
+      session.stateMachine.transition("verifying", "Verification in progress");
+    }
+
+    const verificationEngine =
+      session.executionEngine?.getVerificationEngine() ??
+      new VerificationEngine({ logger: this.logger });
+
+    const report = await verificationEngine.verifyPlan({
+      plan: session.currentPlan,
+      workspaceRoot: session.workspacePath,
+      customCommands: customTestCommands,
+    });
+
+    if (session.stateMachine) {
+      if (report.passed) {
+        if (session.stateMachine.canTransition("completed")) {
+          session.stateMachine.transition("completed", report.summary);
+        }
+      } else {
+        if (session.stateMachine.canTransition("failed")) {
+          session.stateMachine.transition("failed", report.summary);
+        }
+      }
+    }
+
+    this.broadcastCustomEvent({
+      type: "event",
+      event: EVENT_NAMES.VERIFICATION_COMPLETED,
+      sessionId,
+      seq: this.eventSeq++,
+      timestamp: Date.now(),
+      payload: { sessionId, report },
+    });
+
+    return report;
   }
 
   public dispose(): void {

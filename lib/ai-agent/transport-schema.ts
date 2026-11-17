@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { StructuredTaskPlanSchema } from "./plan-schema";
 
 /**
  * Discriminator schemas for the three wire transport envelopes.
@@ -330,3 +331,67 @@ export const TokenUsagePayloadSchema = z.object({
   totalOutputTokens: z.number().nonnegative().optional(),
   totalCost: z.number().nonnegative().optional(),
 });
+
+/**
+ * Stage 11: Plan and Act Mode & Task State Machine Schemas
+ */
+
+export const TaskStateSchema = z.enum([
+  "idle",
+  "planning",
+  "awaiting_plan_approval",
+  "executing",
+  "awaiting_tool_approval",
+  "verifying",
+  "completed",
+  "failed",
+  "cancelled",
+  "interrupted",
+]);
+export type TaskState = z.infer<typeof TaskStateSchema>;
+
+export const SubmitPlanParamsSchema = z.object({
+  sessionId: z.string().min(1),
+  plan: StructuredTaskPlanSchema,
+});
+export type SubmitPlanParams = z.infer<typeof SubmitPlanParamsSchema>;
+
+export const ApprovePlanParamsSchema = z.object({
+  sessionId: z.string().min(1),
+  planId: z.string().optional(),
+  approvedBy: z.string().optional(),
+  feedback: z.string().optional(),
+});
+export type ApprovePlanParams = z.infer<typeof ApprovePlanParamsSchema>;
+
+export const RejectPlanParamsSchema = z.object({
+  sessionId: z.string().min(1),
+  planId: z.string().optional(),
+  reason: z.string().optional(),
+  adjustOnly: z.boolean().optional(),
+});
+export type RejectPlanParams = z.infer<typeof RejectPlanParamsSchema>;
+
+export const GetTaskStateParamsSchema = z.object({
+  sessionId: z.string().min(1),
+});
+export type GetTaskStateParams = z.infer<typeof GetTaskStateParamsSchema>;
+
+export const VerifyTaskParamsSchema = z.object({
+  sessionId: z.string().min(1),
+  automatedCommands: z.array(z.string()).optional(),
+  customTestCommands: z.array(z.string()).optional(),
+});
+export type VerifyTaskParams = z.infer<typeof VerifyTaskParamsSchema>;
+
+export const TaskStatePayloadSchema = z.object({
+  sessionId: z.string().min(1),
+  state: TaskStateSchema,
+  previousState: TaskStateSchema.optional(),
+  reason: z.string().optional(),
+  planId: z.string().optional(),
+  currentStepIndex: z.number().int().nonnegative().optional(),
+  timestamp: z.number().int().positive(),
+});
+export type TaskStatePayload = z.infer<typeof TaskStatePayloadSchema>;
+

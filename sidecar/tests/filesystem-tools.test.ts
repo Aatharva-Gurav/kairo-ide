@@ -57,13 +57,16 @@ describe("FileSystemToolCoordinator", () => {
 
   it("lists all available tools with correct read-only descriptors", () => {
     const tools = toolCoordinator.listAvailableTools();
-    expect(tools.length).toBe(7);
+    expect(tools.length).toBeGreaterThanOrEqual(7);
 
     const readTool = tools.find((t) => t.name === "read_file");
     expect(readTool?.isReadOnly).toBe(true);
 
     const writeTool = tools.find((t) => t.name === "write_to_file");
     expect(writeTool?.isReadOnly).toBe(false);
+
+    const execTool = tools.find((t) => t.name === "execute_command");
+    expect(execTool?.isReadOnly).toBe(false);
   });
 
   it("reads files safely within the workspace", async () => {

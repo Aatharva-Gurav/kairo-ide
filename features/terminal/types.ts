@@ -114,10 +114,14 @@ export type AiProcessStatus = "running" | "completed" | "timed_out" | "killed" |
 
 export interface RunCommandRequest {
   command: string;
+  executable?: string;
+  args?: string[];
   cwd?: string;
+  workspaceRoot?: string;
   timeoutMs?: number;
   maxOutputBytes?: number;
   trusted?: boolean;
+  signal?: AbortSignal;
 }
 
 export interface RunCommandResponse {
@@ -126,11 +130,15 @@ export interface RunCommandResponse {
   stderr: string;
   executionTimeMs: number;
   truncated: boolean;
+  formattedOutput?: string;
 }
 
 export interface RunBackgroundCommandRequest {
   command: string;
+  executable?: string;
+  args?: string[];
   cwd?: string;
+  workspaceRoot?: string;
   maxOutputBytes?: number;
   trusted?: boolean;
 }

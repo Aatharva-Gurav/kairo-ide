@@ -27,16 +27,30 @@ export interface ProcessStatusSnapshot {
   stderr: string;
 }
 
+export interface ExecuteCommandOptions {
+  command: string;
+  executable?: string;
+  args?: string[];
+  cwd?: string;
+  workspaceRoot?: string;
+  timeoutMs?: number;
+  maxOutputBytes?: number;
+  env?: Record<string, string>;
+  signal?: AbortSignal;
+  isBackground?: boolean;
+  sessionId?: string;
+}
+
 export interface ITerminalManager {
   executeCommand(
-    command: string,
+    command: ExecuteCommandOptions | string,
     cwd?: string,
     timeoutMs?: number,
     maxOutputBytes?: number
   ): Promise<CommandExecutionResult>;
 
   executeBackgroundCommand?(
-    command: string,
+    command: ExecuteCommandOptions | string,
     cwd?: string,
     maxOutputBytes?: number
   ): Promise<BackgroundProcessHandle>;
@@ -47,3 +61,5 @@ export interface ITerminalManager {
 
   stopProcess?(executionId: string): Promise<boolean>;
 }
+
+export * from "./terminal-manager";
