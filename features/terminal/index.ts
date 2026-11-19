@@ -10,7 +10,6 @@ export * from "./services/terminal-commands";
 export * from "./services/terminal-profile.service";
 export * from "./services/terminal-link-provider";
 export * from "./services/dev-server-detector";
-export * from "./services/ai-terminal-adapter";
 export * from "./hooks/use-xterm";
 export * from "./store";
 export * from "./components/terminal-view";

@@ -68,20 +68,6 @@ This document records the comprehensive audit and verification results for the K
 | `THEME-09` | `solarized-light` | `#fdf6e3` | `#657b83` | **PASS** |
 | `THEME-10` | *(All 14 Themes)* | Complete color palette generated | ANSI 16 colors mapped | **PASS** |
 
-### 3.3 Security & AI Sandbox Tests
-| Test Case ID | Test Description | Target Subsystem | Result |
-| :--- | :--- | :--- | :---: |
-| `SEC-01` | Proactive blocking of `rm -rf /` and drive wiping | `AiTerminalExecutionAdapter` | **PASS** |
-| `SEC-02` | Default-deny enforcement requiring user approval | `AiTerminalExecutionAdapter` | **PASS** |
-| `SEC-03` | Rejection of unapproved AI command execution | `AiTerminalExecutionAdapter` | **PASS** |
-| `SEC-04` | Auto-approval of trusted read-only patterns (`git status`) | `AiTerminalExecutionAdapter` | **PASS** |
-| `SEC-05` | Automatic redaction of GitHub PATs from output | `AiTerminalExecutionAdapter` | **PASS** |
-| `SEC-06` | Automatic redaction of OpenAI & Anthropic keys | `AiTerminalExecutionAdapter` | **PASS** |
-| `SEC-07` | Output bounding at 1 MB byte limit | `AiCommandExecutor` | **PASS** |
-| `SEC-08` | Synchronous execution timeout termination | `AiCommandExecutor` | **PASS** |
-| `SEC-09` | Background process tracking and stop by execution ID | `AiCommandExecutor` | **PASS** |
-| `SEC-10` | Full background process teardown via `stop_all` | `AiCommandExecutor` | **PASS** |
-
 ---
 
 ## 4. Performance Audit Findings

@@ -5,7 +5,6 @@ import { DEFAULT_TERMINAL_SETTINGS, ShellProfile } from "./types";
 import { registerTerminalCommands } from "./services/terminal-commands";
 import { TerminalProfileService } from "./services/terminal-profile.service";
 import { DevServerDetector } from "./services/dev-server-detector";
-import { AiTerminalExecutionAdapter } from "./services/ai-terminal-adapter";
 import { CommandRegistry } from "@/features/commands/command-registry";
 import { KeybindingService } from "@/features/commands/keybinding.service";
 import { ideEvents } from "@/lib/events";
@@ -301,74 +300,6 @@ describe("Integrated Terminal Subsystem - Stage 4", () => {
 
       unsub();
       DevServerDetector.clearSession("sess-2");
-    });
-  });
-
-  describe("AI Command Execution Security Boundary (Stage 5)", () => {
-    it("blocks destructive shell commands immediately without execution", async () => {
-      const adapter = new AiTerminalExecutionAdapter();
-
-      const evalResult = adapter.evaluateSecurity("rm -rf /", false);
-      expect(evalResult.decision).toBe("blocked_destructive");
-      expect(evalResult.risk).toBe("critical");
-
-      await expect(
-        adapter.run_command({ command: "rm -rf /" })
-      ).rejects.toThrow(/SecurityException.*blocked destructive/i);
-
-      // Verify audit log recorded the blocked attempt
-      const logs = adapter.getAuditLogs();
-      expect(logs.some((l) => l.decision === "blocked_destructive")).toBe(true);
-    });
-
-    it("enforces explicit user approval by default", async () => {
-      let approvalRequested = false;
-      const adapter = new AiTerminalExecutionAdapter({
-        approvalRequester: async () => {
-          approvalRequested = true;
-          return true; // user approved
-        },
-      });
-
-      const response = await adapter.run_command({ command: "git status" });
-      expect(approvalRequested).toBe(true);
-      expect(response.exitCode).toBe(0);
-    });
-
-    it("denies execution when user rejects approval", async () => {
-      const adapter = new AiTerminalExecutionAdapter({
-        approvalRequester: async () => false, // user clicked deny
-      });
-
-      await expect(
-        adapter.run_command({ command: "npm build" })
-      ).rejects.toThrow(/denied by user permission policy/i);
-
-      const logs = adapter.getAuditLogs();
-      expect(logs.some((l) => l.decision === "denied")).toBe(true);
-    });
-
-    it("auto-approves safe read-only commands under trusted policy", async () => {
-      const adapter = new AiTerminalExecutionAdapter({
-        autoTrustSafeCommands: true,
-      });
-
-      const evalResult = adapter.evaluateSecurity("git status", false);
-      expect(evalResult.decision).toBe("auto_trusted");
-      expect(evalResult.risk).toBe("low");
-
-      const res = await adapter.run_command({ command: "git status" });
-      expect(res.exitCode).toBe(0);
-    });
-
-    it("redacts credentials, tokens and passwords from output and audit logs", () => {
-      const adapter = new AiTerminalExecutionAdapter();
-      const secretOutput = "Logged in with token ghp_123456789012345678901234567890123456 and password='SuperSecretPassword!'";
-      const redacted = adapter.redactSecrets(secretOutput);
-
-      expect(redacted).not.toContain("ghp_123456789012345678901234567890123456");
-      expect(redacted).not.toContain("SuperSecretPassword!");
-      expect(redacted).toContain("[REDACTED_SECRET]");
     });
   });
 

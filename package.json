@@ -7,16 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run",
-    "dev:agent-sidecar": "bun run sidecar/index.ts --port 49152 --approval-token dev-token-local",
-    "build:agent-sidecar": "bun build sidecar/index.ts --compile --outfile src-tauri/bin/kairo-sidecar.exe",
-    "test:agent-sidecar": "bun test sidecar/tests",
-    "typecheck:agent-sidecar": "tsc -p sidecar/tsconfig.json --noEmit"
+    "test": "vitest run"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
-    "@cline/core": "^0.2.0",
-    "@cline/sdk": "^0.2.0",
     "@icons-pack/react-simple-icons": "^13.15.1",
     "@monaco-editor/react": "^4.7.0",
     "@supabase/supabase-js": "^2.118.0",
@@ -41,7 +35,6 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@tauri-apps/cli": "^2.12.4",
-    "@types/bun": "^1.4.4",
     "@types/node": "^26.0.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
@@ -53,7 +46,6 @@
   },
   "allowScripts": {
     "esbuild@0.28.2": true,
-    "unrs-resolver@1.12.2": true,
-    "protobufjs@7.6.6": true
+    "unrs-resolver@1.12.2": true
   }
 }

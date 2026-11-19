@@ -6,7 +6,6 @@ The Kairo IDE Integrated Terminal provides a high-performance, developer-grade t
 - **Frontend Presentation Layer**: Built with `@xterm/xterm` (v5+), WebGL acceleration, and modern React 19 UI components styled to match Kairo's dark/light design system.
 - **IPC & Transport Layer**: Asynchronous Tauri v2 inter-process communication using streaming event channels (`terminal:data:{id}`, `terminal:exit:{id}`).
 - **Native Host Backend (Rust)**: PTY allocation via `portable-pty`, thread-safe session concurrency via `Arc<Mutex<...>>` and `RwLock`, and cross-platform process tree lifecycle management.
-- **Controlled AI Execution Sandbox**: Completely decoupled execution runner (`AiCommandExecutor`) providing non-interactive child process execution with default-deny user approval gates, output bounding, and credential redaction for future AI coding agent integrations.
 
 ---
 
@@ -30,11 +29,10 @@ graph TB
         ProfileService["TerminalProfileService (Profiles & Validation)"]
         IPCService["TerminalIpcService (Tauri Command Invoker)"]
         EventBus["IDEEventBus (search:navigate-to-match, layout:toggle)"]
-        AiAdapter["AiTerminalExecutionAdapter (Security & Approvals)"]
     end
 
     subgraph Tauri_Bridge ["Tauri IPC Boundary"]
-        CmdChannel["Tauri Commands (invoke: terminal_*, ai_terminal_*)"]
+        CmdChannel["Tauri Commands (invoke: terminal_*)"]
         EventChannel["Tauri Event Stream (emit: terminal:data:*, terminal:exit:*)"]
     end
 
@@ -43,14 +41,11 @@ graph TB
         PTYSession["TerminalSession (portable-pty Master/Slave Pair)"]
         ReaderThread["PTY Continuous Reader Thread Pool"]
         ShellDiscovery["Shell Detector (Windows / macOS / Linux)"]
-        AiExecutor["AiCommandExecutor (Non-Interactive Sandboxed Processes)"]
-        ProcessTracker["Background Process Tracker (PID, Buffers, Status)"]
     end
 
     subgraph OS_Kernel ["Operating System Kernel"]
         ConPTY["ConPTY (Windows) / OpenPTY (Unix / macOS / Linux)"]
         ShellProcess["Host Shell (pwsh, cmd, bash, zsh, fish)"]
-        AiChildProcess["Non-Interactive Piped Child Process"]
     end
 
     TerminalPanel --> InnerView
@@ -69,7 +64,6 @@ graph TB
     IPCService --> CmdChannel
     CmdChannel --> TermMgr
     CmdChannel --> ShellDiscovery
-    CmdChannel --> AiExecutor
 
     TermMgr --> PTYSession
     PTYSession --> ReaderThread
@@ -78,10 +72,6 @@ graph TB
 
     ReaderThread --> EventChannel
     EventChannel --> TermRegistry
-
-    AiAdapter --> CmdChannel
-    AiExecutor --> ProcessTracker
-    AiExecutor --> AiChildProcess
 ```
 
 ---
@@ -107,7 +97,6 @@ graph TB
 - **`manager.rs` (`TerminalManager`)**: Thread-safe registry (`Arc<RwLock<HashMap<String, Arc<TerminalSession>>>>`) orchestrating active PTY sessions, workspace root directory propagation, and bulk teardown.
 - **`session.rs` (`TerminalSession`)**: Manages individual PTY master/slave pairs via `portable-pty`. Spawns a dedicated OS thread per session to continuously read from the master PTY and emit data events to the frontend. Implements graceful two-stage termination (Ctrl+C interrupt signal followed by process tree termination).
 - **`shells.rs`**: Cross-platform shell discovery detecting PowerShell 7, Windows PowerShell, CMD, Git Bash, and WSL on Windows; zsh, bash, and Homebrew shells on macOS; and bash, zsh, fish, and sh on Linux. Includes system `PATH` resolution in `validate_executable`.
-- **`ai_executor.rs` (`AiCommandExecutor`)**: Dedicated non-interactive command execution engine executing piped child processes with timeout enforcement, output byte bounds (1 MB default), cancellation tokens, and full process tree cleanup (`stop_all`). Completely isolated from interactive PTY sessions.
 
 ---
 

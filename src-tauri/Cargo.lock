@@ -70,7 +70,6 @@ version = "0.1.0"
 dependencies = [
  "log",
  "portable-pty",
- "rand 0.9.5",
  "rfd",
  "serde",
  "serde_json",

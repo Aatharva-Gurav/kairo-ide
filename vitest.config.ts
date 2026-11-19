@@ -5,7 +5,7 @@ export default defineConfig({
   test: {
     environment: "node",
     clearMocks: true,
-    exclude: ["node_modules", "dist", ".next", "sidecar/**"],
+    exclude: ["node_modules", "dist", ".next"],
   },
   resolve: {
     alias: {
