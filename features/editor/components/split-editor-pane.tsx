@@ -180,6 +180,13 @@ export function SplitEditorPane({
       <div className="flex flex-1 flex-col h-full w-full overflow-hidden relative">
         {document.isBinary || document.isTooLarge ? (
           <BinaryFileView document={document} />
+        ) : document.error ? (
+          <div className="flex flex-1 flex-col items-center justify-center p-6 text-center">
+            <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 max-w-md text-destructive">
+              <h3 className="font-semibold text-xs">Error opening file</h3>
+              <p className="text-xs mt-1 text-muted-foreground">{document.error}</p>
+            </div>
+          </div>
         ) : (
           <MonacoEditorView
             document={document}

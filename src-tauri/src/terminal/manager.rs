@@ -29,7 +29,10 @@ impl TerminalManager {
 
     /// Gets the current workspace root directory.
     pub fn get_workspace_root(&self) -> Option<PathBuf> {
-        self.workspace_root.lock().ok().and_then(|guard| guard.clone())
+        self.workspace_root
+            .lock()
+            .ok()
+            .and_then(|guard| guard.clone())
     }
 
     /// Creates and registers a new terminal session.
@@ -38,15 +41,18 @@ impl TerminalManager {
         app: &AppHandle<R>,
         config: TerminalCreateConfig,
     ) -> Result<TerminalSessionInfo, TerminalError> {
-        let ws_root = self.workspace_root.lock().ok().and_then(|guard| guard.clone());
+        let ws_root = self
+            .workspace_root
+            .lock()
+            .ok()
+            .and_then(|guard| guard.clone());
 
         let session = TerminalSession::new(app, config, ws_root.as_deref())?;
         let info = session.get_info();
 
-        let mut lock = self
-            .sessions
-            .write()
-            .map_err(|_| TerminalError::PtySpawnFailed("Failed to acquire sessions write lock".to_string()))?;
+        let mut lock = self.sessions.write().map_err(|_| {
+            TerminalError::PtySpawnFailed("Failed to acquire sessions write lock".to_string())
+        })?;
 
         lock.insert(session.session_id.clone(), session);
 
@@ -70,7 +76,12 @@ impl TerminalManager {
     }
 
     /// Resizes the physical dimensions of a terminal session.
-    pub fn resize_session(&self, session_id: &str, cols: u16, rows: u16) -> Result<(), TerminalError> {
+    pub fn resize_session(
+        &self,
+        session_id: &str,
+        cols: u16,
+        rows: u16,
+    ) -> Result<(), TerminalError> {
         let session = {
             let lock = self
                 .sessions

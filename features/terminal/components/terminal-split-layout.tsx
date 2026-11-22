@@ -209,7 +209,6 @@ export function TerminalSplitLayout({ onOpenFind, className }: TerminalSplitLayo
                       settings={settings}
                       isActive={isCurrentFocused}
                       isVisible={true}
-                      onExit={() => killTerminal(sid)}
                     />
                   </div>
                 </div>
@@ -271,7 +270,6 @@ export function TerminalSplitLayout({ onOpenFind, className }: TerminalSplitLayo
                 settings={settings}
                 isActive={isSelected}
                 isVisible={isSelected}
-                onExit={() => killTerminal(s.sessionId)}
               />
             </div>
           );

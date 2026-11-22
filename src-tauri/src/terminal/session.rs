@@ -68,7 +68,9 @@ impl TerminalSession {
                 pixel_width: 0,
                 pixel_height: 0,
             })
-            .map_err(|e| TerminalError::PtySpawnFailed(format!("Failed to open PTY pair: {}", e)))?;
+            .map_err(|e| {
+                TerminalError::PtySpawnFailed(format!("Failed to open PTY pair: {}", e))
+            })?;
 
         // 4. Configure command builder
         let mut cmd = CommandBuilder::new(&shell_exec);
@@ -86,22 +88,19 @@ impl TerminalSession {
         cmd.env("COLORTERM", "truecolor");
 
         // 5. Spawn child process into slave PTY
-        let child = pair
-            .slave
-            .spawn_command(cmd)
-            .map_err(|e| TerminalError::PtySpawnFailed(format!("Failed to spawn child process: {}", e)))?;
+        let child = pair.slave.spawn_command(cmd).map_err(|e| {
+            TerminalError::PtySpawnFailed(format!("Failed to spawn child process: {}", e))
+        })?;
 
         let pid = child.process_id();
 
-        let writer = pair
-            .master
-            .take_writer()
-            .map_err(|e| TerminalError::PtySpawnFailed(format!("Failed to take master PTY writer: {}", e)))?;
+        let writer = pair.master.take_writer().map_err(|e| {
+            TerminalError::PtySpawnFailed(format!("Failed to take master PTY writer: {}", e))
+        })?;
 
-        let mut reader = pair
-            .master
-            .try_clone_reader()
-            .map_err(|e| TerminalError::PtySpawnFailed(format!("Failed to clone master PTY reader: {}", e)))?;
+        let mut reader = pair.master.try_clone_reader().map_err(|e| {
+            TerminalError::PtySpawnFailed(format!("Failed to clone master PTY reader: {}", e))
+        })?;
 
         let created_at = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -138,6 +137,7 @@ impl TerminalSession {
             .name(format!("kairo-term-reader-{}", &session_id[..8]))
             .spawn(move || {
                 let mut buffer = [0u8; BUFFER_READ_SIZE];
+                let mut residual = Vec::new();
 
                 loop {
                     if shutdown_flag.load(Ordering::Acquire) {
@@ -147,11 +147,53 @@ impl TerminalSession {
                     match reader.read(&mut buffer) {
                         Ok(0) => {
                             // EOF received from PTY master
+                            if !residual.is_empty() {
+                                let text = String::from_utf8_lossy(&residual).to_string();
+                                let _ = app_handle.emit(&event_data_name, text);
+                            }
                             break;
                         }
                         Ok(n) => {
-                            let text = String::from_utf8_lossy(&buffer[..n]).to_string();
-                            let _ = app_handle.emit(&event_data_name, text);
+                            let mut data = if residual.is_empty() {
+                                buffer[..n].to_vec()
+                            } else {
+                                let mut d = std::mem::take(&mut residual);
+                                d.extend_from_slice(&buffer[..n]);
+                                d
+                            };
+
+                            let mut valid_up_to = data.len();
+                            let len = data.len();
+                            for i in 1..=3.min(len) {
+                                let b = data[len - i];
+                                if (b & 0x80) == 0 {
+                                    break;
+                                } else if (b & 0b1110_0000) == 0b1100_0000 {
+                                    if i < 2 {
+                                        valid_up_to = len - i;
+                                    }
+                                    break;
+                                } else if (b & 0b1111_0000) == 0b1110_0000 {
+                                    if i < 3 {
+                                        valid_up_to = len - i;
+                                    }
+                                    break;
+                                } else if (b & 0b1111_1000) == 0b1111_0000 {
+                                    if i < 4 {
+                                        valid_up_to = len - i;
+                                    }
+                                    break;
+                                }
+                            }
+
+                            if valid_up_to < data.len() {
+                                residual = data.split_off(valid_up_to);
+                            }
+
+                            if !data.is_empty() {
+                                let text = String::from_utf8_lossy(&data).to_string();
+                                let _ = app_handle.emit(&event_data_name, text);
+                            }
                         }
                         Err(err) => {
                             if !shutdown_flag.load(Ordering::Acquire) {
@@ -168,14 +210,21 @@ impl TerminalSession {
 
                 // Retrieve exit code if session still exists and not forcefully murdered
                 if let Some(session_arc) = session_weak.upgrade() {
-                    let mut child_guard = session_arc.child.lock().unwrap();
-                    let code = match child_guard.wait() {
-                        Ok(status) => status.exit_code() as i32,
-                        Err(_) => -1,
+                    let code = if let Ok(mut child_guard) = session_arc.child.lock() {
+                        match child_guard.wait() {
+                            Ok(status) => status.exit_code() as i32,
+                            Err(_) => -1,
+                        }
+                    } else {
+                        -1
                     };
 
-                    *session_arc.status.lock().unwrap() = SessionStatus::Exited;
-                    *session_arc.exit_code.lock().unwrap() = Some(code);
+                    if let Ok(mut status_guard) = session_arc.status.lock() {
+                        *status_guard = SessionStatus::Exited;
+                    }
+                    if let Ok(mut code_guard) = session_arc.exit_code.lock() {
+                        *code_guard = Some(code);
+                    }
 
                     let exit_payload = TerminalExitPayload {
                         session_id: session_id.clone(),
@@ -185,7 +234,9 @@ impl TerminalSession {
                     let _ = app_handle.emit(&event_exit_name, exit_payload);
                 }
             })
-            .map_err(|e| TerminalError::PtySpawnFailed(format!("Failed to spawn reader thread: {}", e)))?;
+            .map_err(|e| {
+                TerminalError::PtySpawnFailed(format!("Failed to spawn reader thread: {}", e))
+            })?;
 
         Ok(session)
     }
@@ -196,18 +247,17 @@ impl TerminalSession {
             return Ok(());
         }
 
-        let mut writer_guard = self
-            .writer
-            .lock()
-            .map_err(|_| TerminalError::PtyWriteFailed("Failed to acquire PTY writer lock".to_string()))?;
+        let mut writer_guard = self.writer.lock().map_err(|_| {
+            TerminalError::PtyWriteFailed("Failed to acquire PTY writer lock".to_string())
+        })?;
 
-        writer_guard
-            .write_all(data)
-            .map_err(|e| TerminalError::PtyWriteFailed(format!("Failed to write to master PTY: {}", e)))?;
+        writer_guard.write_all(data).map_err(|e| {
+            TerminalError::PtyWriteFailed(format!("Failed to write to master PTY: {}", e))
+        })?;
 
-        writer_guard
-            .flush()
-            .map_err(|e| TerminalError::PtyWriteFailed(format!("Failed to flush master PTY: {}", e)))?;
+        writer_guard.flush().map_err(|e| {
+            TerminalError::PtyWriteFailed(format!("Failed to flush master PTY: {}", e))
+        })?;
 
         Ok(())
     }
@@ -218,10 +268,9 @@ impl TerminalSession {
             return Ok(());
         }
 
-        let master_guard = self
-            .master
-            .lock()
-            .map_err(|_| TerminalError::PtyResizeFailed("Failed to acquire PTY master lock".to_string()))?;
+        let master_guard = self.master.lock().map_err(|_| {
+            TerminalError::PtyResizeFailed("Failed to acquire PTY master lock".to_string())
+        })?;
 
         master_guard
             .resize(PtySize {
@@ -248,11 +297,8 @@ impl TerminalSession {
             let _ = writer_guard.flush();
         }
 
-        let mut child_guard = self
-            .child
-            .lock()
-            .map_err(|_| TerminalError::ProcessKillFailed("Failed to acquire child lock".to_string()))?;
-
+        // Kill OS process tree FIRST using pid before acquiring child lock,
+        // preventing deadlocks when reader thread is waiting on child.wait()
         if let Some(pid) = self.pid {
             #[cfg(windows)]
             {
@@ -269,13 +315,16 @@ impl TerminalSession {
                 let _ = std::process::Command::new("kill")
                     .args(["-TERM", &format!("-{}", pid)])
                     .status();
-                let _ = child_guard.kill();
             }
-        } else {
+        }
+
+        if let Ok(mut child_guard) = self.child.lock() {
             let _ = child_guard.kill();
         }
 
-        *self.status.lock().unwrap() = SessionStatus::Exited;
+        if let Ok(mut status_guard) = self.status.lock() {
+            *status_guard = SessionStatus::Exited;
+        }
 
         Ok(())
     }

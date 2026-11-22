@@ -25,7 +25,8 @@ fn detect_windows_shells() -> Vec<ShellProfile> {
     let mut profiles = Vec::new();
     let mut default_set = false;
 
-    let program_files = env::var("ProgramFiles").unwrap_or_else(|_| r"C:\Program Files".to_string());
+    let program_files =
+        env::var("ProgramFiles").unwrap_or_else(|_| r"C:\Program Files".to_string());
     let local_app_data = env::var("LOCALAPPDATA").unwrap_or_default();
     let system_root = env::var("SystemRoot").unwrap_or_else(|_| r"C:\Windows".to_string());
 
@@ -52,7 +53,8 @@ fn detect_windows_shells() -> Vec<ShellProfile> {
     }
 
     // 2. Windows PowerShell (powershell.exe)
-    let win_powershell = PathBuf::from(&system_root).join(r"System32\WindowsPowerShell\v1.0\powershell.exe");
+    let win_powershell =
+        PathBuf::from(&system_root).join(r"System32\WindowsPowerShell\v1.0\powershell.exe");
     if win_powershell.is_file() {
         profiles.push(ShellProfile {
             id: "powershell".to_string(),
@@ -81,7 +83,8 @@ fn detect_windows_shells() -> Vec<ShellProfile> {
     }
 
     // 4. Git Bash
-    let program_files_x86 = env::var("ProgramFiles(x86)").unwrap_or_else(|_| r"C:\Program Files (x86)".to_string());
+    let program_files_x86 =
+        env::var("ProgramFiles(x86)").unwrap_or_else(|_| r"C:\Program Files (x86)".to_string());
     let git_bash_candidates = [
         PathBuf::from(&program_files).join(r"Git\bin\bash.exe"),
         PathBuf::from(&program_files).join(r"Git\usr\bin\bash.exe"),
@@ -142,10 +145,25 @@ fn detect_macos_shells() -> Vec<ShellProfile> {
 
     let candidates = [
         ("zsh", "Zsh", "/bin/zsh", vec!["-l".to_string()]),
-        ("zsh-brew", "Zsh (Homebrew)", "/opt/homebrew/bin/zsh", vec!["-l".to_string()]),
+        (
+            "zsh-brew",
+            "Zsh (Homebrew)",
+            "/opt/homebrew/bin/zsh",
+            vec!["-l".to_string()],
+        ),
         ("bash", "Bash", "/bin/bash", vec!["-l".to_string()]),
-        ("bash-brew", "Bash (Homebrew)", "/opt/homebrew/bin/bash", vec!["-l".to_string()]),
-        ("fish", "Fish", "/opt/homebrew/bin/fish", vec!["-l".to_string()]),
+        (
+            "bash-brew",
+            "Bash (Homebrew)",
+            "/opt/homebrew/bin/bash",
+            vec!["-l".to_string()],
+        ),
+        (
+            "fish",
+            "Fish",
+            "/opt/homebrew/bin/fish",
+            vec!["-l".to_string()],
+        ),
     ];
 
     for (id, name, path_str, args) in candidates {
@@ -248,7 +266,10 @@ pub fn resolve_shell(profile_id: Option<&str>) -> Result<(String, Vec<String>), 
 
     if let Some(id) = profile_id {
         if let Some(found) = available.iter().find(|p| p.id.eq_ignore_ascii_case(id)) {
-            return Ok((found.executable.clone(), found.args.clone().unwrap_or_default()));
+            return Ok((
+                found.executable.clone(),
+                found.args.clone().unwrap_or_default(),
+            ));
         }
         return Err(TerminalError::ShellNotFound(format!(
             "Shell profile '{}' is not installed or available on this system.",
@@ -261,7 +282,9 @@ pub fn resolve_shell(profile_id: Option<&str>) -> Result<(String, Vec<String>), 
         .iter()
         .find(|p| p.is_default)
         .or_else(|| available.first())
-        .ok_or_else(|| TerminalError::ShellNotFound("No valid shell detected on host system".to_string()))?;
+        .ok_or_else(|| {
+            TerminalError::ShellNotFound("No valid shell detected on host system".to_string())
+        })?;
 
     Ok((
         default_profile.executable.clone(),
@@ -344,6 +367,9 @@ pub fn resolve_working_directory(
     }
 
     env::current_dir().map_err(|e| {
-        TerminalError::InvalidWorkingDirectory(format!("Could not determine working directory: {}", e))
+        TerminalError::InvalidWorkingDirectory(format!(
+            "Could not determine working directory: {}",
+            e
+        ))
     })
 }

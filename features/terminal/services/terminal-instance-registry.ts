@@ -143,7 +143,11 @@ export class TerminalInstanceRegistry {
       instance.container = container;
       if (!container.contains(instance.term.element || null)) {
         container.innerHTML = "";
-        instance.term.open(container);
+        if (instance.term.element) {
+          container.appendChild(instance.term.element);
+        } else {
+          instance.term.open(container);
+        }
       }
       try {
         instance.fitAddon.fit();

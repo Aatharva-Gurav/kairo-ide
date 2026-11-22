@@ -667,13 +667,10 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
 
         switch (id) {
           case "file.new": {
-            if (!workspaceRef.current.activeWorkspace && editorRef.current.documents.length === 0) {
-              break;
-            }
             if (workspaceRef.current.activeWorkspace) {
               explorerRef.current.startCreateFile();
             } else {
-              editorRef.current.openDocument("untitled-1.txt").catch(() => {});
+              editorRef.current.openDocument("Untitled-1", "").catch(() => {});
             }
             break;
           }

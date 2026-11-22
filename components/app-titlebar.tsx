@@ -286,9 +286,6 @@ export function AppTitleBar() {
     }, 900);
   }, []);
 
-  // Determine if the user is currently on the welcome screen
-  const isWelcomeScreen = !activeWorkspace && documents.length === 0;
-
   // Menu structure definition
   const menuDefinitions: Record<string, MenuItemDef[]> = {
     file: [
@@ -296,13 +293,11 @@ export function AppTitleBar() {
         id: "file.new",
         label: "New Text File",
         shortcut: "Ctrl+N",
-        disabled: isWelcomeScreen,
         action: async () => {
-          if (isWelcomeScreen) return;
           if (activeWorkspace) {
             startCreateFile();
           } else {
-            await openDocument("untitled-1.txt").catch(() => {});
+            await openDocument("Untitled-1", "").catch(() => {});
           }
         },
       },

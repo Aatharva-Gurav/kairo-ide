@@ -71,7 +71,12 @@ fn is_descendant(parent: &Path, child: &Path) -> bool {
     false
 }
 
-fn copy_dir_all(src: &Path, dst: &Path) -> std::io::Result<()> {
+fn copy_dir_all(src: &Path, dst: &Path, depth: usize) -> std::io::Result<()> {
+    if depth > 32 {
+        return Err(std::io::Error::other(
+            "Maximum directory recursion depth exceeded (possible circular symlink).",
+        ));
+    }
     if !dst.exists() {
         fs::create_dir_all(dst)?;
     }
@@ -86,7 +91,7 @@ fn copy_dir_all(src: &Path, dst: &Path) -> std::io::Result<()> {
         }
 
         if file_type.is_dir() {
-            copy_dir_all(&entry_path, &dest_path)?;
+            copy_dir_all(&entry_path, &dest_path, depth + 1)?;
         } else {
             fs::copy(entry_path, dest_path)?;
         }
@@ -246,7 +251,7 @@ pub fn fs_copy(src_path: String, dest_path: String) -> Result<(), String> {
                 "Cannot copy a directory into itself or one of its subdirectories.".to_string(),
             );
         }
-        copy_dir_all(src, dest).map_err(|e| format!("Unable to copy directory: {}", e))?;
+        copy_dir_all(src, dest, 0).map_err(|e| format!("Unable to copy directory: {}", e))?;
     } else {
         if let Some(parent) = dest.parent() {
             if !parent.exists() {
@@ -302,7 +307,7 @@ pub fn fs_move(src_path: String, dest_path: String) -> Result<(), String> {
     if fs::rename(src, dest).is_err() {
         // Fallback to copy and remove (e.g. across drives/mount points)
         if src.is_dir() {
-            copy_dir_all(src, dest).map_err(|e| format!("Unable to move directory: {}", e))?;
+            copy_dir_all(src, dest, 0).map_err(|e| format!("Unable to move directory: {}", e))?;
             fs::remove_dir_all(src)
                 .map_err(|e| format!("Failed to remove source directory: {}", e))?;
         } else {
@@ -344,7 +349,7 @@ pub fn fs_duplicate(src_path: String) -> Result<String, String> {
         let candidate: PathBuf = parent.join(&new_name);
         if !candidate.exists() {
             if src.is_dir() {
-                copy_dir_all(src, &candidate)
+                copy_dir_all(src, &candidate, 0)
                     .map_err(|e| format!("Unable to duplicate directory: {}", e))?;
             } else {
                 fs::copy(src, &candidate)
@@ -370,15 +375,16 @@ pub fn fs_reveal(path: String) -> Result<(), String> {
     {
         use std::os::windows::process::CommandExt;
         let formatted = p.to_string_lossy().replace('/', "\\");
-        if formatted.contains('"') {
+        let clean_formatted = formatted.strip_prefix(r"\\?\").unwrap_or(&formatted);
+        if clean_formatted.contains('"') {
             return Err("Path contains invalid characters.".to_string());
         }
 
         let mut cmd = std::process::Command::new("explorer");
         if p.is_dir() {
-            cmd.raw_arg(format!("\"{}\"", formatted));
+            cmd.raw_arg(format!("\"{}\"", clean_formatted));
         } else {
-            cmd.raw_arg(format!("/select,\"{}\"", formatted));
+            cmd.raw_arg(format!("/select,\"{}\"", clean_formatted));
         }
         cmd.spawn()
             .map_err(|e| format!("Failed to reveal item in file manager: {}", e))?;
@@ -848,6 +854,17 @@ pub fn fs_search_workspace(
         return Ok(Vec::new());
     }
 
+    let regex_matcher = if options.is_regex {
+        let mut builder = regex::RegexBuilder::new(&query);
+        builder.case_insensitive(!options.is_case_sensitive);
+        match builder.build() {
+            Ok(r) => Some(r),
+            Err(e) => return Err(format!("Invalid regular expression: {}", e)),
+        }
+    } else {
+        None
+    };
+
     let max_results = options.max_results.unwrap_or(5000);
     let mut files = Vec::new();
     walk_workspace_files(p, &mut files, 20_000, 0);
@@ -893,12 +910,19 @@ pub fn fs_search_workspace(
                 break;
             }
 
-            let matches = find_matches_in_line(
-                line,
-                &query,
-                options.is_case_sensitive,
-                options.is_whole_word,
-            );
+            let matches: Vec<(usize, usize)> = if let Some(ref re) = regex_matcher {
+                re.find_iter(line)
+                    .filter(|m| !m.as_str().is_empty())
+                    .map(|m| (m.start(), m.as_str().len()))
+                    .collect()
+            } else {
+                find_matches_in_line(
+                    line,
+                    &query,
+                    options.is_case_sensitive,
+                    options.is_whole_word,
+                )
+            };
 
             for (col, len) in matches {
                 results.push(WorkspaceSearchMatch {
@@ -1243,6 +1267,40 @@ mod tests {
 
         let content = fs::read_to_string(&test_file).unwrap();
         assert!(content.starts_with("Greetings 🌍 world!"));
+
+        let _ = fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_search_workspace_regex() {
+        let temp_dir = std::env::temp_dir().join("kairo_fs_test_regex");
+        let _ = fs::create_dir_all(&temp_dir);
+        let test_file = temp_dir.join("regex_test.txt");
+        fs::write(
+            &test_file,
+            "fn handle_event_1() {}\nfn handle_event_2() {}\nfn ignore_this() {}",
+        )
+        .unwrap();
+
+        let options = SearchQueryOptions {
+            is_case_sensitive: true,
+            is_whole_word: false,
+            is_regex: true,
+            include_patterns: vec![],
+            exclude_patterns: vec![],
+            max_results: None,
+        };
+
+        let matches = fs_search_workspace(
+            temp_dir.to_string_lossy().to_string(),
+            r"handle_event_\d+".to_string(),
+            options,
+        )
+        .unwrap();
+
+        assert_eq!(matches.len(), 2);
+        assert_eq!(matches[0].match_length, 14);
+        assert_eq!(matches[1].match_length, 14);
 
         let _ = fs::remove_dir_all(&temp_dir);
     }

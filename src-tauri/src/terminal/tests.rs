@@ -3,7 +3,10 @@ use super::*;
 #[test]
 fn test_detect_shells_returns_valid_profiles() {
     let shells = detect_shells();
-    assert!(!shells.is_empty(), "Should discover at least one host shell");
+    assert!(
+        !shells.is_empty(),
+        "Should discover at least one host shell"
+    );
 
     // Must have exactly one default shell
     let default_shells: Vec<_> = shells.iter().filter(|s| s.is_default).collect();
@@ -121,7 +124,10 @@ fn test_pty_session_direct_creation_and_teardown() {
     let temp_dir = std::env::temp_dir();
     cmd.cwd(&temp_dir);
 
-    let mut child = pair.slave.spawn_command(cmd).expect("Should spawn child in slave PTY");
+    let mut child = pair
+        .slave
+        .spawn_command(cmd)
+        .expect("Should spawn child in slave PTY");
     assert!(child.process_id().is_some() || cfg!(unix));
 
     let mut writer = pair.master.take_writer().expect("Should take writer");
@@ -156,4 +162,3 @@ fn test_validate_executable_path_lookup() {
         assert!(res.is_ok(), "Should resolve 'sh' via PATH on Unix");
     }
 }
-
