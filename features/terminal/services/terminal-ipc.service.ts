@@ -105,6 +105,20 @@ export class TerminalIpcService {
   }
 
   /**
+   * Kills all running terminal sessions and their child process trees in the backend.
+   */
+  static async killAll(): Promise<void> {
+    if (isTauriEnvironment()) {
+      await invoke<void>("terminal_kill_all");
+      return;
+    }
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("mock-terminal:exit-all"));
+    }
+  }
+
+  /**
    * Retrieves all running terminal sessions.
    */
   static async listSessions(): Promise<TerminalSessionInfo[]> {

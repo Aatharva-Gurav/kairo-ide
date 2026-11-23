@@ -51,6 +51,7 @@ pub fn run() {
             workspace_save_file_as,
             workspace_validate_path,
             workspace_detect_project,
+            app_open_url,
             fs_read_directory,
             fs_create_file,
             fs_create_directory,
@@ -79,6 +80,7 @@ pub fn run() {
             terminal_write,
             terminal_resize,
             terminal_kill,
+            terminal_kill_all,
             terminal_list_sessions,
             terminal_get_session,
         ])

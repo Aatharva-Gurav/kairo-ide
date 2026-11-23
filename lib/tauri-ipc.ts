@@ -13,6 +13,57 @@ export function isTauriEnvironment(): boolean {
   );
 }
 
+/**
+ * Safely opens an external URL using the Tauri backend in desktop mode,
+ * or standard browser window.open / anchor navigation in web mode.
+ */
+export async function openExternalUrl(url: string): Promise<void> {
+  if (!url) return;
+  const trimmed = url.trim();
+
+  // Validate URL protocol
+  try {
+    const parsed = new URL(trimmed);
+    if (!["http:", "https:", "mailto:"].includes(parsed.protocol)) {
+      return;
+    }
+  } catch {
+    return;
+  }
+
+  if (isTauriEnvironment()) {
+    try {
+      await invoke<void>("app_open_url", { url: trimmed });
+      return;
+    } catch (err) {
+      console.warn("[openExternalUrl] Tauri app_open_url invoke failed, trying fallback:", err);
+    }
+  }
+
+  // Web fallback 1: window.open
+  try {
+    const opened = window.open(trimmed, "_blank", "noopener,noreferrer");
+    if (opened) return;
+  } catch {
+    // continue to fallback
+  }
+
+  // Web fallback 2: synthetic anchor element
+  try {
+    if (typeof document !== "undefined") {
+      const a = document.createElement("a");
+      a.href = trimmed;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  } catch (err) {
+    console.error("[openExternalUrl] Failed to open link:", err);
+  }
+}
+
 export type FileSystemErrorCode =
   | "NOT_FOUND"
   | "PERMISSION_DENIED"

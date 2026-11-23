@@ -247,6 +247,12 @@ impl TerminalSession {
             return Ok(());
         }
 
+        if let Ok(status) = self.status.lock() {
+            if *status == SessionStatus::Exited {
+                return Ok(());
+            }
+        }
+
         let mut writer_guard = self.writer.lock().map_err(|_| {
             TerminalError::PtyWriteFailed("Failed to acquire PTY writer lock".to_string())
         })?;
@@ -291,35 +297,43 @@ impl TerminalSession {
     pub fn kill(&self) -> Result<(), TerminalError> {
         self.is_shutting_down.store(true, Ordering::Release);
 
-        // Attempt graceful interrupt signal (Ctrl+C / SIGINT) first
-        if let Ok(mut writer_guard) = self.writer.lock() {
-            let _ = writer_guard.write_all(b"\x03");
-            let _ = writer_guard.flush();
-        }
+        let already_exited = if let Ok(status) = self.status.lock() {
+            *status == SessionStatus::Exited
+        } else {
+            false
+        };
 
-        // Kill OS process tree FIRST using pid before acquiring child lock,
-        // preventing deadlocks when reader thread is waiting on child.wait()
-        if let Some(pid) = self.pid {
-            #[cfg(windows)]
-            {
-                let mut kill_cmd = std::process::Command::new("taskkill");
-                kill_cmd.args(["/pid", &pid.to_string(), "/T", "/F"]);
-                use std::os::windows::process::CommandExt;
-                const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-                kill_cmd.creation_flags(CREATE_NO_WINDOW);
-                let _ = kill_cmd.status();
+        if !already_exited {
+            // Attempt graceful interrupt signal (Ctrl+C / SIGINT) first
+            if let Ok(mut writer_guard) = self.writer.lock() {
+                let _ = writer_guard.write_all(b"\x03");
+                let _ = writer_guard.flush();
             }
 
-            #[cfg(not(windows))]
-            {
-                let _ = std::process::Command::new("kill")
-                    .args(["-TERM", &format!("-{}", pid)])
-                    .status();
-            }
-        }
+            // Kill OS process tree FIRST using pid before acquiring child lock,
+            // preventing deadlocks when reader thread is waiting on child.wait()
+            if let Some(pid) = self.pid {
+                #[cfg(windows)]
+                {
+                    let mut kill_cmd = std::process::Command::new("taskkill");
+                    kill_cmd.args(["/pid", &pid.to_string(), "/T", "/F"]);
+                    use std::os::windows::process::CommandExt;
+                    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+                    kill_cmd.creation_flags(CREATE_NO_WINDOW);
+                    let _ = kill_cmd.status();
+                }
 
-        if let Ok(mut child_guard) = self.child.lock() {
-            let _ = child_guard.kill();
+                #[cfg(not(windows))]
+                {
+                    let _ = std::process::Command::new("kill")
+                        .args(["-TERM", &format!("-{}", pid)])
+                        .status();
+                }
+            }
+
+            if let Ok(mut child_guard) = self.child.lock() {
+                let _ = child_guard.kill();
+            }
         }
 
         if let Ok(mut status_guard) = self.status.lock() {

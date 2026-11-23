@@ -34,9 +34,10 @@ pub async fn terminal_write(
     let manager = state.inner().clone();
 
     tauri::async_runtime::spawn_blocking(move || {
-        manager
-            .write_session(&session_id, data.as_bytes())
-            .map_err(|e| e.to_string())
+        match manager.write_session(&session_id, data.as_bytes()) {
+            Ok(()) | Err(crate::terminal::error::TerminalError::SessionNotFound(_)) => Ok(()),
+            Err(e) => Err(e.to_string()),
+        }
     })
     .await
     .map_err(|e| format!("Failed to execute terminal_write task: {}", e))?
@@ -49,9 +50,10 @@ pub fn terminal_resize(
     cols: u16,
     rows: u16,
 ) -> Result<(), String> {
-    state
-        .resize_session(&session_id, cols, rows)
-        .map_err(|e| e.to_string())
+    match state.resize_session(&session_id, cols, rows) {
+        Ok(()) | Err(crate::terminal::error::TerminalError::SessionNotFound(_)) => Ok(()),
+        Err(e) => Err(e.to_string()),
+    }
 }
 
 #[tauri::command]
@@ -62,10 +64,26 @@ pub async fn terminal_kill(
     let manager = state.inner().clone();
 
     tauri::async_runtime::spawn_blocking(move || {
-        manager.kill_session(&session_id).map_err(|e| e.to_string())
+        match manager.kill_session(&session_id) {
+            Ok(()) | Err(crate::terminal::error::TerminalError::SessionNotFound(_)) => Ok(()),
+            Err(e) => Err(e.to_string()),
+        }
     })
     .await
     .map_err(|e| format!("Failed to execute terminal_kill task: {}", e))?
+}
+
+#[tauri::command]
+pub async fn terminal_kill_all(
+    state: State<'_, Arc<TerminalManager>>,
+) -> Result<(), String> {
+    let manager = state.inner().clone();
+
+    tauri::async_runtime::spawn_blocking(move || {
+        manager.kill_all().map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("Failed to execute terminal_kill_all task: {}", e))?
 }
 
 #[tauri::command]

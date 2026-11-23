@@ -10,6 +10,7 @@ import { TerminalIpcService } from "./terminal-ipc.service";
 import { TerminalLinkProvider } from "./terminal-link-provider";
 import { DevServerDetector } from "./dev-server-detector";
 import { UnlistenFn } from "@tauri-apps/api/event";
+import { openExternalUrl } from "@/lib/tauri-ipc";
 
 export interface TerminalInstance {
   sessionId: string;
@@ -60,7 +61,19 @@ export class TerminalInstanceRegistry {
 
     const fitAddon = new FitAddon();
     const searchAddon = new SearchAddon();
-    const webLinksAddon = new WebLinksAddon();
+    // Custom link opener using Tauri desktop native URL opener and browser fallback
+    const handleOpenUri = (event: MouseEvent, uri: string) => {
+      event.preventDefault();
+      event.stopPropagation();
+      let finalUri = uri.trim();
+      if (/^(localhost|127\.0\.0\.1)(:\d+)?/i.test(finalUri)) {
+        finalUri = `http://${finalUri}`;
+      }
+      openExternalUrl(finalUri).catch((err) => {
+        console.error("[TerminalInstanceRegistry] Failed to open link:", err);
+      });
+    };
+    const webLinksAddon = new WebLinksAddon(handleOpenUri);
     const unicode11Addon = new Unicode11Addon();
 
     term.loadAddon(fitAddon);
@@ -75,9 +88,13 @@ export class TerminalInstanceRegistry {
 
     // Forward user keystrokes directly to Rust PTY
     term.onData((data) => {
-      TerminalIpcService.writeSession(sessionId, data).catch((err) => {
-        console.error(`[TerminalRegistry] Failed to write data for session ${sessionId}:`, err);
-      });
+      if (!instance.disposed) {
+        TerminalIpcService.writeSession(sessionId, data).catch((err) => {
+          if (!instance.disposed) {
+            console.error(`[TerminalRegistry] Failed to write data for session ${sessionId}:`, err);
+          }
+        });
+      }
     });
 
     const instance: TerminalInstance = {
@@ -106,29 +123,57 @@ export class TerminalInstanceRegistry {
     // Subscribe directly to backend stdout stream (Zero React state buffering)
     TerminalIpcService.subscribeOutput(sessionId, (chunk) => {
       if (!instance.disposed) {
-        term.write(chunk);
-        DevServerDetector.scanOutput(sessionId, chunk);
+        try {
+          term.write(chunk);
+          DevServerDetector.scanOutput(sessionId, chunk);
+        } catch {
+          // Terminal may be disposing
+        }
       }
     })
       .then((unlisten) => {
-        instance.unlistenData = unlisten;
+        if (instance.disposed) {
+          try {
+            unlisten();
+          } catch {
+            // ignore
+          }
+        } else {
+          instance.unlistenData = unlisten;
+        }
       })
       .catch((err) => {
-        console.error(`[TerminalRegistry] Failed to subscribe to output for session ${sessionId}:`, err);
+        if (!instance.disposed) {
+          console.error(`[TerminalRegistry] Failed to subscribe to output for session ${sessionId}:`, err);
+        }
       });
 
     // Subscribe to backend exit event
     TerminalIpcService.subscribeExit(sessionId, (exitPayload) => {
       if (!instance.disposed) {
-        term.writeln(`\r\n\x1b[90m[Process exited with code ${exitPayload.code ?? "unknown"}]\x1b[0m\r\n`);
+        try {
+          term.writeln(`\r\n\x1b[90m[Process exited with code ${exitPayload.code ?? "unknown"}]\x1b[0m\r\n`);
+        } catch {
+          // Terminal may be disposing
+        }
         onExitCallback?.(exitPayload.code);
       }
     })
       .then((unlisten) => {
-        instance.unlistenExit = unlisten;
+        if (instance.disposed) {
+          try {
+            unlisten();
+          } catch {
+            // ignore
+          }
+        } else {
+          instance.unlistenExit = unlisten;
+        }
       })
       .catch((err) => {
-        console.error(`[TerminalRegistry] Failed to subscribe to exit for session ${sessionId}:`, err);
+        if (!instance.disposed) {
+          console.error(`[TerminalRegistry] Failed to subscribe to exit for session ${sessionId}:`, err);
+        }
       });
 
     this.instances.set(sessionId, instance);
@@ -141,20 +186,28 @@ export class TerminalInstanceRegistry {
 
     if (instance.container !== container) {
       instance.container = container;
-      if (!container.contains(instance.term.element || null)) {
-        container.innerHTML = "";
-        if (instance.term.element) {
-          container.appendChild(instance.term.element);
-        } else {
-          instance.term.open(container);
+      try {
+        if (!container.contains(instance.term.element || null)) {
+          container.innerHTML = "";
+          if (instance.term.element) {
+            container.appendChild(instance.term.element);
+          } else {
+            instance.term.open(container);
+          }
         }
+      } catch {
+        // Container or DOM might not be fully available in testing or SSR
       }
       try {
         instance.fitAddon.fit();
       } catch {
         // container not fully measured yet
       }
-      instance.term.focus();
+      try {
+        instance.term.focus();
+      } catch {
+        // terminal not focused
+      }
     }
   }
 
@@ -235,20 +288,69 @@ export class TerminalInstanceRegistry {
     }
   }
 
+  static detach(sessionId: string, container?: HTMLElement | null): void {
+    const instance = this.instances.get(sessionId);
+    if (!instance) return;
+    if (!container || instance.container === container) {
+      instance.container = null;
+    }
+  }
+
   static dispose(sessionId: string): void {
     const instance = this.instances.get(sessionId);
     if (!instance) return;
 
     instance.disposed = true;
     DevServerDetector.clearSession(sessionId);
-    if (instance.unlistenData) instance.unlistenData();
-    if (instance.unlistenExit) instance.unlistenExit();
-    instance.fitAddon.dispose();
-    instance.searchAddon.dispose();
-    instance.webLinksAddon.dispose();
-    instance.unicode11Addon.dispose();
-    if (instance.webglAddon) instance.webglAddon.dispose();
-    instance.term.dispose();
+    if (instance.unlistenData) {
+      try {
+        instance.unlistenData();
+      } catch {
+        // ignore
+      }
+      instance.unlistenData = undefined;
+    }
+    if (instance.unlistenExit) {
+      try {
+        instance.unlistenExit();
+      } catch {
+        // ignore
+      }
+      instance.unlistenExit = undefined;
+    }
+
+    try {
+      instance.fitAddon.dispose();
+    } catch {
+      // ignore
+    }
+    try {
+      instance.searchAddon.dispose();
+    } catch {
+      // ignore
+    }
+    try {
+      instance.webLinksAddon.dispose();
+    } catch {
+      // ignore
+    }
+    try {
+      instance.unicode11Addon.dispose();
+    } catch {
+      // ignore
+    }
+    if (instance.webglAddon) {
+      try {
+        instance.webglAddon.dispose();
+      } catch {
+        // ignore
+      }
+    }
+    try {
+      instance.term.dispose();
+    } catch {
+      // ignore
+    }
 
     this.instances.delete(sessionId);
   }

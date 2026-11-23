@@ -83,6 +83,43 @@ pub fn workspace_detect_project(root_path: String) -> Result<Vec<String>, String
     Ok(characteristics)
 }
 
+#[tauri::command]
+pub fn app_open_url(url: String) -> Result<(), String> {
+    let lower = url.to_lowercase();
+    if !lower.starts_with("http://") && !lower.starts_with("https://") && !lower.starts_with("mailto:") {
+        return Err("Unsupported URL protocol".to_string());
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        let mut cmd = std::process::Command::new("rundll32.exe");
+        cmd.creation_flags(CREATE_NO_WINDOW);
+        cmd.args(["url.dll,FileProtocolHandler", &url]);
+        cmd.spawn().map_err(|e| format!("Failed to open URL: {}", e))?;
+        Ok(())
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(&url)
+            .spawn()
+            .map_err(|e| format!("Failed to open URL: {}", e))?;
+        Ok(())
+    }
+
+    #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(&url)
+            .spawn()
+            .map_err(|e| format!("Failed to open URL: {}", e))?;
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

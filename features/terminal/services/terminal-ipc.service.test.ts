@@ -54,4 +54,8 @@ describe("TerminalIpcService", () => {
     unlisten();
     delete (global as unknown as { window?: unknown }).window;
   });
+
+  it("handles killAll cleanly without errors in browser environment", async () => {
+    await expect(TerminalIpcService.killAll()).resolves.not.toThrow();
+  });
 });

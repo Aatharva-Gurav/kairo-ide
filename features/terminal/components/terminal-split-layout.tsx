@@ -80,6 +80,21 @@ export function TerminalSplitLayout({ onOpenFind, className }: TerminalSplitLayo
     };
   }, [isDraggingDivider, splitDirection, setSplitRatio]);
 
+  // Synchronize terminal instance sizing across split changes
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const timer = setTimeout(() => {
+        window.dispatchEvent(new Event("resize"));
+        if (splitSessionIds.length >= 2) {
+          splitSessionIds.forEach((sid) => {
+            TerminalInstanceRegistry.fit(sid);
+          });
+        }
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [splitDirection, splitRatio, splitSessionIds]);
+
   const handleViewportContextMenu = (e: React.MouseEvent, sessionId: string) => {
     e.preventDefault();
     e.stopPropagation();
@@ -89,7 +104,11 @@ export function TerminalSplitLayout({ onOpenFind, className }: TerminalSplitLayo
     });
   };
 
-  const isSplitActive = Boolean(splitDirection && splitSessionIds.length >= 2);
+  const isSplitActive = Boolean(
+    splitDirection &&
+    splitSessionIds.length >= 2 &&
+    splitSessionIds.includes(activeSplitSessionId || activeSessionId || "")
+  );
 
   return (
     <div
@@ -139,17 +158,22 @@ export function TerminalSplitLayout({ onOpenFind, className }: TerminalSplitLayo
                   style={
                     isFirst
                       ? splitDirection === "vertical"
-                        ? { height: `${splitRatio * 100}%` }
-                        : { width: `${splitRatio * 100}%` }
-                      : undefined
+                        ? { height: `calc(${splitRatio * 100}% - 3px)` }
+                        : { width: `calc(${splitRatio * 100}% - 3px)` }
+                      : splitDirection === "vertical"
+                        ? { height: `calc(${(1 - splitRatio) * 100}% - 3px)` }
+                        : { width: `calc(${(1 - splitRatio) * 100}% - 3px)` }
                   }
                   className={cn(
                     "flex flex-col overflow-hidden relative bg-background transition-shadow duration-150",
                     isFirst
                       ? splitDirection === "vertical"
-                        ? "w-full min-h-[80px]"
-                        : "h-full min-w-[120px]"
-                      : "flex-1 w-full h-full min-h-[80px] min-w-[120px]",
+                        ? "w-full shrink-0 min-h-[60px]"
+                        : "h-full shrink-0 min-w-[80px]"
+                      : splitDirection === "vertical"
+                        ? "w-full flex-1 min-h-[60px]"
+                        : "h-full flex-1 min-w-[80px]",
+                    isDraggingDivider && "pointer-events-none select-none",
                     isCurrentFocused
                       ? "ring-1 ring-inset ring-primary/40"
                       : "opacity-90"

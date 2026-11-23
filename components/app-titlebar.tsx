@@ -4,7 +4,9 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/features/auth/store";
 import { useWorkspace } from "@/features/workspace/store";
+import { Workspace } from "@/features/workspace/types";
 import { useEditor } from "@/features/editor/store";
+import { EditorDocument } from "@/features/editor/types";
 import { useSettings } from "@/features/settings/store";
 import { useCommands } from "@/features/commands/store";
 import { useFileExplorer } from "@/features/file-explorer/store";
@@ -24,7 +26,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-interface MenuItemDef {
+export interface MenuItemDef {
   id: string;
   label: string;
   shortcut?: string;
@@ -33,6 +35,80 @@ interface MenuItemDef {
   separator?: boolean;
   action?: () => void | Promise<void>;
   submenu?: MenuItemDef[];
+}
+
+export interface MenuDefinitionParams {
+  activeWorkspace: Workspace | null;
+  activeDocument?: EditorDocument | null;
+  terminal?: {
+    activeSplitSessionId?: string | null;
+    activeSessionId?: string | null;
+    killTerminal?: (id: string) => Promise<unknown> | unknown;
+  } | null;
+  actions?: {
+    startCreateFile?: () => void;
+  };
+}
+
+export function getMenuDefinitions(params: MenuDefinitionParams): Record<string, MenuItemDef[]> {
+  const hasWorkspace = Boolean(params.activeWorkspace);
+
+  return {
+    file: [
+      {
+        id: "file.new",
+        label: "New Text File",
+        shortcut: "Ctrl+N",
+        disabled: !hasWorkspace,
+        action: async () => {
+          if (hasWorkspace && params.actions?.startCreateFile) {
+            params.actions.startCreateFile();
+          }
+        },
+      },
+    ],
+    view: [
+      {
+        id: "view.terminal",
+        label: "Terminal",
+        shortcut: "Ctrl+`",
+        disabled: !hasWorkspace,
+      },
+    ],
+    terminal: [
+      {
+        id: "terminal.new",
+        label: "New Terminal",
+        shortcut: "Ctrl+Shift+`",
+        disabled: !hasWorkspace,
+      },
+      {
+        id: "terminal.split",
+        label: "Split Terminal",
+        shortcut: "Ctrl+Shift+5",
+        disabled: !hasWorkspace,
+      },
+      {
+        id: "terminal.toggle",
+        label: "Toggle Terminal Panel",
+        shortcut: "Ctrl+`",
+        disabled: !hasWorkspace,
+      },
+      { id: "sep-term-1", label: "", separator: true },
+      {
+        id: "terminal.clear",
+        label: "Clear Terminal",
+        disabled: !hasWorkspace,
+      },
+      {
+        id: "terminal.kill",
+        label: "Kill Active Terminal",
+        disabled:
+          !hasWorkspace ||
+          !(params.terminal && (params.terminal.activeSplitSessionId || params.terminal.activeSessionId)),
+      },
+    ],
+  };
 }
 
 export function AppTitleBar() {
@@ -293,11 +369,10 @@ export function AppTitleBar() {
         id: "file.new",
         label: "New Text File",
         shortcut: "Ctrl+N",
+        disabled: !activeWorkspace,
         action: async () => {
           if (activeWorkspace) {
             startCreateFile();
-          } else {
-            await openDocument("Untitled-1", "").catch(() => {});
           }
         },
       },
@@ -536,6 +611,7 @@ export function AppTitleBar() {
         id: "view.terminal",
         label: "Terminal",
         shortcut: "Ctrl+`",
+        disabled: !activeWorkspace,
         action: () => ideEvents.emit("terminal:toggle"),
       },
       {
@@ -668,32 +744,40 @@ export function AppTitleBar() {
         id: "terminal.new",
         label: "New Terminal",
         shortcut: "Ctrl+Shift+`",
+        disabled: !activeWorkspace,
         action: () => ideEvents.emit("terminal:new"),
       },
       {
         id: "terminal.split",
         label: "Split Terminal",
         shortcut: "Ctrl+Shift+5",
+        disabled: !activeWorkspace,
         action: () => ideEvents.emit("terminal:split", "horizontal"),
       },
       {
         id: "terminal.toggle",
         label: "Toggle Terminal Panel",
         shortcut: "Ctrl+`",
+        disabled: !activeWorkspace,
         action: () => ideEvents.emit("terminal:toggle"),
       },
       { id: "sep-term-1", label: "", separator: true },
       {
         id: "terminal.clear",
         label: "Clear Terminal",
+        disabled: !activeWorkspace,
         action: () => ideEvents.emit("terminal:clear"),
       },
       {
         id: "terminal.kill",
         label: "Kill Active Terminal",
+        disabled:
+          !activeWorkspace ||
+          !(terminal && (terminal.activeSplitSessionId || terminal.activeSessionId)),
         action: () => {
-          if (terminal && (terminal.activeSplitSessionId || terminal.activeSessionId)) {
-            terminal.killTerminal(terminal.activeSplitSessionId || terminal.activeSessionId!);
+          const sid = terminal?.activeSplitSessionId || terminal?.activeSessionId;
+          if (sid && terminal?.killTerminal) {
+            Promise.resolve(terminal.killTerminal(sid)).catch(() => {});
           }
         },
       },

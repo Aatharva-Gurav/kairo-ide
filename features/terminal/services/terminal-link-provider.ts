@@ -1,5 +1,6 @@
 import { ILinkProvider, ILink, Terminal } from "@xterm/xterm";
 import { ideEvents } from "@/lib/events";
+import { openExternalUrl } from "@/lib/tauri-ipc";
 
 /**
  * Regex matching relative or absolute file paths, optionally followed by :line:col
@@ -33,6 +34,32 @@ export class TerminalLinkProvider implements ILinkProvider {
       const filePath = match[1];
       const lineStr = match[2];
       const colStr = match[3];
+
+      // Ignore web URLs with protocols — WebLinksAddon handles them
+      if (/^(https?|ftp|mailto|file):\/\//i.test(fullMatch.trim()) || /^(https?|ftp|mailto|file):\/\//i.test(filePath)) {
+        continue;
+      }
+
+      // If it's an IP:port or localhost:port (e.g. 127.0.0.1:3000, localhost:5173), activate browser open
+      if (/^(?:127\.0\.0\.1|0\.0\.0\.0|localhost)(?::\d{2,5})/i.test(filePath) || /^(?:\d{1,3}\.){3}\d{1,3}(?::\d{2,5})/i.test(filePath)) {
+        const offset = fullMatch.indexOf(filePath);
+        const startIndex = match.index + offset + 1;
+        const length = filePath.length;
+        links.push({
+          range: {
+            start: { x: startIndex, y: bufferLineNumber + 1 },
+            end: { x: startIndex + length - 1, y: bufferLineNumber + 1 },
+          },
+          text: filePath,
+          activate: () => {
+            const url = `http://${filePath}`;
+            openExternalUrl(url).catch((err) => {
+              console.error("[TerminalLinkProvider] Failed to open URL:", err);
+            });
+          },
+        });
+        continue;
+      }
 
       // Ignore common non-file extensions (e.g., domain extensions like .com, .org, .net, .io)
       if (/\.(com|org|net|io|dev|app|gov|edu|ai|co)$/i.test(filePath)) {

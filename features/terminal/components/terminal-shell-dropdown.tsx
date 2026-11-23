@@ -73,7 +73,7 @@ export function TerminalShellDropdown({ className, buttonClassName }: TerminalSh
             style={{
               boxShadow: "var(--shadow-elevation-high, 0 10px 25px -5px rgba(0, 0, 0, 0.25))",
             }}
-            className="absolute top-[calc(100%+6px)] right-0 z-50 flex flex-row items-center gap-1 rounded-xl border border-border/80 bg-popover/98 backdrop-blur-md p-1.5 shadow-2xl animate-in fade-in-0 zoom-in-[0.98] duration-120 ease-out origin-top-right select-none"
+            className="absolute top-[calc(100%+6px)] left-1/2 -translate-x-1/2 z-50 flex flex-row items-center gap-1 rounded-xl border border-border/80 bg-popover/98 backdrop-blur-md p-1.5 shadow-2xl animate-in fade-in-0 zoom-in-[0.98] duration-120 ease-out origin-top select-none whitespace-nowrap"
           >
             {availableShells.map((shell) => {
               const isDefault = shell.id === defaultShell?.id || shell.isDefault;
@@ -131,7 +131,7 @@ export function TerminalShellDropdown({ className, buttonClassName }: TerminalSh
                     role="menuitem"
                     onClick={() => {
                       setIsOpen(false);
-                      openSettings();
+                      openSettings("terminal");
                     }}
                     aria-label="Terminal Settings"
                     className="size-7 rounded-lg flex items-center justify-center hover:bg-muted/70 text-muted-foreground hover:text-foreground cursor-pointer transition-colors active:scale-90"

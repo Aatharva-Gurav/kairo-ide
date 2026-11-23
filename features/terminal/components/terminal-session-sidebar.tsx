@@ -43,7 +43,7 @@ export function TerminalSessionSidebar({ className }: TerminalSessionSidebarProp
       <aside
         aria-label="Terminal Sessions"
         className={cn(
-          "absolute top-2.5 right-3 z-30 flex flex-col items-center gap-1.5 p-1 rounded-xl border border-border/80 bg-sidebar/95 backdrop-blur-md shadow-xl select-none animate-in fade-in-0 zoom-in-[0.98] duration-150",
+          "absolute top-1/2 -translate-y-1/2 right-3 z-30 flex flex-col items-center gap-1.5 p-1 rounded-xl border border-border/80 bg-sidebar/95 backdrop-blur-md shadow-xl select-none animate-in fade-in-0 zoom-in-[0.98] duration-150",
           className
         )}
       >

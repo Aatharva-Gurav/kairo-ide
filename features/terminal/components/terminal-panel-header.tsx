@@ -173,8 +173,14 @@ export function TerminalPanelHeader({
               render={
                 <button
                   type="button"
-                  onClick={() => splitTerminal("horizontal")}
-                  aria-label="Split Terminal (Ctrl+Shift+5)"
+                  onClick={() => {
+                    if (splitDirection) {
+                      closeSplit();
+                    } else {
+                      splitTerminal("horizontal");
+                    }
+                  }}
+                  aria-label={splitDirection ? "Un-split Terminal" : "Split Terminal (Ctrl+Shift+5)"}
                   className={cn(
                     "size-6 flex items-center justify-center rounded-md hover:bg-muted/70 text-muted-foreground hover:text-foreground cursor-pointer transition-colors active:scale-95",
                     splitDirection && "bg-accent text-foreground"
@@ -184,7 +190,9 @@ export function TerminalPanelHeader({
                 </button>
               }
             />
-            <TooltipContent side="top">Split Terminal (Ctrl+Shift+5)</TooltipContent>
+            <TooltipContent side="top">
+              {splitDirection ? "Un-split Terminal" : "Split Terminal (Ctrl+Shift+5)"}
+            </TooltipContent>
           </Tooltip>
 
           {/* Find In Terminal Button */}
@@ -284,7 +292,7 @@ export function TerminalPanelHeader({
                   role="menuitem"
                   onClick={() => {
                     setIsOverflowOpen(false);
-                    openSettings();
+                    openSettings("terminal");
                   }}
                   className="flex w-full items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-accent hover:text-accent-foreground cursor-pointer text-left transition-colors duration-100 text-muted-foreground hover:text-foreground"
                 >
@@ -299,7 +307,7 @@ export function TerminalPanelHeader({
                   role="menuitem"
                   onClick={() => {
                     setIsOverflowOpen(false);
-                    if (currentSessionId) killTerminal(currentSessionId);
+                    if (currentSessionId) killTerminal(currentSessionId).catch(() => {});
                   }}
                   className="flex w-full items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-destructive/15 text-destructive hover:text-destructive cursor-pointer text-left transition-colors duration-100"
                 >

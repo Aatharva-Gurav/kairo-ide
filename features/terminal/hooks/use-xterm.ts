@@ -29,6 +29,9 @@ export function useXterm({
     }
 
     resizeTimerRef.current = setTimeout(() => {
+      const instance = TerminalInstanceRegistry.get(sessionId);
+      if (!instance || instance.disposed || !instance.container) return;
+
       const dimensions = TerminalInstanceRegistry.fit(sessionId);
       if (!dimensions) return;
 
@@ -39,9 +42,9 @@ export function useXterm({
         (cols !== lastColsRowsRef.current.cols || rows !== lastColsRowsRef.current.rows)
       ) {
         lastColsRowsRef.current = { cols, rows };
-        TerminalIpcService.resizeSession(sessionId, cols, rows).catch((err) => {
-          console.error(`[useXterm] Failed to resize session ${sessionId}:`, err);
-        });
+        if (TerminalInstanceRegistry.has(sessionId)) {
+          TerminalIpcService.resizeSession(sessionId, cols, rows).catch(() => {});
+        }
       }
     }, 30);
   }, [sessionId]);
@@ -70,6 +73,7 @@ export function useXterm({
       if (resizeTimerRef.current) {
         clearTimeout(resizeTimerRef.current);
       }
+      TerminalInstanceRegistry.detach(sessionId, container);
     };
   }, [sessionId, settings, theme, onExit, handleResize]);
 

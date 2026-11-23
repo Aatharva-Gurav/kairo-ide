@@ -115,6 +115,46 @@ describe("Integrated Terminal Subsystem - Stage 4", () => {
 
       TerminalInstanceRegistry.disposeAll();
     });
+
+    it("safely detaches containers and prevents operations on detached or disposed instances", () => {
+      const sessionId = "detach-test-session";
+      const instance = TerminalInstanceRegistry.createOrGet(
+        sessionId,
+        DEFAULT_TERMINAL_SETTINGS,
+        "dark-modern"
+      );
+
+      const fakeContainer = {
+        contains: () => false,
+        innerHTML: "",
+        appendChild: () => {},
+      } as unknown as HTMLElement;
+      TerminalInstanceRegistry.attach(sessionId, fakeContainer);
+      expect(instance.container).toBe(fakeContainer);
+
+      TerminalInstanceRegistry.detach(sessionId, fakeContainer);
+      expect(instance.container).toBeNull();
+
+      // fit on detached instance returns null gracefully
+      const fitResult = TerminalInstanceRegistry.fit(sessionId);
+      expect(fitResult).toBeNull();
+
+      // Disposing detached instance should succeed with zero errors
+      expect(() => TerminalInstanceRegistry.dispose(sessionId)).not.toThrow();
+    });
+
+    it("gracefully disposes instances multiple times without errors", () => {
+      const sessionId = "safe-multi-dispose";
+      TerminalInstanceRegistry.createOrGet(
+        sessionId,
+        DEFAULT_TERMINAL_SETTINGS,
+        "dark-modern"
+      );
+
+      expect(() => TerminalInstanceRegistry.dispose(sessionId)).not.toThrow();
+      expect(() => TerminalInstanceRegistry.dispose(sessionId)).not.toThrow();
+      expect(TerminalInstanceRegistry.has(sessionId)).toBe(false);
+    });
   });
 
   describe("Command & Keybinding Integration", () => {
@@ -340,6 +380,21 @@ describe("Integrated Terminal Subsystem - Stage 4", () => {
       );
       expect(fallbackMarkup).toContain("svg");
       expect(fallbackMarkup).toContain("text-primary");
+    });
+  });
+
+  describe("Terminal Link Opening & URL Validation", () => {
+    it("safely handles valid and invalid URLs via openExternalUrl", async () => {
+      const { openExternalUrl } = await import("@/lib/tauri-ipc");
+
+      // Valid HTTP/HTTPS should not throw
+      await expect(openExternalUrl("http://localhost:3000")).resolves.not.toThrow();
+      await expect(openExternalUrl("https://github.com/test/repo")).resolves.not.toThrow();
+
+      // Empty or invalid protocol should be rejected safely
+      await expect(openExternalUrl("")).resolves.not.toThrow();
+      await expect(openExternalUrl("javascript:alert(1)")).resolves.not.toThrow();
+      await expect(openExternalUrl("not-a-url")).resolves.not.toThrow();
     });
   });
 });

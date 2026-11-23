@@ -44,6 +44,7 @@ export interface TerminalContextValue {
 
   createTerminal: (shellId?: string, cwd?: string) => Promise<string>;
   killTerminal: (sessionId: string) => Promise<void>;
+  killAllTerminals: () => Promise<void>;
   setActiveTerminal: (sessionId: string) => void;
   setActiveSplitTerminal: (sessionId: string) => void;
   toggleTerminal: () => void;
@@ -114,6 +115,11 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     activeWorkspaceRef.current = activeWorkspace;
   }, [activeWorkspace]);
+
+  const sessionsRef = useRef(sessions);
+  useEffect(() => {
+    sessionsRef.current = sessions;
+  }, [sessions]);
 
   // Terminal Settings derived from IDE Settings
   const terminalSettings: TerminalSettings = useMemo(() => {
@@ -250,10 +256,11 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
   // Terminate an active session
   const killTerminal = useCallback(
     async (sessionId: string) => {
+      if (!sessionId) return;
       try {
         await TerminalIpcService.killSession(sessionId);
-      } catch (err) {
-        console.warn(`[TerminalStore] Error while killing session ${sessionId}:`, err);
+      } catch {
+        // Backend process may already have terminated or exited gracefully
       } finally {
         TerminalInstanceRegistry.dispose(sessionId);
 
@@ -270,6 +277,10 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
           return updated;
         });
 
+        setActiveSplitSessionId((prev) =>
+          prev === sessionId ? (activeSessionId === sessionId ? null : activeSessionId) : prev
+        );
+
         setSplitSessionIds((prev) => {
           const remaining = prev.filter((id) => id !== sessionId);
           if (remaining.length <= 1) {
@@ -283,6 +294,27 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
     [activeSessionId]
   );
 
+  // Terminate all active sessions and clean up background processes
+  const killAllTerminals = useCallback(async () => {
+    const currentSessions = sessionsRef.current;
+    try {
+      await TerminalIpcService.killAll();
+    } catch {
+      await Promise.allSettled(
+        currentSessions.map((s) => TerminalIpcService.killSession(s.sessionId))
+      );
+    } finally {
+      TerminalInstanceRegistry.disposeAll();
+
+      setSessions([]);
+      setActiveSessionId(null);
+      setActiveSplitSessionId(null);
+      setSplitDirection(null);
+      setSplitSessionIds([]);
+      setIsOpen(false);
+    }
+  }, []);
+
   const setActiveTerminal = useCallback((sessionId: string) => {
     setActiveSessionId(sessionId);
     setActiveSplitSessionId(sessionId);
@@ -294,6 +326,7 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
 
   const setActiveSplitTerminal = useCallback((sessionId: string) => {
     setActiveSplitSessionId(sessionId);
+    setActiveSessionId(sessionId);
     setTimeout(() => {
       const instance = TerminalInstanceRegistry.get(sessionId);
       instance?.term.focus();
@@ -342,19 +375,36 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      // If already split with 2 panes and direction is changing, simply toggle orientation
+      if (splitDirection && splitSessionIds.length >= 2 && splitDirection !== direction) {
+        setSplitDirection(direction);
+        return;
+      }
+
       const newSessionId = await createTerminal(shellId);
       setSplitDirection(direction);
       setSplitRatio(0.5);
       setSplitSessionIds([sourceSessionId, newSessionId]);
       setActiveSplitSessionId(newSessionId);
+      setActiveSessionId(newSessionId);
+
+      // Trigger resize after layout changes so both panes re-fit
+      if (typeof window !== "undefined") {
+        setTimeout(() => {
+          window.dispatchEvent(new Event("resize"));
+        }, 50);
+      }
     },
-    [activeSessionId, activeSplitSessionId, createTerminal]
+    [activeSessionId, activeSplitSessionId, createTerminal, splitDirection, splitSessionIds.length]
   );
 
   const closeSplit = useCallback(() => {
     setSplitDirection(null);
     setSplitSessionIds([]);
-  }, []);
+    if (activeSplitSessionId) {
+      setActiveSessionId(activeSplitSessionId);
+    }
+  }, [activeSplitSessionId]);
 
   const copySelection = useCallback(
     async (sessionId?: string) => {
@@ -434,19 +484,29 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
   // Subscribe to decoupled IDE event bus
   useEffect(() => {
     const unlistenToggle = ideEvents.on("terminal:toggle", () => {
+      if (!activeWorkspaceRef.current) return;
       toggleTerminal();
     });
     const unlistenNew = ideEvents.on("terminal:new", (payload) => {
+      if (!activeWorkspaceRef.current) return;
       createTerminal(payload?.shellId).catch(() => {});
     });
     const unlistenSplit = ideEvents.on("terminal:split", (direction) => {
+      if (!activeWorkspaceRef.current) return;
       splitTerminal(direction || "horizontal").catch(() => {});
     });
     const unlistenClear = ideEvents.on("terminal:clear", () => {
+      if (!activeWorkspaceRef.current) return;
       const curId = activeSplitSessionId || activeSessionId;
       if (curId) {
         clearTerminal(curId);
       }
+    });
+    const unlistenCloseWorkspace = ideEvents.on("workspace:closed", () => {
+      killAllTerminals().catch(() => {});
+    });
+    const unlistenSwitchWorkspace = ideEvents.on("workspace:switched", () => {
+      killAllTerminals().catch(() => {});
     });
     const unlistenClose = ideEvents.on("terminal:close", () => {
       const curId = activeSplitSessionId || activeSessionId;
@@ -494,6 +554,8 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
       unlistenNext();
       unlistenPrev();
       unlistenMaximize();
+      unlistenCloseWorkspace();
+      unlistenSwitchWorkspace();
     };
   }, [
     toggleTerminal,
@@ -501,6 +563,7 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
     splitTerminal,
     clearTerminal,
     killTerminal,
+    killAllTerminals,
     setActiveTerminal,
     toggleMaximize,
     sessions,
@@ -541,6 +604,7 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
     activeSplitSessionId,
     createTerminal,
     killTerminal,
+    killAllTerminals,
     setActiveTerminal,
     setActiveSplitTerminal,
     toggleTerminal,

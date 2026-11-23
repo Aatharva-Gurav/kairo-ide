@@ -536,6 +536,7 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
         description: "Open or close the integrated terminal panel",
         category: "workbench",
         keywords: ["terminal", "bash", "powershell", "cmd", "pty", "console", "shell", "toggle"],
+        enabled: () => Boolean(workspaceRef.current.activeWorkspace),
         execute: () => {
           ideEvents.emit("terminal:toggle");
         },
@@ -546,6 +547,7 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
         description: "Spawn a new terminal session in the bottom panel",
         category: "workbench",
         keywords: ["terminal", "new", "create", "shell", "bash", "powershell"],
+        enabled: () => Boolean(workspaceRef.current.activeWorkspace),
         execute: () => {
           ideEvents.emit("terminal:new");
         },
@@ -556,6 +558,7 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
         description: "Split the current terminal session side by side",
         category: "workbench",
         keywords: ["terminal", "split", "horizontal", "vertical", "columns"],
+        enabled: () => Boolean(workspaceRef.current.activeWorkspace),
         execute: () => {
           ideEvents.emit("terminal:split", "horizontal");
         },
@@ -566,6 +569,7 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
         description: "Clear active terminal viewport screen",
         category: "workbench",
         keywords: ["terminal", "clear", "cls", "reset"],
+        enabled: () => Boolean(workspaceRef.current.activeWorkspace),
         execute: () => {
           ideEvents.emit("terminal:clear");
         },
@@ -669,8 +673,6 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
           case "file.new": {
             if (workspaceRef.current.activeWorkspace) {
               explorerRef.current.startCreateFile();
-            } else {
-              editorRef.current.openDocument("Untitled-1", "").catch(() => {});
             }
             break;
           }
