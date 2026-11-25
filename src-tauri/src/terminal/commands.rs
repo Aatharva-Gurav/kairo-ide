@@ -87,6 +87,22 @@ pub async fn terminal_kill_all(
 }
 
 #[tauri::command]
+pub async fn terminal_kill_workspace(
+    state: State<'_, Arc<TerminalManager>>,
+    workspace_id: Option<String>,
+) -> Result<usize, String> {
+    let manager = state.inner().clone();
+
+    tauri::async_runtime::spawn_blocking(move || {
+        manager
+            .kill_workspace_sessions(workspace_id.as_deref())
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("Failed to execute terminal_kill_workspace task: {}", e))?
+}
+
+#[tauri::command]
 pub fn terminal_list_sessions(
     state: State<'_, Arc<TerminalManager>>,
 ) -> Result<Vec<TerminalSessionInfo>, String> {

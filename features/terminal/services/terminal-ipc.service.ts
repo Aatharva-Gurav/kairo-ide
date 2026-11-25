@@ -119,6 +119,20 @@ export class TerminalIpcService {
   }
 
   /**
+   * Kills all terminal sessions associated with a specific workspace ID in the backend.
+   */
+  static async killWorkspaceSessions(workspaceId?: string): Promise<number> {
+    if (isTauriEnvironment()) {
+      return await invoke<number>("terminal_kill_workspace", { workspaceId });
+    }
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("mock-terminal:exit-workspace", { detail: { workspaceId } }));
+    }
+    return 0;
+  }
+
+  /**
    * Retrieves all running terminal sessions.
    */
   static async listSessions(): Promise<TerminalSessionInfo[]> {

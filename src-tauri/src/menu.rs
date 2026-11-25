@@ -68,6 +68,10 @@ pub fn init_menus<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<AppMenus<R>> 
         .accelerator("CmdOrCtrl+W")
         .build(app)?;
 
+    let close_workspace = MenuItemBuilder::with_id("file.closeWorkspace", "Close Workspace")
+        .accelerator("CmdOrCtrl+K F")
+        .build(app)?;
+
     let close_window = MenuItemBuilder::with_id("file.closeWindow", "Close Window")
         .accelerator(if cfg!(target_os = "macos") {
             "Cmd+Shift+W"
@@ -89,6 +93,7 @@ pub fn init_menus<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<AppMenus<R>> 
         .item(&save_all)
         .separator()
         .item(&close_editor)
+        .item(&close_workspace)
         .item(&close_window)
         .build()?;
 
@@ -278,6 +283,7 @@ pub fn init_menus<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<AppMenus<R>> 
         .item(&save_all)
         .separator()
         .item(&close_editor)
+        .item(&close_workspace)
         .item(&close_window)
         .build()?;
 

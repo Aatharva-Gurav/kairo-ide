@@ -20,7 +20,9 @@ import {
   ArrowRight,
   ChevronsDownUp,
   Move,
+  Terminal,
 } from "lucide-react";
+import { useTerminalOptional } from "@/features/terminal";
 
 interface ContextMenuProps {
   state: ContextMenuState;
@@ -55,7 +57,8 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
     refresh,
   } = useFileExplorer();
 
-  const { activeWorkspace, closeWorkspace } = useWorkspace();
+  const { activeWorkspace, closeWorkspace, addFolderToWorkspace } = useWorkspace();
+  const terminal = useTerminalOptional();
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -418,6 +421,25 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
             <Folder className="size-3.5 text-muted-foreground" />
             <span>Reveal in File Manager</span>
           </button>
+          <button
+            onClick={() =>
+              handleAction(async () => {
+                if (!node?.path) return;
+                if (terminal) {
+                  try {
+                    terminal.setTerminalOpen(true);
+                    await terminal.createTerminal(undefined, node.path);
+                  } catch (err) {
+                    console.error("[ContextMenu] Failed to open folder in integrated terminal:", err);
+                  }
+                }
+              })
+            }
+            className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
+          >
+            <Terminal className="size-3.5 text-muted-foreground" />
+            <span>Open in Integrated Terminal</span>
+          </button>
           <div className="my-1 h-px bg-border/70 mx-1" />
           <button
             onClick={() => handleAction(() => copyAbsolutePath(node))}
@@ -482,6 +504,13 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
             <span>New Folder...</span>
           </button>
           <button
+            onClick={() => handleAction(() => addFolderToWorkspace())}
+            className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
+          >
+            <FolderPlus className="size-3.5 text-muted-foreground" />
+            <span>Add Folder to Workspace...</span>
+          </button>
+          <button
             disabled={!clipboard}
             onClick={() => handleAction(() => pasteNode(null))}
             className={`flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left transition-colors duration-100 ${
@@ -503,6 +532,25 @@ export function ContextMenu({ state, onClose }: ContextMenuProps) {
           >
             <Folder className="size-3.5 text-muted-foreground" />
             <span>Reveal in File Explorer</span>
+          </button>
+          <button
+            onClick={() =>
+              handleAction(async () => {
+                if (!activeWorkspace?.rootPath) return;
+                if (terminal) {
+                  try {
+                    terminal.setTerminalOpen(true);
+                    await terminal.createTerminal(undefined, activeWorkspace.rootPath);
+                  } catch (err) {
+                    console.error("[ContextMenu] Failed to open workspace in integrated terminal:", err);
+                  }
+                }
+              })
+            }
+            className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors duration-100"
+          >
+            <Terminal className="size-3.5 text-muted-foreground" />
+            <span>Open in Integrated Terminal</span>
           </button>
           <div className="my-1 h-px bg-border/70 mx-1" />
           <button

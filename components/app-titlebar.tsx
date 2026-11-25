@@ -461,7 +461,9 @@ export function AppTitleBar() {
         id: "file.closeWorkspace",
         label: "Close Workspace",
         disabled: !activeWorkspace,
-        action: () => closeWorkspace(),
+        action: async () => {
+          await closeWorkspace();
+        },
       },
       { id: "sep3", label: "", separator: true },
       {

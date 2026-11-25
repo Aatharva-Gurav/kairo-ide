@@ -28,6 +28,9 @@ import { AppTitleBar } from "@/components/app-titlebar";
 import { TerminalProvider, useTerminal, TerminalPanel } from "@/features/terminal";
 import { CommandProvider } from "@/features/commands/store";
 import { AuthGuard } from "@/components/auth-guard";
+import { FloatingCreationFeature } from "@/features/editor/components/floating-creation";
+import { WorkspaceClosingOverlay } from "@/features/workspace/components/workspace-closing-overlay";
+import { WorkspaceDirtyConfirmModal } from "@/features/workspace/components/workspace-dirty-confirm-modal";
 import { cn } from "@/lib/utils";
 
 function PageContent() {
@@ -84,6 +87,15 @@ function PageContent() {
       {focusedDocument && (
         <EditorStatusBar document={focusedDocument} cursorPosition={focusedCursorPos} />
       )}
+
+      {/* Floating File & Folder Creation Feature positioned stably at application viewport level */}
+      <FloatingCreationFeature hasStatusBar={Boolean(focusedDocument)} />
+
+      {/* Professional VS Code-Style Workspace Closing & Switching Animation Overlay */}
+      <WorkspaceClosingOverlay />
+
+      {/* Dirty Documents Confirmation Modal on Workspace Close or Switch */}
+      <WorkspaceDirtyConfirmModal />
     </SidebarInset>
   );
 }

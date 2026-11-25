@@ -62,6 +62,7 @@ export interface EditorContextValue {
   closeDocument: (filePath: string, force?: boolean) => Promise<boolean>;
   closeDocuments: (filePaths: string[], force?: boolean) => Promise<boolean>;
   closeAllDocuments: () => Promise<boolean>;
+  cleanupEditor: (force?: boolean) => Promise<void>;
   closeOtherDocuments: (filePath: string) => Promise<boolean>;
   setActiveDocumentId: (filePath: string) => void;
   updateContent: (filePath: string, newContent: string) => void;
@@ -707,6 +708,38 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     return true;
   }, [closeSplitView]);
 
+  const cleanupEditor = useCallback(
+    async (force = true): Promise<void> => {
+      const currentDocs = documentsRef.current || [];
+      const dirtyDocs = currentDocs.filter((d) => d.isDirty);
+      if (!force && dirtyDocs.length > 0) {
+        if (filesSettingsRef.current.autoSave !== "off" && saveDocumentRef.current) {
+          for (const doc of dirtyDocs) {
+            await saveDocumentRef.current(doc.id);
+          }
+        } else {
+          setDirtyCloseCandidate(dirtyDocs[0]);
+          return;
+        }
+      }
+
+      autoSaveTimersRef.current.forEach((t) => clearTimeout(t));
+      autoSaveTimersRef.current.clear();
+
+      ModelService.disposeAll();
+      documentsRef.current = [];
+      setDocuments([]);
+      setActiveDocumentIdState(null);
+      setSplitDocumentIdState(null);
+      closeSplitView();
+      setDirtyCloseCandidate(null);
+      setQuickOpenVisible(false);
+      setGoToLineVisible(false);
+      ideEvents.emit("editor:active-changed", { path: null });
+    },
+    [closeSplitView]
+  );
+
   const closeOtherDocuments = useCallback(
     async (filePath: string): Promise<boolean> => {
       const norm = normalizePath(filePath);
@@ -921,15 +954,23 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
         openFileDialog();
       }),
 
+      ideEvents.on("workspace:closing", () => {
+        cleanupEditor(true);
+      }),
+
       ideEvents.on("workspace:closed", () => {
-        closeAllDocuments();
+        cleanupEditor(true);
+      }),
+
+      ideEvents.on("workspace:switched", () => {
+        cleanupEditor(true);
       }),
     ];
 
     return () => {
       unsubs.forEach((u) => u());
     };
-  }, [openDocument, openFileDialog, closeDocument, closeDocuments, closeAllDocuments, openSplitView]);
+  }, [openDocument, openFileDialog, closeDocument, closeDocuments, closeAllDocuments, cleanupEditor, openSplitView]);
 
   // Auto-save on window blur
   useEffect(() => {
@@ -1056,6 +1097,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
       closeDocument,
       closeDocuments,
       closeAllDocuments,
+      cleanupEditor,
       closeOtherDocuments,
       setActiveDocumentId,
       updateContent,
@@ -1107,6 +1149,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
       closeDocument,
       closeDocuments,
       closeAllDocuments,
+      cleanupEditor,
       closeOtherDocuments,
       setActiveDocumentId,
       updateContent,

@@ -1,6 +1,12 @@
 import { invokeCommand, basename, normalizePath } from "@/lib/tauri-ipc";
 import { getSafeLocalStorage } from "@/lib/storage";
 import { Workspace, RecentWorkspace, PersistedWorkspaceExplorerState } from "./types";
+import { TerminalIpcService } from "@/features/terminal/services/terminal-ipc.service";
+import { TerminalInstanceRegistry } from "@/features/terminal/services/terminal-instance-registry";
+import { SettingsService } from "@/features/settings/services/settings.service";
+import { ModelService } from "@/features/editor/services/model.service";
+import { fsWatcher } from "@/lib/watcher";
+import { directoryCache } from "@/features/file-explorer/cache";
 
 export const STORAGE_KEYS = {
   RECENT_WORKSPACES: "kairo:recent_workspaces",
@@ -86,6 +92,50 @@ export class WorkspaceService {
       lastOpenedAt: Date.now(),
       openedAt: Date.now(),
       projectTypes,
+    };
+  }
+
+  /**
+   * Adds an additional folder root to an existing workspace (multi-root workspace).
+   */
+  static addRootFolder(workspace: Workspace, folderPath: string): Workspace {
+    if (!workspace || !folderPath) return workspace;
+    const norm = normalizePath(folderPath);
+    const existing = workspace.roots.find(
+      (r) => normalizePath(r.path).toLowerCase() === norm.toLowerCase()
+    );
+    if (existing) return workspace;
+
+    const name = basename(norm) || norm;
+    const rootId = `root_${Date.now().toString(36)}_${workspace.roots.length}`;
+    const newRoot = { id: rootId, name, path: norm };
+
+    return {
+      ...workspace,
+      roots: [...workspace.roots, newRoot],
+      lastOpenedAt: Date.now(),
+    };
+  }
+
+  /**
+   * Removes a folder root from a multi-root workspace (keeps at least 1 root).
+   */
+  static removeRootFolder(workspace: Workspace, rootIdOrPath: string): Workspace {
+    if (!workspace || !rootIdOrPath || workspace.roots.length <= 1) return workspace;
+    const norm = normalizePath(rootIdOrPath).toLowerCase();
+    const filtered = workspace.roots.filter(
+      (r) => r.id !== rootIdOrPath && normalizePath(r.path).toLowerCase() !== norm
+    );
+
+    if (filtered.length === 0) return workspace;
+
+    const newPrimary = filtered[0];
+    return {
+      ...workspace,
+      rootPath: newPrimary.path,
+      name: filtered.length === 1 ? newPrimary.name : workspace.name,
+      roots: filtered,
+      lastOpenedAt: Date.now(),
     };
   }
 
@@ -267,5 +317,69 @@ export class WorkspaceService {
       console.error("[WorkspaceService] Error loading workspace state:", e);
       return null;
     }
+  }
+
+  /**
+   * Performs an orderly, non-throwing cleanup of all resources associated with a workspace.
+   * Reports actual stages to the caller.
+   */
+  static async cleanupWorkspaceResources(
+    workspace: Workspace,
+    onStageChange?: (stage: string) => void
+  ): Promise<void> {
+    if (!workspace) return;
+
+    // Stage 1: Terminate all terminal sessions & child processes (unless persistAcrossWorkspaces is set)
+    const settings = SettingsService.getEffectiveSettings();
+    const shouldPersist = Boolean(settings.terminal?.persistAcrossWorkspaces);
+
+    if (!shouldPersist) {
+      onStageChange?.("Closing terminal sessions...");
+      try {
+        await TerminalIpcService.killWorkspaceSessions(workspace.id);
+      } catch (err) {
+        console.warn("[WorkspaceService] Error killing workspace terminal sessions:", err);
+      }
+      try {
+        TerminalInstanceRegistry.disposeAll();
+      } catch (err) {
+        console.warn("[WorkspaceService] Error disposing terminal instances:", err);
+      }
+    } else {
+      onStageChange?.("Preserving active terminal sessions...");
+    }
+
+    // Stage 2: Dispose Monaco editor resources
+    onStageChange?.("Disposing editor resources...");
+    try {
+      ModelService.disposeAll();
+    } catch (err) {
+      console.warn("[WorkspaceService] Error disposing Monaco models:", err);
+    }
+
+    // Stage 3: Stop filesystem watchers & clear caches
+    onStageChange?.("Stopping filesystem watchers...");
+    try {
+      if (workspace.roots && workspace.roots.length > 0) {
+        for (const root of workspace.roots) {
+          if (root.path) {
+            await fsWatcher.unwatch(root.path).catch(() => {});
+          }
+        }
+      } else if (workspace.rootPath) {
+        await fsWatcher.unwatch(workspace.rootPath).catch(() => {});
+      }
+    } catch (err) {
+      console.warn("[WorkspaceService] Error unwatching workspace path:", err);
+    }
+    try {
+      directoryCache.clear();
+    } catch (err) {
+      console.warn("[WorkspaceService] Error clearing directory cache:", err);
+    }
+
+    // Stage 4: Releasing workspace resources
+    onStageChange?.("Releasing workspace resources...");
+    await new Promise((resolve) => setTimeout(resolve, 80));
   }
 }

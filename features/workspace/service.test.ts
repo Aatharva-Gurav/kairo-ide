@@ -148,4 +148,43 @@ describe("WorkspaceService", () => {
     expect(WorkspaceService.removeRecentWorkspace("")).toEqual([]);
     expect(WorkspaceService.getWorkspaceState("")).toBeNull();
   });
+
+  it("performs comprehensive workspace cleanup reporting each stage without throwing", async () => {
+    const ws = WorkspaceService.createWorkspace("C:/Projects/TestWorkspace");
+    const stages: string[] = [];
+
+    await expect(
+      WorkspaceService.cleanupWorkspaceResources(ws, (stage) => {
+        stages.push(stage);
+      })
+    ).resolves.not.toThrow();
+
+    expect(stages).toContain("Closing terminal sessions...");
+    expect(stages).toContain("Disposing editor resources...");
+    expect(stages).toContain("Stopping filesystem watchers...");
+    expect(stages).toContain("Releasing workspace resources...");
+  });
+
+  it("adds and removes root folders in multi-root workspaces", () => {
+    const ws = WorkspaceService.createWorkspace("C:/Projects/PrimaryApp");
+    expect(ws.roots.length).toBe(1);
+
+    const withSecond = WorkspaceService.addRootFolder(ws, "C:/Projects/SharedLib");
+    expect(withSecond.roots.length).toBe(2);
+    expect(withSecond.roots[1].name).toBe("SharedLib");
+    expect(withSecond.roots[1].path).toBe("C:/Projects/SharedLib");
+
+    // Deduplication check
+    const duplicateAdd = WorkspaceService.addRootFolder(withSecond, "C:\\Projects\\SharedLib");
+    expect(duplicateAdd.roots.length).toBe(2);
+
+    // Remove root
+    const afterRemoval = WorkspaceService.removeRootFolder(withSecond, "C:/Projects/SharedLib");
+    expect(afterRemoval.roots.length).toBe(1);
+    expect(afterRemoval.roots[0].name).toBe("PrimaryApp");
+
+    // Guard: cannot remove last remaining root
+    const cannotRemoveLast = WorkspaceService.removeRootFolder(afterRemoval, afterRemoval.roots[0].id);
+    expect(cannotRemoveLast.roots.length).toBe(1);
+  });
 });

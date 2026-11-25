@@ -29,6 +29,7 @@ export interface TerminalSessionInfo {
   status: SessionStatus;
   createdAt: number;
   exitCode?: number;
+  workspaceId?: string;
 }
 
 export interface TerminalCreateConfig {
@@ -39,6 +40,7 @@ export interface TerminalCreateConfig {
   env?: Record<string, string>;
   cols?: number;
   rows?: number;
+  workspaceId?: string;
 }
 
 export interface TerminalExitPayload {
@@ -53,6 +55,7 @@ export interface TerminalSessionState {
   info: TerminalSessionInfo;
   isExited: boolean;
   exitCode?: number;
+  workspaceId?: string;
 }
 
 export type TerminalCursorStyle = "block" | "underline" | "bar";
@@ -85,6 +88,7 @@ export interface TerminalSettings {
   copyOnSelect: boolean;
   rightClickBehavior: TerminalRightClickBehavior;
   confirmKillProcess: boolean;
+  persistAcrossWorkspaces: boolean;
   customProfiles: ShellProfile[];
 }
 
@@ -103,5 +107,6 @@ export const DEFAULT_TERMINAL_SETTINGS: TerminalSettings = {
   copyOnSelect: false,
   rightClickBehavior: "contextMenu",
   confirmKillProcess: true,
+  persistAcrossWorkspaces: false,
   customProfiles: [],
 };

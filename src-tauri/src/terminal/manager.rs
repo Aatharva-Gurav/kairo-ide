@@ -134,6 +134,40 @@ impl TerminalManager {
         Ok(session.get_info())
     }
 
+    /// Kills all active terminal sessions associated with a specific workspace ID,
+    /// or all sessions if workspace_id is None.
+    pub fn kill_workspace_sessions(
+        &self,
+        workspace_id: Option<&str>,
+    ) -> Result<usize, TerminalError> {
+        let targets: Vec<Arc<TerminalSession>> = {
+            if let Ok(mut lock) = self.sessions.write() {
+                let to_remove: Vec<String> = lock
+                    .iter()
+                    .filter(|(_, session)| match workspace_id {
+                        Some(ws_id) => session.workspace_id.as_deref() == Some(ws_id),
+                        None => true,
+                    })
+                    .map(|(id, _)| id.clone())
+                    .collect();
+
+                to_remove
+                    .into_iter()
+                    .filter_map(|id| lock.remove(&id))
+                    .collect()
+            } else {
+                Vec::new()
+            }
+        };
+
+        let count = targets.len();
+        for session in targets {
+            let _ = session.kill();
+        }
+
+        Ok(count)
+    }
+
     /// Kills all active terminal sessions on application or window shutdown.
     pub fn kill_all(&self) -> Result<(), TerminalError> {
         let sessions: Vec<Arc<TerminalSession>> = {

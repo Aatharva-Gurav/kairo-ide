@@ -45,6 +45,7 @@ export interface TerminalContextValue {
   createTerminal: (shellId?: string, cwd?: string) => Promise<string>;
   killTerminal: (sessionId: string) => Promise<void>;
   killAllTerminals: () => Promise<void>;
+  killWorkspaceTerminals: (workspaceId?: string) => Promise<void>;
   setActiveTerminal: (sessionId: string) => void;
   setActiveSplitTerminal: (sessionId: string) => void;
   toggleTerminal: () => void;
@@ -137,6 +138,11 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
     return base;
   }, [ideSettings.terminal]);
 
+  const terminalSettingsRef = useRef(terminalSettings);
+  useEffect(() => {
+    terminalSettingsRef.current = terminalSettings;
+  }, [terminalSettings]);
+
   // Load host shell profiles on mount
   useEffect(() => {
     let isMounted = true;
@@ -190,6 +196,8 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
         activeWorkspaceRef.current?.rootPath ||
         undefined;
 
+      const currentWorkspaceId = activeWorkspaceRef.current?.id;
+
       try {
         const info = await TerminalIpcService.createSession({
           shellId: selectedShell?.isCustom ? undefined : selectedShell?.id,
@@ -197,6 +205,7 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
           args: selectedShell?.args,
           env: selectedShell?.env,
           cwd,
+          workspaceId: currentWorkspaceId,
         });
 
         // Run startup command if specified on profile
@@ -215,6 +224,7 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
           shellProfile: selectedShell || undefined,
           info,
           isExited: false,
+          workspaceId: currentWorkspaceId,
         };
 
         // Listen for process exit to update tab status indicator
@@ -312,6 +322,42 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
       setSplitDirection(null);
       setSplitSessionIds([]);
       setIsOpen(false);
+    }
+  }, []);
+
+  // Terminate terminal sessions associated with a specific workspace ID (or all workspace sessions)
+  const killWorkspaceTerminals = useCallback(async (targetWorkspaceId?: string): Promise<void> => {
+    try {
+      await TerminalIpcService.killWorkspaceSessions(targetWorkspaceId);
+    } catch (err) {
+      console.warn("[TerminalStore] Failed to terminate workspace terminal sessions:", err);
+    } finally {
+      setSessions((prev) => {
+        const remaining = targetWorkspaceId
+          ? prev.filter((s) => s.workspaceId && s.workspaceId !== targetWorkspaceId)
+          : [];
+
+        const targets = targetWorkspaceId
+          ? prev.filter((s) => !s.workspaceId || s.workspaceId === targetWorkspaceId)
+          : prev;
+
+        for (const s of targets) {
+          TerminalInstanceRegistry.dispose(s.sessionId);
+        }
+
+        if (remaining.length === 0) {
+          setActiveSessionId(null);
+          setActiveSplitSessionId(null);
+          setSplitDirection(null);
+          setSplitSessionIds([]);
+          setIsOpen(false);
+        } else {
+          setActiveSessionId(remaining[remaining.length - 1].sessionId);
+          setActiveSplitSessionId(remaining[remaining.length - 1].sessionId);
+        }
+
+        return remaining;
+      });
     }
   }, []);
 
@@ -502,10 +548,16 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
         clearTerminal(curId);
       }
     });
+    const unlistenClosingWorkspace = ideEvents.on("workspace:closing", (payload) => {
+      if (terminalSettingsRef.current.persistAcrossWorkspaces) return;
+      killWorkspaceTerminals(payload?.workspace?.id).catch(() => {});
+    });
     const unlistenCloseWorkspace = ideEvents.on("workspace:closed", () => {
+      if (terminalSettingsRef.current.persistAcrossWorkspaces) return;
       killAllTerminals().catch(() => {});
     });
     const unlistenSwitchWorkspace = ideEvents.on("workspace:switched", () => {
+      if (terminalSettingsRef.current.persistAcrossWorkspaces) return;
       killAllTerminals().catch(() => {});
     });
     const unlistenClose = ideEvents.on("terminal:close", () => {
@@ -554,6 +606,7 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
       unlistenNext();
       unlistenPrev();
       unlistenMaximize();
+      unlistenClosingWorkspace();
       unlistenCloseWorkspace();
       unlistenSwitchWorkspace();
     };
@@ -564,6 +617,7 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
     clearTerminal,
     killTerminal,
     killAllTerminals,
+    killWorkspaceTerminals,
     setActiveTerminal,
     toggleMaximize,
     sessions,
@@ -605,6 +659,7 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
     createTerminal,
     killTerminal,
     killAllTerminals,
+    killWorkspaceTerminals,
     setActiveTerminal,
     setActiveSplitTerminal,
     toggleTerminal,

@@ -33,9 +33,25 @@ export interface PersistedWorkspaceExplorerState {
   showHidden?: boolean;
 }
 
+export type WorkspaceLifecycleState =
+  | "CLOSED"
+  | "OPENING"
+  | "OPEN"
+  | "CLOSING"
+  | "SWITCHING";
+
+export interface WorkspaceClosingStage {
+  id: string;
+  label: string;
+  status: "pending" | "in_progress" | "done" | "error";
+}
+
 export interface WorkspaceState {
   activeWorkspace: Workspace | null;
   recentWorkspaces: RecentWorkspace[];
   isLoading: boolean;
   error: string | null;
+  lifecycleState: WorkspaceLifecycleState;
+  closingStage: string | null;
+  targetWorkspaceName?: string | null;
 }

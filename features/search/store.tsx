@@ -244,6 +244,31 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
     }
   }, [results, replaceQuery, performSearch]);
 
+  // Clean up search results and cancel active operations when workspace closes or switches
+  useEffect(() => {
+    const handleWorkspaceReset = () => {
+      searchIdRef.current++;
+      setResults([]);
+      setQuery("");
+      setReplaceQuery("");
+      setIsSearching(false);
+      setIsReplacing(false);
+      setError(null);
+      setExpandedFiles(new Set());
+      setIsReplaceConfirmOpen(false);
+    };
+
+    const unsubs = [
+      ideEvents.on("workspace:closing", handleWorkspaceReset),
+      ideEvents.on("workspace:closed", handleWorkspaceReset),
+      ideEvents.on("workspace:switched", handleWorkspaceReset),
+    ];
+
+    return () => {
+      unsubs.forEach((u) => u());
+    };
+  }, []);
+
   const value = useMemo(
     () => ({
       query,

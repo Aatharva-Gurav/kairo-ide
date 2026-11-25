@@ -30,6 +30,7 @@ pub struct TerminalSession {
     pub rows: AtomicU16,
     pub created_at: u64,
     pub is_shutting_down: Arc<AtomicBool>,
+    pub workspace_id: Option<String>,
 }
 
 impl TerminalSession {
@@ -107,6 +108,7 @@ impl TerminalSession {
             .unwrap_or_default()
             .as_millis() as u64;
 
+        let workspace_id = config.workspace_id.clone();
         let is_shutting_down = Arc::new(AtomicBool::new(false));
 
         let session = Arc::new(Self {
@@ -124,6 +126,7 @@ impl TerminalSession {
             rows: AtomicU16::new(initial_rows),
             created_at,
             is_shutting_down: Arc::clone(&is_shutting_down),
+            workspace_id,
         });
 
         // 6. Spawn continuous background reader thread
@@ -328,6 +331,10 @@ impl TerminalSession {
                     let _ = std::process::Command::new("kill")
                         .args(["-TERM", &format!("-{}", pid)])
                         .status();
+                    std::thread::sleep(std::time::Duration::from_millis(50));
+                    let _ = std::process::Command::new("kill")
+                        .args(["-KILL", &format!("-{}", pid)])
+                        .status();
                 }
             }
 
@@ -359,6 +366,7 @@ impl TerminalSession {
             status,
             created_at: self.created_at,
             exit_code,
+            workspace_id: self.workspace_id.clone(),
         }
     }
 }

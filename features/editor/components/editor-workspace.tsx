@@ -9,7 +9,6 @@ import { EditorEmptyState } from "./editor-empty-state";
 import { BinaryFileView } from "./binary-file-view";
 import { CloseConfirmModal } from "./close-confirm-modal";
 import { GoToLineModal } from "./go-to-line-modal";
-import { FloatingCreationFeature } from "./floating-creation";
 import { installMonacoWorkerStub } from "@/lib/monaco-worker-stub";
 
 // Early client-side registration of the shared worker stub before the editor
@@ -203,9 +202,6 @@ export function EditorWorkspace() {
       ) : (
         <EditorEmptyState />
       )}
-
-      {/* Floating File & Folder Creation Feature */}
-      <FloatingCreationFeature hasStatusBar={false} />
 
       {/* Global Modals */}
       <CloseConfirmModal />

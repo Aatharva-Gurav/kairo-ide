@@ -36,6 +36,7 @@ export interface FileRenamedPayload {
 
 export type IDEEventMap = {
   "workspace:opened": WorkspaceEventPayload;
+  "workspace:closing": { workspace: WorkspaceEventPayload; targetWorkspace?: WorkspaceEventPayload };
   "workspace:closed": void;
   "workspace:changed": WorkspaceEventPayload;
   "workspace:switched": { from: WorkspaceEventPayload | null; to: WorkspaceEventPayload };

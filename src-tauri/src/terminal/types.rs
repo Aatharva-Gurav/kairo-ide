@@ -35,6 +35,8 @@ pub struct TerminalSessionInfo {
     pub status: SessionStatus,
     pub created_at: u64,
     pub exit_code: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub workspace_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -47,6 +49,7 @@ pub struct TerminalCreateConfig {
     pub env: Option<HashMap<String, String>>,
     pub cols: Option<u16>,
     pub rows: Option<u16>,
+    pub workspace_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

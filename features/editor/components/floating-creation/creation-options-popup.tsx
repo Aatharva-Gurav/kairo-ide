@@ -65,14 +65,14 @@ export function CreationOptionsPopup({
   return (
     <div
       ref={containerRef}
-      className="absolute bottom-12 right-0 w-10 z-40 flex flex-col items-center gap-2 select-none"
+      className="absolute top-0 right-[calc(100%+8px)] h-10 z-40 flex flex-row items-center gap-2 select-none"
     >
       <TooltipProvider delay={150}>
-        {/* Circular Option 2: New Folder (Same size as main button, no text) */}
+        {/* Circular Option 2: New Folder */}
         <div
           className={cn(
             "flex items-center justify-center cursor-pointer",
-            "animate-in fade-in-0 zoom-in-75 slide-in-from-bottom-2 duration-180 ease-[cubic-bezier(0.16,1,0.3,1)] fill-mode-both"
+            "animate-in fade-in-0 zoom-in-75 slide-in-from-right-4 duration-180 ease-[cubic-bezier(0.16,1,0.3,1)] fill-mode-both"
           )}
           onClick={() => onSelectType("folder")}
         >
@@ -97,17 +97,17 @@ export function CreationOptionsPopup({
                 </button>
               }
             />
-            <TooltipContent side="left" sideOffset={10}>
+            <TooltipContent side="top" sideOffset={10}>
               New Folder
             </TooltipContent>
           </Tooltip>
         </div>
 
-        {/* Circular Option 1: New File (Same size as main button, no text) */}
+        {/* Circular Option 1: New File */}
         <div
           className={cn(
             "flex items-center justify-center cursor-pointer",
-            "animate-in fade-in-0 zoom-in-75 slide-in-from-bottom-1 duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] fill-mode-both"
+            "animate-in fade-in-0 zoom-in-75 slide-in-from-right-2 duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] fill-mode-both"
           )}
           onClick={() => onSelectType("file")}
         >
@@ -132,7 +132,7 @@ export function CreationOptionsPopup({
                 </button>
               }
             />
-            <TooltipContent side="left" sideOffset={10}>
+            <TooltipContent side="top" sideOffset={10}>
               New File
             </TooltipContent>
           </Tooltip>

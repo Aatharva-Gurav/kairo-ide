@@ -437,6 +437,32 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
     });
   }, [activeWorkspacePath, expandedPaths, sortConfig.mode, showHidden]);
 
+  // Clean up explorer state and clear directory cache when workspace closes
+  useEffect(() => {
+    const handleWorkspaceReset = () => {
+      directoryCache.clear();
+      setNodes([]);
+      setSelectedNode(null);
+      setSelectedPaths(new Set());
+      setExpandedPaths(new Set());
+      setInlineAction(null);
+      setBulkDeleteCandidate(null);
+      setMoveCandidates(null);
+      setBatchRenameCandidates(null);
+      setFilterQuery("");
+      setError(null);
+    };
+
+    const unsubs = [
+      ideEvents.on("workspace:closing", handleWorkspaceReset),
+      ideEvents.on("workspace:closed", handleWorkspaceReset),
+    ];
+
+    return () => {
+      unsubs.forEach((u) => u());
+    };
+  }, []);
+
   // External filesystem watcher subscription with debouncing per directory
   useEffect(() => {
     const debounceTimers = new Map<string, NodeJS.Timeout>();

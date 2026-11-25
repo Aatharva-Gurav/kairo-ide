@@ -58,4 +58,8 @@ describe("TerminalIpcService", () => {
   it("handles killAll cleanly without errors in browser environment", async () => {
     await expect(TerminalIpcService.killAll()).resolves.not.toThrow();
   });
+
+  it("handles killWorkspaceSessions cleanly without errors in browser environment", async () => {
+    await expect(TerminalIpcService.killWorkspaceSessions("ws_test")).resolves.not.toThrow();
+  });
 });

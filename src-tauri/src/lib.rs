@@ -81,6 +81,7 @@ pub fn run() {
             terminal_resize,
             terminal_kill,
             terminal_kill_all,
+            terminal_kill_workspace,
             terminal_list_sessions,
             terminal_get_session,
         ])

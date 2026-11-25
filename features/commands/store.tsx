@@ -46,17 +46,17 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
   const [isQuickOpenOpen, setQuickOpenOpen] = useState(false);
 
   // Subsystem hooks
-  const { activeWorkspace, openFolder, closeWorkspace, openWorkspacePath } = useWorkspace();
+  const { activeWorkspace, openFolder, closeWorkspace, openWorkspacePath, addFolderToWorkspace, removeFolderFromWorkspace } = useWorkspace();
   const fileExplorer = useFileExplorer();
   const editor = useEditor();
   const { openSettings, updateSetting, settings } = useSettings();
   const { toggleSidebar } = useSidebar();
 
   // Keep references to prevent stale closures in registered commands
-  const workspaceRef = useRef({ activeWorkspace, openFolder, closeWorkspace, openWorkspacePath });
+  const workspaceRef = useRef({ activeWorkspace, openFolder, closeWorkspace, openWorkspacePath, addFolderToWorkspace, removeFolderFromWorkspace });
   useEffect(() => {
-    workspaceRef.current = { activeWorkspace, openFolder, closeWorkspace, openWorkspacePath };
-  }, [activeWorkspace, openFolder, closeWorkspace, openWorkspacePath]);
+    workspaceRef.current = { activeWorkspace, openFolder, closeWorkspace, openWorkspacePath, addFolderToWorkspace, removeFolderFromWorkspace };
+  }, [activeWorkspace, openFolder, closeWorkspace, openWorkspacePath, addFolderToWorkspace, removeFolderFromWorkspace]);
 
   const explorerRef = useRef(fileExplorer);
   useEffect(() => {
@@ -138,8 +138,20 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
         category: "workbench",
         keywords: ["close", "exit", "workspace"],
         enabled: () => Boolean(workspaceRef.current.activeWorkspace),
-        execute: () => {
-          workspaceRef.current.closeWorkspace();
+        execute: async () => {
+          await workspaceRef.current.closeWorkspace();
+        },
+      }),
+
+      CommandRegistry.register({
+        id: "workbench.action.addRootFolder",
+        title: "Workspaces: Add Folder to Workspace...",
+        description: "Add an additional root folder to the active workspace",
+        category: "workbench",
+        keywords: ["add", "folder", "root", "workspace", "multi-root"],
+        enabled: () => Boolean(workspaceRef.current.activeWorkspace),
+        execute: async () => {
+          await workspaceRef.current.addFolderToWorkspace();
         },
       }),
 
@@ -727,6 +739,10 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
             if (editorRef.current.activeDocumentId) {
               await editorRef.current.closeDocument(editorRef.current.activeDocumentId);
             }
+            break;
+          }
+          case "file.closeWorkspace": {
+            await workspaceRef.current.closeWorkspace();
             break;
           }
           case "edit.undo": {

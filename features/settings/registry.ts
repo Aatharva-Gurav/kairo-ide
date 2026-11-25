@@ -792,6 +792,16 @@ export const SETTINGS_REGISTRY: SettingDefinition<any>[] = [
     validate: (val) => typeof val === "boolean",
   },
   {
+    key: "terminal.persistAcrossWorkspaces",
+    category: "terminal",
+    label: "Persist Terminals Across Workspaces",
+    description: "Keep terminal sessions and their running background processes alive when switching or closing workspaces.",
+    type: "boolean",
+    defaultValue: false,
+    scope: "both",
+    validate: (val) => typeof val === "boolean",
+  },
+  {
     key: "terminal.defaultCwd",
     category: "terminal",
     label: "Default Working Directory",
