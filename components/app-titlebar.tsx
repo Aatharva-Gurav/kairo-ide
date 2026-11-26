@@ -15,6 +15,7 @@ import { KairoBrandIcon } from "@/components/kairo-brand-icon";
 import { Button } from "@/components/ui/button";
 import { isTauriEnvironment, invokeCommand, basename, writeFileContent } from "@/lib/tauri-ipc";
 import { ideEvents } from "@/lib/events";
+import { getAppVersion, getMonacoVersion } from "@/lib/app-metadata";
 import { isDarkTheme } from "@/features/theme";
 import { useTerminalOptional } from "@/features/terminal";
 import {
@@ -116,6 +117,8 @@ export function AppTitleBar() {
   const {
     activeDocument,
     activeDocumentId,
+    focusedDocument,
+    focusedPane,
     documents,
     saveDocument,
     saveAllDocuments,
@@ -354,13 +357,12 @@ export function AppTitleBar() {
     }
   }, [monacoEditorRef]);
 
-  // Check for updates
+  // Check for updates (no update server or updater plugin is configured in this build)
   const handleCheckUpdates = useCallback(() => {
-    setUpdateStatus("checking");
-    setTimeout(() => {
-      setUpdateStatus("latest");
-    }, 900);
+    setUpdateStatus("unavailable");
   }, []);
+
+  const targetDocument = focusedDocument || activeDocument;
 
   // Menu structure definition
   const menuDefinitions: Record<string, MenuItemDef[]> = {
@@ -478,14 +480,14 @@ export function AppTitleBar() {
         id: "edit.undo",
         label: "Undo",
         shortcut: "Ctrl+Z",
-        disabled: !activeDocument,
+        disabled: !targetDocument,
         action: () => triggerEditorAction("undo"),
       },
       {
         id: "edit.redo",
         label: "Redo",
         shortcut: "Ctrl+Y",
-        disabled: !activeDocument,
+        disabled: !targetDocument,
         action: () => triggerEditorAction("redo"),
       },
       { id: "sep-edit1", label: "", separator: true },
@@ -493,21 +495,21 @@ export function AppTitleBar() {
         id: "edit.cut",
         label: "Cut",
         shortcut: "Ctrl+X",
-        disabled: !activeDocument,
+        disabled: !targetDocument,
         action: () => triggerEditorAction("editor.action.clipboardCutAction"),
       },
       {
         id: "edit.copy",
         label: "Copy",
         shortcut: "Ctrl+C",
-        disabled: !activeDocument,
+        disabled: !targetDocument,
         action: () => triggerEditorAction("editor.action.clipboardCopyAction"),
       },
       {
         id: "edit.paste",
         label: "Paste",
         shortcut: "Ctrl+V",
-        disabled: !activeDocument,
+        disabled: !targetDocument,
         action: handlePaste,
       },
       { id: "sep-edit2", label: "", separator: true },
@@ -515,22 +517,31 @@ export function AppTitleBar() {
         id: "edit.find",
         label: "Find",
         shortcut: "Ctrl+F",
-        disabled: !activeDocument,
-        action: () => ideEvents.emit("editor:find", { path: activeDocument?.path, mode: "find" }),
+        disabled: !targetDocument,
+        action: () =>
+          ideEvents.emit("editor:find", {
+            path: targetDocument?.path,
+            paneId: focusedPane,
+            mode: "find",
+          }),
       },
       {
         id: "edit.replace",
         label: "Replace",
         shortcut: "Ctrl+H",
-        disabled: !activeDocument,
-        action: () => ideEvents.emit("editor:replace", { path: activeDocument?.path }),
+        disabled: !targetDocument,
+        action: () =>
+          ideEvents.emit("editor:replace", {
+            path: targetDocument?.path,
+            paneId: focusedPane,
+          }),
       },
       { id: "sep-edit3", label: "", separator: true },
       {
         id: "edit.formatDocument",
         label: "Format Document",
         shortcut: "Shift+Alt+F",
-        disabled: !activeDocument,
+        disabled: !targetDocument,
         action: async () => {
           await formatActiveDocument();
         },
@@ -541,21 +552,21 @@ export function AppTitleBar() {
         id: "selection.selectAll",
         label: "Select All",
         shortcut: "Ctrl+A",
-        disabled: !activeDocument,
+        disabled: !targetDocument,
         action: () => triggerEditorAction("editor.action.selectAll"),
       },
       {
         id: "selection.expand",
         label: "Expand Selection",
         shortcut: "Shift+Alt+Right",
-        disabled: !activeDocument,
+        disabled: !targetDocument,
         action: () => triggerEditorAction("editor.action.smartSelect.expand"),
       },
       {
         id: "selection.shrink",
         label: "Shrink Selection",
         shortcut: "Shift+Alt+Left",
-        disabled: !activeDocument,
+        disabled: !targetDocument,
         action: () => triggerEditorAction("editor.action.smartSelect.shrink"),
       },
       { id: "sep-sel", label: "", separator: true },
@@ -563,35 +574,35 @@ export function AppTitleBar() {
         id: "selection.copyLineUp",
         label: "Copy Line Up",
         shortcut: "Shift+Alt+Up",
-        disabled: !activeDocument,
+        disabled: !targetDocument,
         action: () => triggerEditorAction("editor.action.copyLinesUpAction"),
       },
       {
         id: "selection.copyLineDown",
         label: "Copy Line Down",
         shortcut: "Shift+Alt+Down",
-        disabled: !activeDocument,
+        disabled: !targetDocument,
         action: () => triggerEditorAction("editor.action.copyLinesDownAction"),
       },
       {
         id: "selection.moveLineUp",
         label: "Move Line Up",
         shortcut: "Alt+Up",
-        disabled: !activeDocument,
+        disabled: !targetDocument,
         action: () => triggerEditorAction("editor.action.moveLinesUpAction"),
       },
       {
         id: "selection.moveLineDown",
         label: "Move Line Down",
         shortcut: "Alt+Down",
-        disabled: !activeDocument,
+        disabled: !targetDocument,
         action: () => triggerEditorAction("editor.action.moveLinesDownAction"),
       },
       {
         id: "selection.duplicateSelection",
         label: "Duplicate Selection",
         shortcut: "Ctrl+Shift+D",
-        disabled: !activeDocument,
+        disabled: !targetDocument,
         action: () => triggerEditorAction("editor.action.duplicateSelection"),
       },
     ],
@@ -1202,7 +1213,9 @@ export function AppTitleBar() {
             </div>
 
             <h2 className="text-base font-bold tracking-tight text-foreground">Kairo IDE</h2>
-            <p className="text-xs text-primary font-mono font-medium mt-0.5">Version 0.1.0 (Release Build)</p>
+            <p className="text-xs text-primary font-mono font-medium mt-0.5">
+              Version {getAppVersion()} (Release Build)
+            </p>
 
             <p className="text-xs text-muted-foreground mt-3 leading-relaxed max-w-sm">
               A high-performance, desktop code editor built with Next.js, React 19, Monaco Editor, and Tauri 2.
@@ -1219,7 +1232,7 @@ export function AppTitleBar() {
               </div>
               <div className="flex justify-between">
                 <span>Editor Engine:</span>
-                <span className="text-foreground">Monaco Editor 0.56</span>
+                <span className="text-foreground">Monaco Editor {getMonacoVersion()}</span>
               </div>
               <div className="flex justify-between">
                 <span>Active Theme:</span>
@@ -1323,30 +1336,20 @@ export function AppTitleBar() {
             onClick={(e) => e.stopPropagation()}
             className="w-full max-w-sm rounded-xl border border-border/80 bg-card p-5 shadow-2xl text-card-foreground animate-in zoom-in-95 duration-150 flex flex-col items-center text-center"
           >
-            {updateStatus === "checking" ? (
-              <>
-                <div className="size-8 rounded-full border-2 border-primary border-t-transparent animate-spin mb-3" />
-                <h3 className="text-sm font-semibold text-foreground">Checking for Updates...</h3>
-                <p className="text-xs text-muted-foreground mt-1">Connecting to release repository</p>
-              </>
-            ) : (
-              <>
-                <div className="size-9 rounded-full bg-success/15 text-success flex items-center justify-center mb-3">
-                  <CheckCircle2 className="size-5" />
-                </div>
-                <h3 className="text-sm font-semibold text-foreground">You Are Up to Date</h3>
-                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                  Kairo IDE v0.1.0 is currently the latest available build. No updates required.
-                </p>
-                <Button
-                  size="sm"
-                  onClick={() => setUpdateStatus(null)}
-                  className="mt-4 cursor-pointer"
-                >
-                  Done
-                </Button>
-              </>
-            )}
+            <div className="size-9 rounded-full bg-muted text-muted-foreground flex items-center justify-center mb-3">
+              <CheckCircle2 className="size-5" />
+            </div>
+            <h3 className="text-sm font-semibold text-foreground">Automatic Updates Unavailable</h3>
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+              No update service is configured in this build of Kairo IDE v{getAppVersion()}. Check for new releases manually.
+            </p>
+            <Button
+              size="sm"
+              onClick={() => setUpdateStatus(null)}
+              className="mt-4 cursor-pointer"
+            >
+              Close
+            </Button>
           </div>
         </div>
       )}

@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { BufferSyncService } from "./buffer-sync.service";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { BufferSyncService, EditorDocumentSnapshot } from "./buffer-sync.service";
 import { ModelService } from "./model.service";
 import { EditorService } from "./editor.service";
+import { ConflictDetails } from "@/lib/diff/types";
 import * as tauriIpc from "@/lib/tauri-ipc";
 
 describe("BufferSyncService & 10-Step Protocol", () => {
@@ -9,6 +10,7 @@ describe("BufferSyncService & 10-Step Protocol", () => {
   const virtualDisk = new Map<string, string>();
 
   beforeEach(() => {
+    BufferSyncService.resetStateForTests();
     ModelService.disposeAll();
     virtualDisk.clear();
 
@@ -289,5 +291,194 @@ describe("BufferSyncService & 10-Step Protocol", () => {
     expect(applyRes.error).toContain("Disk full error");
     // Model rolled back to initial content
     expect(model.getValue()).toBe("initial content");
+  });
+
+  describe("Stage 2C Synchronization, IPC & Lifecycle Repairs", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+      BufferSyncService.resetStateForTests();
+    });
+
+    it("uses valid native IPC command names fs_delete and fs_rename", async () => {
+      const invokeSpy = vi.spyOn(tauriIpc, "invokeCommand").mockResolvedValue(undefined);
+      const monaco = createMockMonaco();
+      const fileA = "C:/project/a.ts";
+      const fileB = "C:/project/b.ts";
+
+      ModelService.createOrReuseModel(monaco, fileA, "const a = 1;", "typescript");
+      const renameRes = await BufferSyncService.renameFile(fileA, fileB, monaco);
+      expect(renameRes.success).toBe(true);
+      expect(invokeSpy).toHaveBeenCalledWith("fs_rename", {
+        oldPath: tauriIpc.normalizePath(fileA),
+        newPath: tauriIpc.normalizePath(fileB),
+      });
+
+      const deleteRes = await BufferSyncService.deleteFile(fileB);
+      expect(deleteRes.success).toBe(true);
+      expect(invokeSpy).toHaveBeenCalledWith("fs_delete", {
+        path: tauriIpc.normalizePath(fileB),
+        isDir: false,
+      });
+    });
+
+    it("preserves open Monaco models when rename or delete IPC fails", async () => {
+      const monaco = createMockMonaco();
+      const oldPath = "C:/project/locked.ts";
+      ModelService.createOrReuseModel(monaco, oldPath, "important dirty code", "typescript");
+
+      vi.spyOn(tauriIpc, "invokeCommand").mockRejectedValueOnce(new Error("Permission denied"));
+      const renameFail = await BufferSyncService.renameFile(oldPath, "C:/project/moved.ts", monaco);
+      expect(renameFail.success).toBe(false);
+      expect(BufferSyncService.isDocumentOpen(oldPath)).toBe(true);
+      expect(BufferSyncService.isDocumentOpen("C:/project/moved.ts")).toBe(false);
+
+      vi.spyOn(tauriIpc, "invokeCommand").mockRejectedValueOnce(new Error("File locked"));
+      const deleteFail = await BufferSyncService.deleteFile(oldPath);
+      expect(deleteFail.success).toBe(false);
+      expect(BufferSyncService.isDocumentOpen(oldPath)).toBe(true);
+    });
+
+    it("integrates with live EditorContext documents bridge for unmounted tabs and dirty state", async () => {
+      const filePath = "C:/project/tab-only.ts";
+      const norm = tauriIpc.normalizePath(filePath);
+      virtualDisk.set(norm, "saved line");
+
+      const docs: EditorDocumentSnapshot[] = [
+        {
+          id: norm,
+          path: norm,
+          content: "unsaved tab edit",
+          savedContent: "saved line",
+          isDirty: true,
+        },
+      ];
+      const conflicts: ConflictDetails[] = [];
+
+      const disconnect = BufferSyncService.connectEditorBridge({
+        getDocuments: () => docs,
+        applySyncToDocument: (p, newContent, options) => {
+          const target = docs.find((d) => d.path === tauriIpc.normalizePath(p));
+          if (target) {
+            target.content = newContent;
+            if (options.saved) target.savedContent = newContent;
+            target.isDirty = options.saved ? false : newContent !== target.savedContent;
+          }
+        },
+        reportConflict: (c) => conflicts.push(c),
+        clearConflict: vi.fn(),
+      });
+
+      expect(BufferSyncService.isDocumentOpen(filePath)).toBe(true);
+      expect(await BufferSyncService.isDocumentDirty(filePath)).toBe(true);
+
+      // Prepare change detects unsaved buffer conflict on unmounted tab
+      const prep = await BufferSyncService.prepareChange({
+        path: filePath,
+        proposedContent: "incoming edit",
+        baseContent: "saved line",
+      });
+      expect(prep.allowed).toBe(false);
+      expect(prep.conflict?.type).toBe("dirty_buffer");
+      expect(conflicts).toHaveLength(1);
+
+      // Applying change with autoSave=false keeps isDirty=true in EditorContext.documents
+      const cleanPath = "C:/project/clean-tab.ts";
+      const cleanNorm = tauriIpc.normalizePath(cleanPath);
+      virtualDisk.set(cleanNorm, "initial");
+      docs.push({
+        id: cleanNorm,
+        path: cleanNorm,
+        content: "initial",
+        savedContent: "initial",
+        isDirty: false,
+      });
+
+      const applyNoSave = await BufferSyncService.applyChange({
+        path: cleanPath,
+        newContent: "buffered edit",
+        autoSave: false,
+      });
+      expect(applyNoSave.success).toBe(true);
+      const updatedDoc = docs.find((d) => d.path === cleanNorm)!;
+      expect(updatedDoc.content).toBe("buffered edit");
+      expect(updatedDoc.isDirty).toBe(true);
+      expect(virtualDisk.get(cleanNorm)).toBe("initial");
+
+      disconnect();
+    });
+
+    it("detects missing file conflicts (deleted_target) and rejects out-of-workspace paths", async () => {
+      BufferSyncService.setWorkspaceScope("C:/workspace/alpha");
+      virtualDisk.set("C:/workspace/alpha/src/index.ts", "export const ok = true;");
+      virtualDisk.set("C:/workspace/beta/secret.ts", "secret");
+
+      // Outside workspace & path traversal rejected
+      const outPrep = await BufferSyncService.prepareChange({
+        path: "C:/workspace/beta/secret.ts",
+        proposedContent: "hacked",
+      });
+      expect(outPrep.allowed).toBe(false);
+      expect(outPrep.error).toContain("outside the authorized workspace");
+
+      const travRes = await BufferSyncService.applyChange({
+        path: "C:/workspace/alpha/../beta/secret.ts",
+        newContent: "hacked",
+      });
+      expect(travRes.success).toBe(false);
+      expect(travRes.error).toContain("traversal");
+
+      // Missing target on disk produces deleted_target conflict instead of silent empty content
+      const missingPrep = await BufferSyncService.prepareChange({
+        path: "C:/workspace/alpha/src/missing.ts",
+        proposedContent: "hello",
+        baseContent: "old content",
+      });
+      expect(missingPrep.allowed).toBe(false);
+      expect(missingPrep.conflict?.type).toBe("deleted_target");
+    });
+
+    it("aborts stale async sync operations when workspace switches mid-flight", async () => {
+      BufferSyncService.setWorkspaceScope("C:/workspace/one");
+      const target = "C:/workspace/one/app.ts";
+
+      vi.spyOn(tauriIpc, "readFileContent").mockImplementationOnce(async () => {
+        // Simulate workspace switch completing before disk read resolves
+        BufferSyncService.setWorkspaceScope("C:/workspace/two");
+        return {
+          content: "const v = 1;",
+          isBinary: false,
+          size: 12,
+          readonly: false,
+        };
+      });
+
+      const prep = await BufferSyncService.prepareChange({
+        path: target,
+        proposedContent: "const v = 2;",
+        baseContent: "const v = 1;",
+      });
+      expect(prep.allowed).toBe(false);
+      expect(prep.error).toContain("Workspace changed");
+    });
+
+    it("preserves CRLF line endings when applying edits", async () => {
+      const filePath = "C:/project/crlf.ts";
+      const norm = tauriIpc.normalizePath(filePath);
+      virtualDisk.set(norm, "line1\r\nline2\r\n");
+
+      const monaco = createMockMonaco();
+      const model = ModelService.createOrReuseModel(monaco, filePath, "line1\r\nline2\r\n", "typescript");
+
+      const res = await BufferSyncService.applyChange({
+        path: filePath,
+        newContent: "line1\nupdated\n",
+        autoSave: true,
+        preserveLineEndings: true,
+      });
+
+      expect(res.success).toBe(true);
+      expect(model.getValue()).toBe("line1\r\nupdated\r\n");
+      expect(virtualDisk.get(norm)).toBe("line1\r\nupdated\r\n");
+    });
   });
 });

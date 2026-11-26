@@ -72,6 +72,11 @@ export type FileSystemErrorCode =
   | "NOT_DIRECTORY"
   | "LOCKED"
   | "DESCENDANT_OPERATION"
+  | "SENSITIVE_PATH"
+  | "OUTSIDE_WORKSPACE"
+  | "SYMLINK_BLOCKED"
+  | "NO_ACTIVE_WORKSPACE"
+  | "WORKSPACE_CHANGED"
   | "UNKNOWN";
 
 export class FileSystemError extends Error {
@@ -89,13 +94,18 @@ export function parseFsErrorCode(rawError: unknown): FileSystemErrorCode {
   const message = typeof rawError === "string" ? rawError : (rawError as Error)?.message || "";
   const lower = message.toLowerCase();
 
+  if (lower.includes("no active workspace")) return "NO_ACTIVE_WORKSPACE";
+  if (lower.includes("active workspace changed") || lower.includes("operation cancelled")) return "WORKSPACE_CHANGED";
+  if (lower.includes("protected sensitive file") || lower.includes("credential path")) return "SENSITIVE_PATH";
+  if (lower.includes("outside the authorized workspace")) return "OUTSIDE_WORKSPACE";
+  if (lower.includes("symlinks and junctions")) return "SYMLINK_BLOCKED";
   if (lower.includes("already exists")) return "ALREADY_EXISTS";
-  if (lower.includes("permission denied") || lower.includes("access is denied")) return "PERMISSION_DENIED";
+  if (lower.includes("permission denied") || lower.includes("access is denied") || lower.includes("access denied")) return "PERMISSION_DENIED";
   if (lower.includes("cannot copy a directory into itself") || lower.includes("cannot move a directory into itself")) return "DESCENDANT_OPERATION";
   if (lower.includes("not found") || lower.includes("does not exist")) return "NOT_FOUND";
   if (lower.includes("not a directory")) return "NOT_DIRECTORY";
   if (lower.includes("locked") || lower.includes("being used by another process")) return "LOCKED";
-  if (lower.includes("invalid")) return "INVALID_PATH";
+  if (lower.includes("invalid") || lower.includes("directory traversal")) return "INVALID_PATH";
   return "UNKNOWN";
 }
 
@@ -106,6 +116,27 @@ export function formatFsError(rawError: unknown): string {
   const message = typeof rawError === "string" ? rawError : (rawError as Error)?.message || "Unknown error";
   const lower = message.toLowerCase();
 
+  if (lower.includes("no active workspace")) {
+    return "No active workspace is open. Open a workspace folder first.";
+  }
+  if (lower.includes("active workspace changed") || lower.includes("operation cancelled")) {
+    return "Operation cancelled because the active workspace changed or was closed.";
+  }
+  if (lower.includes("protected sensitive file") || lower.includes("credential path")) {
+    return "Access denied: this file is protected by Kairo security policy.";
+  }
+  if (lower.includes("outside the authorized workspace")) {
+    return "Access denied: the requested path is outside the active workspace.";
+  }
+  if (lower.includes("symlinks and junctions")) {
+    return "Access denied: symbolic links and junctions are not permitted.";
+  }
+  if (lower.includes("directory traversal")) {
+    return "Invalid path: directory traversal is not permitted.";
+  }
+  if (lower.includes("cannot rename, move, or delete the active workspace root")) {
+    return "Operation denied: cannot rename, move, or delete the active workspace root.";
+  }
   if (lower.includes("already exists")) {
     return "An item with this name already exists in the selected location.";
   }
@@ -114,6 +145,12 @@ export function formatFsError(rawError: unknown): string {
   }
   if (lower.includes("cannot copy a directory into itself") || lower.includes("cannot move a directory into itself")) {
     return "Cannot copy or move a directory into itself or one of its subdirectories.";
+  }
+  if (
+    lower.includes("__tauri_internals__") ||
+    (lower.includes("command") && lower.includes("not found"))
+  ) {
+    return `Native desktop IPC error: ${message}`;
   }
   if (
     lower.includes("path does not exist") ||
@@ -650,6 +687,21 @@ async function handleBrowserVfsCommand<T>(command: string, args?: Record<string,
       } as T;
     }
 
+    case "workspace_open":
+    case "workspace_add_root":
+    case "workspace_remove_root": {
+      const root = normalizePath(String(args?.rootPath || args?.root_path || ""));
+      return {
+        rootPath: root,
+        roots: root ? [root] : [],
+        workspaceId: args?.workspaceId ? String(args.workspaceId) : undefined,
+        generation: 1,
+      } as T;
+    }
+
+    case "workspace_close":
+      return undefined as T;
+
     case "workspace_validate_path":
       return true as T;
 
@@ -679,20 +731,14 @@ async function handleBrowserVfsCommand<T>(command: string, args?: Record<string,
 }
 
 /**
- * Invoke a Tauri backend command safely with automatic web/browser virtual FS fallback.
+ * Invoke a Tauri backend command safely in native mode, or route to the
+ * virtual filesystem fallback strictly when running in standalone browser mode.
  */
 export async function invokeCommand<T>(command: string, args?: Record<string, unknown>): Promise<T> {
   if (isTauriEnvironment()) {
     try {
       return await invoke<T>(command, args);
     } catch (error) {
-      const errStr = String(error || "");
-      if (
-        errStr.includes("__TAURI_INTERNALS__") ||
-        (errStr.toLowerCase().includes("command") && errStr.toLowerCase().includes("not found"))
-      ) {
-        return handleBrowserVfsCommand<T>(command, args);
-      }
       throw new Error(formatFsError(error));
     }
   }

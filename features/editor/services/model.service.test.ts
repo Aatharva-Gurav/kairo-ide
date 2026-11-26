@@ -195,5 +195,19 @@ describe("ModelService", () => {
     expect(openPaths.some((p) => p.includes("a.ts"))).toBe(true);
     expect(openPaths.some((p) => p.includes("b.ts"))).toBe(true);
   });
+
+  it("ignores and prunes disposed models on getModel, updateContent, and applyEdit", () => {
+    const monaco = createMockMonaco();
+    const filePath = "C:/test/disposed.ts";
+    const model = ModelService.createOrReuseModel(monaco, filePath, "const d = 1;", "typescript");
+
+    model.dispose();
+
+    expect(ModelService.hasModel(filePath)).toBe(false);
+    expect(ModelService.getModel(filePath)).toBeNull();
+    expect(ModelService.updateContent(filePath, "should not update")).toBe(false);
+    expect(ModelService.applyEdit(filePath, "should not edit", true)).toBe(false);
+    expect(ModelService.getOpenModelPaths()).toHaveLength(0);
+  });
 });
 

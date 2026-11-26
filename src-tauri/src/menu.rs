@@ -369,6 +369,16 @@ pub fn handle_menu_event<R: Runtime>(app: &AppHandle<R>, event: MenuEvent) {
     }
 
     match id_str {
+        // Disabled/unimplemented menu items must remain no-ops even if emitted directly
+        "file.newWindow"
+        | "file.openRecentEmpty"
+        | "view.appearance.zenMode"
+        | "view.appearance.toggleMenuBar"
+        | "view.sourceControl"
+        | "view.runAndDebug"
+        | "view.extensions"
+        | "help.documentation"
+        | "help.checkForUpdates" => {}
         "file.closeWindow" => {
             if let Some(w) = app.get_webview_window("main") {
                 let _ = w.close();
@@ -378,13 +388,15 @@ pub fn handle_menu_event<R: Runtime>(app: &AppHandle<R>, event: MenuEvent) {
             std::thread::spawn(|| {
                 rfd::MessageDialog::new()
                     .set_title("About Kairo IDE")
-                    .set_description(
-                        "Kairo IDE v0.1.0\n\n\
-                         A high-performance, extensible desktop IDE shell\n\
-                         built with Next.js, React, Monaco Editor, and Tauri 2.\n\n\
-                         Architecture: Desktop Native Window\n\
-                         Menu: Native Tauri OS Menu",
-                    )
+                    .set_description(concat!(
+                        "Kairo IDE v",
+                        env!("CARGO_PKG_VERSION"),
+                        "\n\n",
+                        "A high-performance, extensible desktop IDE shell\n",
+                        "built with Next.js, React 19, Monaco Editor, and Tauri 2.\n\n",
+                        "Architecture: Desktop Native Window\n",
+                        "Menu: Native Tauri OS Menu",
+                    ))
                     .show();
             });
         }

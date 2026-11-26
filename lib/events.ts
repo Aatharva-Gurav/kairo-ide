@@ -61,13 +61,14 @@ export type IDEEventMap = {
   "editor:document-closed": { path: string };
   "editor:document-saved": { path: string };
   "editor:document-changed": { path: string; isDirty: boolean };
+  "editor:buffer-conflict": { path: string; type: string; message: string };
   "editor:active-changed": { path: string | null };
   "editor:reveal-in-explorer": { path: string };
   "editor:zoom-in": void;
   "editor:zoom-out": void;
   "editor:zoom-reset": void;
-  "editor:find": { path?: string; mode?: "find" | "replace" } | void;
-  "editor:replace": { path?: string } | void;
+  "editor:find": { path?: string; paneId?: "primary" | "split"; mode?: "find" | "replace" } | void;
+  "editor:replace": { path?: string; paneId?: "primary" | "split" } | void;
   "search:navigate-to-match": { path: string; line: number; column: number; matchLength?: number };
   "sidebar:switch-tab": "explorer" | "search";
   "workbench:open-file": void;

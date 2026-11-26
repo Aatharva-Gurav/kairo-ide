@@ -20,9 +20,20 @@ import {
 import { EditorService } from "./services/editor.service";
 import { ModelService } from "./services/model.service";
 import { FormatterService } from "./services/formatter.service";
+import { BufferSyncService } from "./services/buffer-sync.service";
+import { DiffService } from "@/lib/diff/diff-service";
+import { ConflictDetails } from "@/lib/diff/types";
+import {
+  EditorPaneId,
+  createPaneFocusState,
+  registerPaneEditorInState,
+  focusPaneInState,
+} from "./services/pane-focus";
 import { ideEvents } from "@/lib/events";
 import { normalizePath, basename, isTauriEnvironment, invokeCommand } from "@/lib/tauri-ipc";
 import { fsWatcher } from "@/lib/watcher";
+
+export type { EditorPaneId };
 
 export interface EditorContextValue {
   documents: EditorDocument[];
@@ -76,6 +87,10 @@ export interface EditorContextValue {
   setGoToLineVisible: (visible: boolean) => void;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   monacoEditorRef: React.MutableRefObject<any>;
+  focusedPane: EditorPaneId;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  registerPaneEditor: (paneId: EditorPaneId, editor: any | null) => void;
+  focusPane: (paneId: EditorPaneId, docPath?: string | null) => void;
 
   // Focused Document & Cursor tracking for workbench status bar
   focusedDocument: EditorDocument | null;
@@ -85,6 +100,8 @@ export interface EditorContextValue {
     selectionCount?: number;
     totalLines?: number;
   } | undefined;
+  bufferConflicts: Record<string, ConflictDetails>;
+  clearBufferConflict: (path: string) => void;
   handleCursorChange: (
     docPath: string,
     pos: { lineNumber: number; column: number; selectionCount?: number; totalLines?: number }
@@ -140,9 +157,14 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
   const [dirtyCloseCandidate, setDirtyCloseCandidate] = useState<EditorDocument | null>(null);
   const [isQuickOpenVisible, setQuickOpenVisible] = useState(false);
   const [isGoToLineVisible, setGoToLineVisible] = useState(false);
+  const [bufferConflicts, setBufferConflicts] = useState<Record<string, ConflictDetails>>({});
+  const workspaceGenerationRef = useRef(0);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const monacoEditorRef = useRef<any>(null);
+  const [focusedPane, setFocusedPane] = useState<EditorPaneId>("primary");
+  const focusedPaneRef = useRef<EditorPaneId>("primary");
+  const paneFocusStateRef = useRef(createPaneFocusState());
   const documentsRef = useRef(documents);
   useEffect(() => {
     documentsRef.current = documents;
@@ -172,6 +194,27 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
   >({});
   const [focusedDocPath, setFocusedDocPath] = useState<string | null>(null);
 
+  const registerPaneEditor = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (paneId: EditorPaneId, editor: any | null) => {
+      const next = registerPaneEditorInState(paneFocusStateRef.current, paneId, editor);
+      monacoEditorRef.current = paneFocusStateRef.current.monacoEditorRef.current;
+      focusedPaneRef.current = next.focusedPane;
+      setFocusedPane(next.focusedPane);
+    },
+    []
+  );
+
+  const focusPane = useCallback((paneId: EditorPaneId, docPath?: string | null) => {
+    const next = focusPaneInState(paneFocusStateRef.current, paneId, docPath);
+    monacoEditorRef.current = paneFocusStateRef.current.monacoEditorRef.current;
+    focusedPaneRef.current = next.focusedPane;
+    setFocusedPane(next.focusedPane);
+    if (docPath !== undefined) {
+      setFocusedDocPath(docPath);
+    }
+  }, []);
+
   const handleCursorChange = useCallback(
     (
       docPath: string,
@@ -187,11 +230,14 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
   );
 
   const focusedDocument = useMemo(() => {
-    if (isSplit && splitDocument && focusedDocPath === splitDocument.path) {
+    if (isSplit && splitDocument && focusedPane === "split") {
+      return splitDocument;
+    }
+    if (isSplit && splitDocument && focusedDocPath === splitDocument.path && focusedDocPath !== activeDocument?.path) {
       return splitDocument;
     }
     return activeDocument;
-  }, [isSplit, splitDocument, activeDocument, focusedDocPath]);
+  }, [isSplit, splitDocument, activeDocument, focusedPane, focusedDocPath]);
 
   const focusedCursorPos = useMemo(() => {
     if (!focusedDocument) return undefined;
@@ -233,7 +279,14 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     setIsSplit(false);
     setSplitLayoutMode("single");
     setSplitDocumentIdState(null);
-  }, []);
+    focusPane("primary", activeDocumentIdRef.current);
+  }, [focusPane]);
+
+  useEffect(() => {
+    if (!isSplit && focusedPaneRef.current === "split") {
+      focusPane("primary", activeDocumentIdRef.current);
+    }
+  }, [isSplit, focusPane]);
 
   const toggleSplitView = useCallback(() => {
     setIsSplit((prev) => {
@@ -334,8 +387,14 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
       if (!doc || doc.isBinary || doc.readonly) return false;
 
       try {
-        if (settings.formatOnSave && monacoEditorRef.current) {
-          await FormatterService.formatMonacoDocument(monacoEditorRef.current);
+        const formatTargetEditor =
+          (focusedPaneRef.current === "split" && splitDocumentIdRef.current === targetId
+            ? paneFocusStateRef.current.editors.split
+            : activeDocumentIdRef.current === targetId
+              ? paneFocusStateRef.current.editors.primary
+              : null) || null;
+        if (settings.formatOnSave && formatTargetEditor) {
+          await FormatterService.formatMonacoDocument(formatTargetEditor);
         }
 
         // Always prioritize the active Monaco model's live content if available
@@ -371,6 +430,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
           prev.map((d) => (d.id === targetId ? updatedDoc : d))
         );
 
+        BufferSyncService.clearConflict(targetId);
         ideEvents.emit("editor:document-saved", { path: targetId });
         ideEvents.emit("editor:document-changed", { path: targetId, isDirty: false });
         return true;
@@ -733,6 +793,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
       setSplitDocumentIdState(null);
       closeSplitView();
       setDirtyCloseCandidate(null);
+      setBufferConflicts({});
       setQuickOpenVisible(false);
       setGoToLineVisible(false);
       ideEvents.emit("editor:active-changed", { path: null });
@@ -811,8 +872,10 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const formatActiveDocument = useCallback(async (): Promise<boolean> => {
-    if (monacoEditorRef.current) {
-      return await FormatterService.formatMonacoDocument(monacoEditorRef.current);
+    const targetEditor =
+      paneFocusStateRef.current.editors[focusedPaneRef.current] || monacoEditorRef.current;
+    if (targetEditor) {
+      return await FormatterService.formatMonacoDocument(targetEditor);
     }
     return false;
   }, []);
@@ -836,6 +899,60 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
   const revealInExplorer = useCallback((filePath: string) => {
     ideEvents.emit("editor:reveal-in-explorer", { path: normalizePath(filePath) });
   }, []);
+
+  const clearBufferConflict = useCallback((filePath: string) => {
+    const norm = normalizePath(filePath);
+    setBufferConflicts((prev) => {
+      if (!(norm in prev)) return prev;
+      const next = { ...prev };
+      delete next[norm];
+      return next;
+    });
+  }, []);
+
+  // Connect BufferSyncService bridge outside render so sync operations stay aligned with EditorContext.documents
+  useEffect(() => {
+    return BufferSyncService.connectEditorBridge({
+      getDocuments: () => documentsRef.current,
+      applySyncToDocument: (filePath, newContent, options) => {
+        const norm = normalizePath(filePath);
+        documentsRef.current = documentsRef.current.map((doc) => {
+          if (doc.id !== norm) return doc;
+          const savedContent = options.saved ? newContent : doc.savedContent;
+          return {
+            ...doc,
+            content: newContent,
+            savedContent,
+            isDirty: options.saved ? false : newContent !== savedContent,
+            error: null,
+          };
+        });
+        setDocuments((prev) =>
+          prev.map((doc) => {
+            if (doc.id !== norm) return doc;
+            const savedContent = options.saved ? newContent : doc.savedContent;
+            return {
+              ...doc,
+              content: newContent,
+              savedContent,
+              isDirty: options.saved ? false : newContent !== savedContent,
+              error: null,
+            };
+          })
+        );
+      },
+      reportConflict: (conflict) => {
+        const norm = normalizePath(conflict.path);
+        setBufferConflicts((prev) => ({
+          ...prev,
+          [norm]: conflict,
+        }));
+      },
+      clearConflict: (filePath) => {
+        clearBufferConflict(filePath);
+      },
+    });
+  }, [clearBufferConflict]);
 
   // Event bus bindings for file open, rename, delete, search navigation
   useEffect(() => {
@@ -954,15 +1071,26 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
         openFileDialog();
       }),
 
+      ideEvents.on("workspace:opened", (payload) => {
+        workspaceGenerationRef.current += 1;
+        BufferSyncService.setWorkspaceScope(payload?.rootPath ?? null);
+      }),
+
       ideEvents.on("workspace:closing", () => {
+        workspaceGenerationRef.current += 1;
+        BufferSyncService.setWorkspaceScope(null);
         cleanupEditor(true);
       }),
 
       ideEvents.on("workspace:closed", () => {
+        workspaceGenerationRef.current += 1;
+        BufferSyncService.setWorkspaceScope(null);
         cleanupEditor(true);
       }),
 
-      ideEvents.on("workspace:switched", () => {
+      ideEvents.on("workspace:switched", (payload) => {
+        workspaceGenerationRef.current += 1;
+        BufferSyncService.setWorkspaceScope(payload?.to?.rootPath ?? null);
         cleanupEditor(true);
       }),
     ];
@@ -1031,32 +1159,78 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
   // External file watcher notifications
   useEffect(() => {
     return fsWatcher.onEvent(async (event) => {
+      const watchGen = workspaceGenerationRef.current;
       const normPath = normalizePath(event.path);
       const openDoc = documentsRef.current.find((d) => d.id === normPath);
       if (!openDoc) return;
 
       if (event.type === "modify") {
-        if (!openDoc.isDirty) {
-          // Clean reload from disk
-          try {
-            const reloaded = await EditorService.loadDocument(normPath);
+        try {
+          const reloaded = await EditorService.loadDocument(normPath);
+          if (workspaceGenerationRef.current !== watchGen) return;
+
+          const latestDoc = documentsRef.current.find((d) => d.id === normPath);
+          if (!latestDoc) return;
+
+          if (!latestDoc.isDirty) {
             documentsRef.current = documentsRef.current.map((d) =>
               d.id === normPath ? { ...d, ...reloaded } : d
             );
             setDocuments((prev) =>
               prev.map((d) => (d.id === normPath ? { ...d, ...reloaded } : d))
             );
-            ModelService.updateContent(normPath, reloaded.content);
+            if (ModelService.hasModel(normPath)) {
+              ModelService.applyEdit(normPath, reloaded.content, true);
+            }
+            clearBufferConflict(normPath);
             ideEvents.emit("editor:document-changed", { path: normPath, isDirty: false });
-          } catch {
-            // Ignore
+          } else {
+            const liveBuffer = BufferSyncService.getBufferContent(normPath) ?? latestDoc.content;
+            const conflict = DiffService.detectConflict({
+              path: normPath,
+              baseContent: latestDoc.savedContent,
+              currentBuffer: liveBuffer,
+              currentDisk: reloaded.content,
+              isDirty: true,
+              fileExistsOnDisk: !reloaded.error,
+              expectedToExist: true,
+            });
+            if (conflict) {
+              setBufferConflicts((prev) => ({ ...prev, [normPath]: conflict }));
+              ideEvents.emit("editor:buffer-conflict", {
+                path: normPath,
+                type: conflict.type,
+                message: conflict.message,
+              });
+            }
           }
+        } catch {
+          // Ignore transient watcher read failures
         }
       } else if (event.type === "delete") {
+        if (openDoc.isDirty) {
+          const deletedConflict = DiffService.detectConflict({
+            path: normPath,
+            baseContent: openDoc.savedContent,
+            currentBuffer: BufferSyncService.getBufferContent(normPath) ?? openDoc.content,
+            isDirty: true,
+            fileExistsOnDisk: false,
+            expectedToExist: true,
+          });
+          if (deletedConflict) {
+            setBufferConflicts((prev) => ({ ...prev, [normPath]: deletedConflict }));
+            ideEvents.emit("editor:buffer-conflict", {
+              path: normPath,
+              type: deletedConflict.type,
+              message: deletedConflict.message,
+            });
+          }
+          return;
+        }
         closeDocuments([normPath], true);
       }
     });
-  }, [closeDocuments]);
+  }, [closeDocuments, clearBufferConflict]);
 
   const value = useMemo(
     () => ({
@@ -1110,9 +1284,14 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
       setQuickOpenVisible,
       setGoToLineVisible,
       monacoEditorRef,
+      focusedPane,
+      registerPaneEditor,
+      focusPane,
 
       focusedDocument,
       focusedCursorPos,
+      bufferConflicts,
+      clearBufferConflict,
       handleCursorChange,
       setFocusedDocPath,
     }),
@@ -1162,8 +1341,13 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
       setQuickOpenVisible,
       setGoToLineVisible,
       monacoEditorRef,
+      focusedPane,
+      registerPaneEditor,
+      focusPane,
       focusedDocument,
       focusedCursorPos,
+      bufferConflicts,
+      clearBufferConflict,
       handleCursorChange,
       setFocusedDocPath,
     ]

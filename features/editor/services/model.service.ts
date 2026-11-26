@@ -53,11 +53,18 @@ export class ModelService {
   }
 
   /**
-   * Retrieves an existing registered model for the path.
+   * Retrieves an existing non-disposed model for the path.
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   static getModel(path: string): any {
-    return activeModels.get(normalizePath(path)) || null;
+    const norm = normalizePath(path);
+    const model = activeModels.get(norm);
+    if (!model) return null;
+    if (typeof model.isDisposed === "function" && model.isDisposed()) {
+      activeModels.delete(norm);
+      return null;
+    }
+    return model;
   }
 
   /**
@@ -139,18 +146,20 @@ export class ModelService {
   }
 
   /**
-   * Updates an existing Monaco model's content live without losing view state or editor binding.
+   * Updates an existing non-disposed Monaco model's content live without losing view state or editor binding.
    */
   static updateContent(path: string, newContent: string): boolean {
     const norm = normalizePath(path);
     const model = activeModels.get(norm);
-    if (model) {
-      if (model.getValue() !== newContent) {
-        model.setValue(newContent);
-      }
-      return true;
+    if (!model) return false;
+    if (typeof model.isDisposed === "function" && model.isDisposed()) {
+      activeModels.delete(norm);
+      return false;
     }
-    return false;
+    if (model.getValue() !== newContent) {
+      model.setValue(newContent);
+    }
+    return true;
   }
 
   /**
@@ -216,19 +225,21 @@ export class ModelService {
     if (activeModels.has(normOld)) {
       const oldModel = activeModels.get(normOld);
       activeModels.delete(normOld);
-      if (oldModel && monacoInstance?.editor && monacoInstance?.Uri) {
-        try {
-          const content = oldModel.getValue();
-          const language = oldModel.getLanguageId();
-          oldModel.dispose();
-          const newUri = monacoInstance.Uri.file(normNew);
-          const newModel = monacoInstance.editor.createModel(content, language, newUri);
-          activeModels.set(normNew, newModel);
-        } catch {
+      if (oldModel && (typeof oldModel.isDisposed !== "function" || !oldModel.isDisposed())) {
+        if (monacoInstance?.editor && monacoInstance?.Uri) {
+          try {
+            const content = oldModel.getValue();
+            const language = oldModel.getLanguageId();
+            oldModel.dispose();
+            const newUri = monacoInstance.Uri.file(normNew);
+            const newModel = monacoInstance.editor.createModel(content, language, newUri);
+            activeModels.set(normNew, newModel);
+          } catch {
+            activeModels.set(normNew, oldModel);
+          }
+        } else {
           activeModels.set(normNew, oldModel);
         }
-      } else if (oldModel) {
-        activeModels.set(normNew, oldModel);
       }
     }
     if (viewStates.has(normOld)) {

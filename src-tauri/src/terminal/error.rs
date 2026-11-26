@@ -4,11 +4,16 @@ use std::fmt;
 pub enum TerminalError {
     SessionNotFound(String),
     ShellNotFound(String),
+    UnauthorizedExecutable(String),
+    InvalidArguments(String),
+    BlockedEnvironmentVariable(String),
+    InvalidProfile(String),
     InvalidWorkingDirectory(String),
     PtySpawnFailed(String),
     PtyWriteFailed(String),
     PtyResizeFailed(String),
     ProcessKillFailed(String),
+    LockPoisoned(String),
     Io(std::io::Error),
 }
 
@@ -17,6 +22,20 @@ impl fmt::Display for TerminalError {
         match self {
             Self::SessionNotFound(id) => write!(f, "Terminal session not found: {}", id),
             Self::ShellNotFound(shell) => write!(f, "Shell executable not found: {}", shell),
+            Self::UnauthorizedExecutable(reason) => {
+                write!(f, "Unauthorized terminal executable: {}", reason)
+            }
+            Self::InvalidArguments(reason) => {
+                write!(f, "Invalid terminal shell arguments: {}", reason)
+            }
+            Self::BlockedEnvironmentVariable(key) => {
+                write!(
+                    f,
+                    "Blocked or invalid terminal environment variable: {}",
+                    key
+                )
+            }
+            Self::InvalidProfile(reason) => write!(f, "Invalid terminal profile: {}", reason),
             Self::InvalidWorkingDirectory(path) => {
                 write!(f, "Invalid or non-existent working directory: {}", path)
             }
@@ -24,6 +43,9 @@ impl fmt::Display for TerminalError {
             Self::PtyWriteFailed(err) => write!(f, "Failed to write to PTY: {}", err),
             Self::PtyResizeFailed(err) => write!(f, "Failed to resize PTY: {}", err),
             Self::ProcessKillFailed(err) => write!(f, "Failed to terminate process: {}", err),
+            Self::LockPoisoned(reason) => {
+                write!(f, "Terminal internal state lock poisoned: {}", reason)
+            }
             Self::Io(err) => write!(f, "Terminal I/O error: {}", err),
         }
     }

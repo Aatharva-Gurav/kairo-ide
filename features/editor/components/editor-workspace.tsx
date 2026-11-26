@@ -41,7 +41,7 @@ export function EditorWorkspace() {
     splitRatio,
     setSplitRatio,
     handleCursorChange,
-    setFocusedDocPath,
+    focusPane,
   } = useEditor();
 
   const [isDraggingDivider, setIsDraggingDivider] = useState(false);
@@ -100,7 +100,7 @@ export function EditorWorkspace() {
             {/* Primary Pane (Left or Top) */}
             <div
               onMouseDown={() => {
-                if (activeDocument) setFocusedDocPath(activeDocument.path);
+                if (activeDocument) focusPane("primary", activeDocument.path);
               }}
               style={
                 splitDirection === "vertical"
@@ -127,6 +127,7 @@ export function EditorWorkspace() {
               ) : (
                 <MonacoEditorView
                   document={activeDocument}
+                  paneId="primary"
                   onCursorChange={handleCursorChange}
                 />
               )}
@@ -162,7 +163,7 @@ export function EditorWorkspace() {
             {/* Secondary Split Pane (Right or Bottom) */}
             <div
               onMouseDown={() => {
-                if (splitDocument) setFocusedDocPath(splitDocument.path);
+                if (splitDocument) focusPane("split", splitDocument.path);
               }}
               className={cn(
                 "flex-1 flex flex-col overflow-hidden relative",
@@ -194,6 +195,7 @@ export function EditorWorkspace() {
             ) : (
               <MonacoEditorView
                 document={activeDocument}
+                paneId="primary"
                 onCursorChange={handleCursorChange}
               />
             )}

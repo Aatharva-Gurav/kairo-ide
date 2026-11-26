@@ -347,9 +347,14 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
         description: "Open the find tool to search text in active editor",
         category: "editor",
         keywords: ["find", "search", "match"],
-        enabled: () => Boolean(editorRef.current.activeDocument),
+        enabled: () => Boolean(editorRef.current.focusedDocument || editorRef.current.activeDocument),
         execute: () => {
-          ideEvents.emit("editor:find", { path: editorRef.current.activeDocument?.path, mode: "find" });
+          const targetDoc = editorRef.current.focusedDocument || editorRef.current.activeDocument;
+          ideEvents.emit("editor:find", {
+            path: targetDoc?.path,
+            paneId: editorRef.current.focusedPane,
+            mode: "find",
+          });
         },
       }),
 
@@ -359,9 +364,13 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
         description: "Open the replace tool to search and replace text in active editor",
         category: "editor",
         keywords: ["replace", "substitute", "swap"],
-        enabled: () => Boolean(editorRef.current.activeDocument),
+        enabled: () => Boolean(editorRef.current.focusedDocument || editorRef.current.activeDocument),
         execute: () => {
-          ideEvents.emit("editor:replace", { path: editorRef.current.activeDocument?.path });
+          const targetDoc = editorRef.current.focusedDocument || editorRef.current.activeDocument;
+          ideEvents.emit("editor:replace", {
+            path: targetDoc?.path,
+            paneId: editorRef.current.focusedPane,
+          });
         },
       }),
 
@@ -540,50 +549,6 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
           const isDark = isDarkTheme(current);
           const next = isDark ? "light-modern" : "dark-modern";
           settingsRef.current.updateSetting("appearance.theme", next);
-        },
-      }),
-      CommandRegistry.register({
-        id: "workbench.action.terminal.toggleTerminal",
-        title: "Terminal: Toggle Integrated Terminal",
-        description: "Open or close the integrated terminal panel",
-        category: "workbench",
-        keywords: ["terminal", "bash", "powershell", "cmd", "pty", "console", "shell", "toggle"],
-        enabled: () => Boolean(workspaceRef.current.activeWorkspace),
-        execute: () => {
-          ideEvents.emit("terminal:toggle");
-        },
-      }),
-      CommandRegistry.register({
-        id: "workbench.action.terminal.new",
-        title: "Terminal: Create New Terminal",
-        description: "Spawn a new terminal session in the bottom panel",
-        category: "workbench",
-        keywords: ["terminal", "new", "create", "shell", "bash", "powershell"],
-        enabled: () => Boolean(workspaceRef.current.activeWorkspace),
-        execute: () => {
-          ideEvents.emit("terminal:new");
-        },
-      }),
-      CommandRegistry.register({
-        id: "workbench.action.terminal.split",
-        title: "Terminal: Split Terminal",
-        description: "Split the current terminal session side by side",
-        category: "workbench",
-        keywords: ["terminal", "split", "horizontal", "vertical", "columns"],
-        enabled: () => Boolean(workspaceRef.current.activeWorkspace),
-        execute: () => {
-          ideEvents.emit("terminal:split", "horizontal");
-        },
-      }),
-      CommandRegistry.register({
-        id: "workbench.action.terminal.clear",
-        title: "Terminal: Clear Terminal",
-        description: "Clear active terminal viewport screen",
-        category: "workbench",
-        keywords: ["terminal", "clear", "cls", "reset"],
-        enabled: () => Boolean(workspaceRef.current.activeWorkspace),
-        execute: () => {
-          ideEvents.emit("terminal:clear");
         },
       })
     );

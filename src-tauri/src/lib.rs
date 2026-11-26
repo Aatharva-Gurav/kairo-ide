@@ -1,17 +1,30 @@
 pub mod commands;
 pub mod menu;
+pub mod security;
 pub mod terminal;
 
 use commands::fs::*;
 use commands::workspace::*;
 use menu::*;
+use security::asset_protocol::handle_asset_request;
+use security::WorkspaceGuard;
 use std::sync::Arc;
 use tauri::Manager;
 use terminal::commands::*;
 
 pub fn run() {
+    let workspace_guard = Arc::new(WorkspaceGuard::new());
+    let asset_guard = Arc::clone(&workspace_guard);
+
     tauri::Builder::default()
-        .setup(|app| {
+        .register_asynchronous_uri_scheme_protocol("asset", move |_ctx, request, responder| {
+            let guard = Arc::clone(&asset_guard);
+            tauri::async_runtime::spawn_blocking(move || {
+                let response = handle_asset_request(&guard, &request);
+                responder.respond(response);
+            });
+        })
+        .setup(move |app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
                     tauri_plugin_log::Builder::default()
@@ -23,11 +36,9 @@ pub fn run() {
             let menus = menu::init_menus(app.handle())?;
             app.manage(std::sync::Mutex::new(Some(menus)));
 
-            let workspace_root =
-                std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
+            app.manage(Arc::clone(&workspace_guard));
 
             let terminal_manager = Arc::new(terminal::TerminalManager::new());
-            terminal_manager.set_workspace_root(workspace_root);
             app.manage(Arc::clone(&terminal_manager));
 
             // Default to maximized window on launch
@@ -46,6 +57,10 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
+            workspace_open,
+            workspace_close,
+            workspace_add_root,
+            workspace_remove_root,
             workspace_pick_folder,
             workspace_pick_file,
             workspace_save_file_as,
@@ -76,6 +91,7 @@ pub fn run() {
             window_is_maximized,
             window_set_theme,
             terminal_detect_shells,
+            terminal_sync_custom_profiles,
             terminal_create,
             terminal_write,
             terminal_resize,

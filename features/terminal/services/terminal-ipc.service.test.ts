@@ -1,4 +1,13 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
+const { mockInvoke } = vi.hoisted(() => ({
+  mockInvoke: vi.fn(),
+}));
+
+vi.mock("@tauri-apps/api/core", () => ({
+  invoke: mockInvoke,
+}));
+
 import { TerminalIpcService } from "./terminal-ipc.service";
 
 describe("TerminalIpcService", () => {
@@ -61,5 +70,56 @@ describe("TerminalIpcService", () => {
 
   it("handles killWorkspaceSessions cleanly without errors in browser environment", async () => {
     await expect(TerminalIpcService.killWorkspaceSessions("ws_test")).resolves.not.toThrow();
+  });
+
+  describe("Tauri Mode Terminal IPC & Custom Profile Sync (SEC-04 / SEC-08)", () => {
+    const globalWithWindow = globalThis as unknown as { window?: unknown };
+    let originalWindow: unknown;
+
+    beforeEach(() => {
+      originalWindow = globalWithWindow.window;
+      globalWithWindow.window = { __TAURI_INTERNALS__: {} };
+      mockInvoke.mockReset();
+    });
+
+    afterEach(() => {
+      if (originalWindow === undefined) {
+        delete globalWithWindow.window;
+      } else {
+        globalWithWindow.window = originalWindow;
+      }
+    });
+
+    it("syncs custom profiles with terminal_sync_custom_profiles and propagates backend errors", async () => {
+      const profiles = [
+        {
+          id: "custom-pwsh",
+          name: "Custom PowerShell",
+          executable: "pwsh.exe",
+          icon: "terminal",
+          isDefault: false,
+          isCustom: true,
+          platform: "win32",
+        },
+      ];
+      mockInvoke.mockResolvedValueOnce(profiles);
+
+      const synced = await TerminalIpcService.syncCustomProfiles(profiles);
+      expect(mockInvoke).toHaveBeenCalledWith("terminal_sync_custom_profiles", { profiles });
+      expect(synced).toEqual(profiles);
+
+      mockInvoke.mockRejectedValueOnce(new Error("Unauthorized executable"));
+      await expect(TerminalIpcService.syncCustomProfiles(profiles)).rejects.toThrow(
+        "Unauthorized executable"
+      );
+    });
+
+    it("propagates native terminal_create failures without falling back to browser mock", async () => {
+      mockInvoke.mockRejectedValueOnce(new Error("Direct executable overrides are not permitted"));
+
+      await expect(
+        TerminalIpcService.createSession({ executable: "python.exe" })
+      ).rejects.toThrow("Direct executable overrides are not permitted");
+    });
   });
 });

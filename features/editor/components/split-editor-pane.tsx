@@ -190,6 +190,7 @@ export function SplitEditorPane({
         ) : (
           <MonacoEditorView
             document={document}
+            paneId="split"
             onCursorChange={onCursorChange}
           />
         )}

@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { TerminalThemeService } from "./services/terminal-theme.service";
 import { TerminalInstanceRegistry } from "./services/terminal-instance-registry";
 import { DEFAULT_TERMINAL_SETTINGS, ShellProfile } from "./types";
 import { registerTerminalCommands } from "./services/terminal-commands";
+import { performTerminalToggle } from "./services/terminal-toggle";
 import { TerminalProfileService } from "./services/terminal-profile.service";
 import { DevServerDetector } from "./services/dev-server-detector";
 import { CommandRegistry } from "@/features/commands/command-registry";
@@ -264,10 +265,30 @@ describe("Integrated Terminal Subsystem - Stage 4", () => {
       expect(invalidExec.valid).toBe(false);
       expect(invalidExec.errors).toContain("Executable path cannot be empty");
 
-      const validProfile = TerminalProfileService.validateProfile({
-        name: "Custom Node",
+      const arbitraryBinary = TerminalProfileService.validateProfile({
+        name: "Arbitrary Binary",
         executable: "node.exe",
-        args: ["--interactive"],
+      });
+      expect(arbitraryBinary.valid).toBe(false);
+
+      const blockedEnv = TerminalProfileService.validateProfile({
+        name: "Unsafe Env Shell",
+        executable: "powershell.exe",
+        env: { PATH: "/tmp/evil", NODE_OPTIONS: "--require=/tmp/hook.js" },
+      });
+      expect(blockedEnv.valid).toBe(false);
+
+      const unsafeArgs = TerminalProfileService.validateProfile({
+        name: "Unsafe Arg Shell",
+        executable: "bash",
+        args: ["-c", "whoami"],
+      });
+      expect(unsafeArgs.valid).toBe(false);
+
+      const validProfile = TerminalProfileService.validateProfile({
+        name: "Custom PowerShell",
+        executable: "powershell.exe",
+        args: ["-NoLogo"],
         env: { NODE_ENV: "development" },
       });
       expect(validProfile.valid).toBe(true);
@@ -395,6 +416,100 @@ describe("Integrated Terminal Subsystem - Stage 4", () => {
       await expect(openExternalUrl("")).resolves.not.toThrow();
       await expect(openExternalUrl("javascript:alert(1)")).resolves.not.toThrow();
       await expect(openExternalUrl("not-a-url")).resolves.not.toThrow();
+    });
+  });
+
+  describe("Terminal Toggle Determinism & Command Deduplication (Stage 2B)", () => {
+    it("toggles terminal visibility cleanly without duplicate session creation", async () => {
+      const isOpenRef = { current: false };
+      const isCreatingInitialRef = { current: false };
+      let visibleState = false;
+      const setIsOpen = (next: boolean) => {
+        visibleState = next;
+      };
+
+      let resolveCreate!: () => void;
+      const createTerminalMock = vi.fn(
+        () =>
+          new Promise<void>((resolve) => {
+            resolveCreate = resolve;
+          })
+      );
+
+      // Open when 0 sessions exist -> spawns once
+      const opened = performTerminalToggle(
+        { isOpenRef, isCreatingInitialRef, sessionsCount: 0 },
+        setIsOpen,
+        createTerminalMock
+      );
+      expect(opened).toBe(true);
+      expect(visibleState).toBe(true);
+      expect(createTerminalMock).toHaveBeenCalledTimes(1);
+
+      // Rapid close then reopen while initial creation is still in-flight -> must NOT spawn a 2nd session
+      expect(
+        performTerminalToggle(
+          { isOpenRef, isCreatingInitialRef, sessionsCount: 0 },
+          setIsOpen,
+          createTerminalMock
+        )
+      ).toBe(false);
+      expect(visibleState).toBe(false);
+
+      expect(
+        performTerminalToggle(
+          { isOpenRef, isCreatingInitialRef, sessionsCount: 0 },
+          setIsOpen,
+          createTerminalMock
+        )
+      ).toBe(true);
+      expect(createTerminalMock).toHaveBeenCalledTimes(1);
+
+      resolveCreate();
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(isCreatingInitialRef.current).toBe(false);
+
+      // Opening again when a session already exists does not create another session
+      isOpenRef.current = false;
+      performTerminalToggle(
+        { isOpenRef, isCreatingInitialRef, sessionsCount: 1 },
+        setIsOpen,
+        createTerminalMock
+      );
+      expect(createTerminalMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("registers each terminal command once and enforces workspace predicate safely", async () => {
+      CommandRegistry.clear();
+      let workspaceOpen = false;
+      const unreg1 = registerTerminalCommands({
+        isWorkspaceActive: () => workspaceOpen,
+      });
+
+      const terminalCommands = CommandRegistry.getAll().filter((c) =>
+        c.id.startsWith("workbench.action.terminal.")
+      );
+      expect(terminalCommands).toHaveLength(10);
+      expect(new Set(terminalCommands.map((c) => c.id)).size).toBe(10);
+
+      // Disabled when no workspace is open
+      expect(CommandRegistry.isEnabled("workbench.action.terminal.toggleTerminal")).toBe(false);
+      expect(await CommandRegistry.execute("workbench.action.terminal.toggleTerminal")).toBe(false);
+
+      // Enabled when workspace opens
+      workspaceOpen = true;
+      expect(CommandRegistry.isEnabled("workbench.action.terminal.toggleTerminal")).toBe(true);
+
+      // Calling old cleanup after re-registration must not unregister newer commands
+      const unreg2 = registerTerminalCommands({
+        isWorkspaceActive: () => true,
+      });
+      unreg1();
+      expect(CommandRegistry.get("workbench.action.terminal.toggleTerminal")).toBeDefined();
+
+      unreg2();
+      expect(CommandRegistry.get("workbench.action.terminal.toggleTerminal")).toBeUndefined();
     });
   });
 });

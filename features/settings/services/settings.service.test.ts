@@ -197,4 +197,60 @@ describe("SettingsService", () => {
     SettingsService.setWorkspaceRootPath("c:/projects/myapp");
     expect(SettingsService.getSetting<number>("editor.tabSize")).toBe(4);
   });
+
+  it("synchronizes persisted theme with pre-hydration theme-init.js across user modes", async () => {
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    const vm = await import("node:vm");
+
+    const scriptPath = path.join(process.cwd(), "public", "theme-init.js");
+    const themeInitCode = fs.readFileSync(scriptPath, "utf8");
+
+    const runThemeInit = (prefersDark = true) => {
+      const classes = new Set<string>();
+      const attrs: Record<string, string> = {};
+      const mockDoc = {
+        documentElement: {
+          classList: {
+            add: (c: string) => classes.add(c),
+            remove: (c: string) => classes.delete(c),
+          },
+          setAttribute: (k: string, v: string) => {
+            attrs[k] = v;
+          },
+        },
+      };
+      const sandbox = {
+        localStorage: localStorageMock,
+        document: mockDoc,
+        window: {
+          matchMedia: () => ({ matches: prefersDark }),
+        },
+      };
+      vm.runInNewContext(themeInitCode, sandbox);
+      return { theme: attrs["data-theme"], isDark: classes.has("dark") };
+    };
+
+    // Offline Mode ("local" user) selects light theme -> startup script resolves exact same theme
+    SettingsService.setUser("local");
+    SettingsService.updateSetting("appearance.theme", "warm-sand", "user");
+    expect(localStorage.getItem(SETTINGS_STORAGE_KEYS.ACTIVE_THEME_KEY)).toBe("warm-sand");
+    expect(runThemeInit()).toEqual({ theme: "warm-sand", isDark: false });
+
+    // Even if kairo:active_theme is cleared, theme-init.js falls back cleanly to kairo.settings.local
+    localStorage.removeItem(SETTINGS_STORAGE_KEYS.ACTIVE_THEME_KEY);
+    expect(runThemeInit()).toEqual({ theme: "warm-sand", isDark: false });
+
+    // Signed-in user selects dark theme -> startup script resolves exact same theme
+    SettingsService.setUser("cloud-user-42");
+    SettingsService.updateSetting("appearance.theme", "midnight-blue", "user");
+    expect(localStorage.getItem(SETTINGS_STORAGE_KEYS.ACTIVE_THEME_KEY)).toBe("midnight-blue");
+    expect(runThemeInit()).toEqual({ theme: "midnight-blue", isDark: true });
+
+    // System preference tracks matchMedia dynamically
+    SettingsService.updateSetting("appearance.theme", "system", "user");
+    expect(localStorage.getItem(SETTINGS_STORAGE_KEYS.ACTIVE_THEME_KEY)).toBe("system");
+    expect(runThemeInit(false)).toEqual({ theme: "light-modern", isDark: false });
+    expect(runThemeInit(true)).toEqual({ theme: "dark-modern", isDark: true });
+  });
 });

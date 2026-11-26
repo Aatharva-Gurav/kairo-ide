@@ -1,6 +1,7 @@
 use super::manager::TerminalManager;
 use super::shells::detect_shells;
 use super::types::{ShellProfile, TerminalCreateConfig, TerminalSessionInfo};
+use crate::security::WorkspaceGuard;
 use std::sync::Arc;
 use tauri::{AppHandle, Runtime, State};
 
@@ -10,16 +11,31 @@ pub fn terminal_detect_shells() -> Result<Vec<ShellProfile>, String> {
 }
 
 #[tauri::command]
+pub fn terminal_sync_custom_profiles(
+    state: State<'_, Arc<TerminalManager>>,
+    workspace_guard: State<'_, Arc<WorkspaceGuard>>,
+    profiles: Vec<ShellProfile>,
+) -> Result<Vec<ShellProfile>, String> {
+    state
+        .sync_custom_profiles(profiles, Some(workspace_guard.inner().as_ref()))
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub async fn terminal_create<R: Runtime>(
     app: AppHandle<R>,
     state: State<'_, Arc<TerminalManager>>,
+    workspace_guard: State<'_, Arc<WorkspaceGuard>>,
     config: Option<TerminalCreateConfig>,
 ) -> Result<TerminalSessionInfo, String> {
     let manager = state.inner().clone();
+    let guard = workspace_guard.inner().clone();
     let cfg = config.unwrap_or_default();
 
     tauri::async_runtime::spawn_blocking(move || {
-        manager.create_session(&app, cfg).map_err(|e| e.to_string())
+        manager
+            .create_session(&app, cfg, Some(guard.as_ref()))
+            .map_err(|e| e.to_string())
     })
     .await
     .map_err(|e| format!("Failed to execute terminal_create task: {}", e))?
@@ -63,27 +79,21 @@ pub async fn terminal_kill(
 ) -> Result<(), String> {
     let manager = state.inner().clone();
 
-    tauri::async_runtime::spawn_blocking(move || {
-        match manager.kill_session(&session_id) {
-            Ok(()) | Err(crate::terminal::error::TerminalError::SessionNotFound(_)) => Ok(()),
-            Err(e) => Err(e.to_string()),
-        }
+    tauri::async_runtime::spawn_blocking(move || match manager.kill_session(&session_id) {
+        Ok(()) | Err(crate::terminal::error::TerminalError::SessionNotFound(_)) => Ok(()),
+        Err(e) => Err(e.to_string()),
     })
     .await
     .map_err(|e| format!("Failed to execute terminal_kill task: {}", e))?
 }
 
 #[tauri::command]
-pub async fn terminal_kill_all(
-    state: State<'_, Arc<TerminalManager>>,
-) -> Result<(), String> {
+pub async fn terminal_kill_all(state: State<'_, Arc<TerminalManager>>) -> Result<(), String> {
     let manager = state.inner().clone();
 
-    tauri::async_runtime::spawn_blocking(move || {
-        manager.kill_all().map_err(|e| e.to_string())
-    })
-    .await
-    .map_err(|e| format!("Failed to execute terminal_kill_all task: {}", e))?
+    tauri::async_runtime::spawn_blocking(move || manager.kill_all().map_err(|e| e.to_string()))
+        .await
+        .map_err(|e| format!("Failed to execute terminal_kill_all task: {}", e))?
 }
 
 #[tauri::command]
@@ -106,7 +116,7 @@ pub async fn terminal_kill_workspace(
 pub fn terminal_list_sessions(
     state: State<'_, Arc<TerminalManager>>,
 ) -> Result<Vec<TerminalSessionInfo>, String> {
-    Ok(state.list_sessions())
+    state.try_list_sessions().map_err(|e| e.to_string())
 }
 
 #[tauri::command]

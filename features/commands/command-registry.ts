@@ -16,7 +16,9 @@ export class CommandRegistry {
     this.notifyListeners();
 
     return () => {
-      this.unregister(command.id);
+      if (this.commands.get(command.id) === command) {
+        this.unregister(command.id);
+      }
     };
   }
 

@@ -15,6 +15,7 @@ export const SETTINGS_STORAGE_KEYS = {
   USER_SETTINGS_PREFIX: "kairo.settings.",
   WORKSPACE_SETTINGS_PREFIX: "kairo:workspace_settings:",
   SETTINGS_VERSION_KEY: "kairo.settings.version",
+  ACTIVE_THEME_KEY: "kairo:active_theme",
   CURRENT_VERSION: 1,
 } as const;
 
@@ -425,6 +426,20 @@ export class SettingsService {
    * Immediately applies live settings changes to DOM / system environment.
    */
   private static applyLiveSettings(settings: IDESettings, changedKey?: string): void {
+    if (!changedKey || changedKey === "appearance.theme") {
+      const resolved = migrateLegacyTheme(settings.appearance.theme);
+
+      // Persist active theme preference so pre-hydration anti-FOUC bootstrap matches SettingsService
+      try {
+        const storage = getStorage();
+        if (storage) {
+          storage.setItem(SETTINGS_STORAGE_KEYS.ACTIVE_THEME_KEY, resolved);
+        }
+      } catch {
+        // Ignore storage write errors in restricted contexts
+      }
+    }
+
     if (typeof window === "undefined" || typeof document === "undefined") return;
 
     // 1. Theme live update

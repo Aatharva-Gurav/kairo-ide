@@ -32,6 +32,18 @@ export class TerminalIpcService {
   }
 
   /**
+   * Synchronizes and validates user-saved custom shell profiles with the Rust backend.
+   * Rejects unauthorized executables, unsafe arguments, or blocked environment variables.
+   */
+  static async syncCustomProfiles(profiles: ShellProfile[]): Promise<ShellProfile[]> {
+    if (isTauriEnvironment()) {
+      return await invoke<ShellProfile[]>("terminal_sync_custom_profiles", { profiles });
+    }
+
+    return profiles;
+  }
+
+  /**
    * Spawns a new PTY session in the Rust backend.
    */
   static async createSession(

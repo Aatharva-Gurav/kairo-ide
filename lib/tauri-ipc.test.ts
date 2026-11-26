@@ -1,4 +1,13 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
+const { mockInvoke } = vi.hoisted(() => ({
+  mockInvoke: vi.fn(),
+}));
+
+vi.mock("@tauri-apps/api/core", () => ({
+  invoke: mockInvoke,
+}));
+
 import {
   normalizePath,
   basename,
@@ -8,7 +17,9 @@ import {
   getFileExtension,
   validateFileName,
   formatFsError,
+  parseFsErrorCode,
   formatBytes,
+  invokeCommand,
 } from "./tauri-ipc";
 
 describe("Tauri IPC & Path Utilities", () => {
@@ -92,6 +103,10 @@ describe("Tauri IPC & Path Utilities", () => {
     expect(formatFsError("Access is denied")).toContain("Access denied");
     expect(formatFsError("Cannot copy a directory into itself")).toContain("Cannot copy or move");
     expect(formatFsError("Path does not exist: /foo/bar")).toContain("could not be found");
+    expect(formatFsError("Access denied: '.env' is a protected sensitive file or credential path.")).toContain("protected by Kairo security policy");
+    expect(parseFsErrorCode("Access denied: path is outside the authorized workspace boundary")).toBe("OUTSIDE_WORKSPACE");
+    expect(parseFsErrorCode("Access denied: symlinks and junctions are not permitted")).toBe("SYMLINK_BLOCKED");
+    expect(parseFsErrorCode("Access denied: no active workspace is open.")).toBe("NO_ACTIVE_WORKSPACE");
   });
 
   it("formats bytes into human-readable string units", () => {
@@ -99,6 +114,48 @@ describe("Tauri IPC & Path Utilities", () => {
     expect(formatBytes(1024)).toBe("1 KB");
     expect(formatBytes(1048576)).toBe("1 MB");
     expect(formatBytes(1073741824)).toBe("1 GB");
+  });
+
+  describe("invokeCommand Tauri vs Browser VFS Isolation (SEC-08)", () => {
+    const globalWithWindow = globalThis as unknown as { window?: unknown };
+    let originalWindow: unknown;
+
+    beforeEach(() => {
+      originalWindow = globalWithWindow.window;
+      mockInvoke.mockReset();
+    });
+
+    afterEach(() => {
+      if (originalWindow === undefined) {
+        delete globalWithWindow.window;
+      } else {
+        globalWithWindow.window = originalWindow;
+      }
+    });
+
+    it("throws a clear error instead of falling back to browser VFS in Tauri mode", async () => {
+      globalWithWindow.window = { __TAURI_INTERNALS__: {} };
+
+      mockInvoke.mockRejectedValueOnce(new Error("command fs_read_file not found"));
+      await expect(
+        invokeCommand<string>("fs_read_file", { path: "C:/workspace/README.md" })
+      ).rejects.toThrow(/command fs_read_file not found/);
+
+      mockInvoke.mockRejectedValueOnce(new Error("__TAURI_INTERNALS__ invoke error"));
+      await expect(
+        invokeCommand<boolean>("fs_exists", { path: "C:/workspace/README.md" })
+      ).rejects.toThrow(/__TAURI_INTERNALS__/);
+    });
+
+    it("uses browser VFS fallback only when not running inside Tauri", async () => {
+      delete globalWithWindow.window;
+
+      const exists = await invokeCommand<boolean>("fs_exists", {
+        path: "/workspace/nonexistent-sec08-check.txt",
+      });
+      expect(exists).toBe(false);
+      expect(mockInvoke).not.toHaveBeenCalled();
+    });
   });
 });
 

@@ -86,6 +86,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
             setLifecycleState("OPEN");
             ideEvents.emit("workspace:opened", restored);
           } else {
+            await WorkspaceService.closeNativeWorkspace().catch(() => {});
             setLifecycleState("CLOSED");
           }
           setRecentWorkspaces(WorkspaceService.getRecentWorkspaces());
@@ -134,6 +135,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     setClosingStage("Closing terminal sessions...");
 
     try {
+      await WorkspaceService.closeNativeWorkspace().catch(() => {});
       ideEvents.emit("workspace:closing", { workspace: currentWorkspace });
 
       // Run structured teardown across all workspace-owned resources
@@ -223,6 +225,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         setLifecycleState("SWITCHING");
         setClosingStage(`Closing ${currentWorkspace.name}...`);
 
+        await WorkspaceService.closeNativeWorkspace().catch(() => {});
+
         ideEvents.emit("workspace:closing", {
           workspace: currentWorkspace,
           targetWorkspace: {
@@ -257,9 +261,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
       setClosingStage(`Opening ${targetName}...`);
 
-      // Step 2: Validate the requested path
+      // Step 2: Validate and authorize the requested path in native Rust WorkspaceGuard
       const isValid = await WorkspaceService.validatePath(rootPath);
       if (!isValid) {
+        await WorkspaceService.closeNativeWorkspace().catch(() => {});
         const normTarget = normalizePath(rootPath).toLowerCase();
         const recents = WorkspaceService.getRecentWorkspaces().map((item) =>
           item && item.rootPath && normalizePath(item.rootPath).toLowerCase() === normTarget
@@ -280,9 +285,15 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
 
-      // Step 3: Initialize new workspace
+      // Step 3: Authorize native workspace guard before project detection or state activation
+      const tentativeWs = WorkspaceService.createWorkspace(rootPath);
+      await WorkspaceService.openNativeWorkspace(rootPath, tentativeWs.id);
+
       const detectedTypes = await WorkspaceService.detectProjectCharacteristics(rootPath);
-      const ws = WorkspaceService.createWorkspace(rootPath, detectedTypes);
+      const ws = {
+        ...tentativeWs,
+        projectTypes: detectedTypes,
+      };
       const updatedRecents = WorkspaceService.addRecentWorkspace(ws);
       WorkspaceService.setLastActiveWorkspace(ws);
 
@@ -297,9 +308,12 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         setClosingStage(null);
         setTargetWorkspaceName(null);
         ideEvents.emit("workspace:opened", ws);
+      } else {
+        await WorkspaceService.closeNativeWorkspace().catch(() => {});
       }
       return true;
     } catch (err: unknown) {
+      await WorkspaceService.closeNativeWorkspace().catch(() => {});
       const msg = err instanceof Error ? err.message : "Failed to open workspace.";
       console.error("[WorkspaceStore] Failed to open workspace:", err);
       if (lifecycleSeqRef.current === currentSeq) {
@@ -373,6 +387,14 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
 
+      try {
+        await WorkspaceService.addNativeRoot(targetPath);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Failed to authorize folder root.";
+        setError(msg);
+        return false;
+      }
+
       const updated = WorkspaceService.addRootFolder(current, targetPath);
       setActiveWorkspace(updated);
       activeWorkspaceRef.current = updated;
@@ -408,6 +430,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       );
 
       if (rootToRemove) {
+        await WorkspaceService.removeNativeRoot(rootToRemove.path).catch(() => {});
         try {
           await fsWatcher.unwatch(rootToRemove.path);
         } catch (err) {

@@ -18,6 +18,7 @@ import {
 import { TerminalIpcService } from "./services/terminal-ipc.service";
 import { TerminalInstanceRegistry } from "./services/terminal-instance-registry";
 import { registerTerminalCommands } from "./services/terminal-commands";
+import { performTerminalToggle } from "./services/terminal-toggle";
 import { TerminalProfileService } from "./services/terminal-profile.service";
 import { useWorkspaceOptional } from "@/features/workspace/store";
 import { useSettings } from "@/features/settings/store";
@@ -122,6 +123,18 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
     sessionsRef.current = sessions;
   }, [sessions]);
 
+  const isOpenRef = useRef(isOpen);
+  useEffect(() => {
+    isOpenRef.current = isOpen;
+  }, [isOpen]);
+
+  const isCreatingInitialRef = useRef(false);
+
+  const setTerminalOpen = useCallback((open: boolean) => {
+    isOpenRef.current = open;
+    setIsOpen(open);
+  }, []);
+
   // Terminal Settings derived from IDE Settings
   const terminalSettings: TerminalSettings = useMemo(() => {
     const fromIde = ideSettings.terminal;
@@ -143,6 +156,8 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
     terminalSettingsRef.current = terminalSettings;
   }, [terminalSettings]);
 
+  const customProfilesSyncRef = useRef<Promise<void>>(Promise.resolve());
+
   // Load host shell profiles on mount
   useEffect(() => {
     let isMounted = true;
@@ -161,18 +176,46 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Merge discovered OS shells with user-defined custom profiles
+  // Synchronize validated user custom shell profiles with the Rust backend
+  useEffect(() => {
+    const rawCustom = terminalSettings.customProfiles || [];
+    const validCustom = rawCustom.filter((profile) => {
+      const validation = TerminalProfileService.validateProfile(profile);
+      if (!validation.valid) {
+        console.warn(
+          `[TerminalStore] Skipping invalid custom shell profile "${profile.name || profile.id}":`,
+          validation.errors.join("; ")
+        );
+      }
+      return validation.valid;
+    });
+
+    const syncPromise = TerminalIpcService.syncCustomProfiles(validCustom)
+      .then(() => undefined)
+      .catch((err) => {
+        console.warn("[TerminalStore] Failed to sync custom shell profiles:", err);
+      });
+
+    customProfilesSyncRef.current = syncPromise;
+  }, [terminalSettings.customProfiles]);
+
+  // Merge discovered OS shells with validated user-defined custom profiles
   const allProfiles = useMemo(() => {
+    const validCustom = (terminalSettings.customProfiles || []).filter(
+      (profile) => TerminalProfileService.validateProfile(profile).valid
+    );
     return TerminalProfileService.mergeProfiles(
       availableShells,
-      terminalSettings.customProfiles || [],
+      validCustom,
       terminalSettings.defaultProfile
     );
   }, [availableShells, terminalSettings.customProfiles, terminalSettings.defaultProfile]);
 
-  // Register terminal commands in central CommandRegistry
+  // Register terminal commands once in central CommandRegistry
   useEffect(() => {
-    return registerTerminalCommands();
+    return registerTerminalCommands({
+      isWorkspaceActive: () => Boolean(activeWorkspaceRef.current),
+    });
   }, []);
 
   const defaultShell = useMemo(() => {
@@ -185,6 +228,8 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
   // Create a new terminal session
   const createTerminal = useCallback(
     async (shellId?: string, customCwd?: string): Promise<string> => {
+      await customProfilesSyncRef.current;
+
       const selectedShell = shellId
         ? allProfiles.find((s) => s.id === shellId)
         : defaultShell;
@@ -200,10 +245,7 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
 
       try {
         const info = await TerminalIpcService.createSession({
-          shellId: selectedShell?.isCustom ? undefined : selectedShell?.id,
-          executable: selectedShell?.isCustom ? selectedShell.executable : undefined,
-          args: selectedShell?.args,
-          env: selectedShell?.env,
+          shellId: selectedShell?.id,
           cwd,
           workspaceId: currentWorkspaceId,
         });
@@ -252,6 +294,7 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
         setSessions((prev) => [...prev, newSessionState]);
         setActiveSessionId(info.sessionId);
         setActiveSplitSessionId(info.sessionId);
+        isOpenRef.current = true;
         setIsOpen(true);
 
         return info.sessionId;
@@ -274,34 +317,32 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
       } finally {
         TerminalInstanceRegistry.dispose(sessionId);
 
-        setSessions((prev) => {
-          const updated = prev.filter((s) => s.sessionId !== sessionId);
-          if (activeSessionId === sessionId) {
-            const nextActive = updated[updated.length - 1]?.sessionId ?? null;
-            setActiveSessionId(nextActive);
-            setActiveSplitSessionId(nextActive);
-            if (!nextActive) {
-              setIsOpen(false);
-            }
-          }
-          return updated;
-        });
+        const updated = sessionsRef.current.filter((s) => s.sessionId !== sessionId);
+        sessionsRef.current = updated;
+        setSessions(updated);
 
-        setActiveSplitSessionId((prev) =>
-          prev === sessionId ? (activeSessionId === sessionId ? null : activeSessionId) : prev
-        );
-
-        setSplitSessionIds((prev) => {
-          const remaining = prev.filter((id) => id !== sessionId);
-          if (remaining.length <= 1) {
-            setSplitDirection(null);
-            return [];
+        if (activeSessionId === sessionId) {
+          const nextActive = updated[updated.length - 1]?.sessionId ?? null;
+          setActiveSessionId(nextActive);
+          setActiveSplitSessionId(nextActive);
+          if (!nextActive) {
+            isOpenRef.current = false;
+            setIsOpen(false);
           }
-          return remaining;
-        });
+        } else {
+          setActiveSplitSessionId((prev) => (prev === sessionId ? activeSessionId : prev));
+        }
+
+        const remainingSplit = splitSessionIds.filter((id) => id !== sessionId);
+        if (remainingSplit.length <= 1) {
+          setSplitDirection(null);
+          setSplitSessionIds([]);
+        } else {
+          setSplitSessionIds(remainingSplit);
+        }
       }
     },
-    [activeSessionId]
+    [activeSessionId, splitSessionIds]
   );
 
   // Terminate all active sessions and clean up background processes
@@ -316,11 +357,13 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
     } finally {
       TerminalInstanceRegistry.disposeAll();
 
+      sessionsRef.current = [];
       setSessions([]);
       setActiveSessionId(null);
       setActiveSplitSessionId(null);
       setSplitDirection(null);
       setSplitSessionIds([]);
+      isOpenRef.current = false;
       setIsOpen(false);
     }
   }, []);
@@ -332,32 +375,33 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
     } catch (err) {
       console.warn("[TerminalStore] Failed to terminate workspace terminal sessions:", err);
     } finally {
-      setSessions((prev) => {
-        const remaining = targetWorkspaceId
-          ? prev.filter((s) => s.workspaceId && s.workspaceId !== targetWorkspaceId)
-          : [];
+      const current = sessionsRef.current;
+      const remaining = targetWorkspaceId
+        ? current.filter((s) => s.workspaceId && s.workspaceId !== targetWorkspaceId)
+        : [];
+      const targets = targetWorkspaceId
+        ? current.filter((s) => !s.workspaceId || s.workspaceId === targetWorkspaceId)
+        : current;
 
-        const targets = targetWorkspaceId
-          ? prev.filter((s) => !s.workspaceId || s.workspaceId === targetWorkspaceId)
-          : prev;
+      for (const s of targets) {
+        TerminalInstanceRegistry.dispose(s.sessionId);
+      }
 
-        for (const s of targets) {
-          TerminalInstanceRegistry.dispose(s.sessionId);
-        }
+      sessionsRef.current = remaining;
+      setSessions(remaining);
 
-        if (remaining.length === 0) {
-          setActiveSessionId(null);
-          setActiveSplitSessionId(null);
-          setSplitDirection(null);
-          setSplitSessionIds([]);
-          setIsOpen(false);
-        } else {
-          setActiveSessionId(remaining[remaining.length - 1].sessionId);
-          setActiveSplitSessionId(remaining[remaining.length - 1].sessionId);
-        }
-
-        return remaining;
-      });
+      if (remaining.length === 0) {
+        setActiveSessionId(null);
+        setActiveSplitSessionId(null);
+        setSplitDirection(null);
+        setSplitSessionIds([]);
+        isOpenRef.current = false;
+        setIsOpen(false);
+      } else {
+        const nextActiveId = remaining[remaining.length - 1].sessionId;
+        setActiveSessionId(nextActiveId);
+        setActiveSplitSessionId(nextActiveId);
+      }
     }
   }, []);
 
@@ -380,14 +424,16 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const toggleTerminal = useCallback(() => {
-    setIsOpen((prev) => {
-      const next = !prev;
-      if (next && sessions.length === 0) {
-        createTerminal().catch(() => {});
-      }
-      return next;
-    });
-  }, [sessions.length, createTerminal]);
+    performTerminalToggle(
+      {
+        isOpenRef,
+        isCreatingInitialRef,
+        sessionsCount: sessionsRef.current.length,
+      },
+      setIsOpen,
+      createTerminal
+    );
+  }, [createTerminal]);
 
   const toggleMaximize = useCallback(() => {
     setIsMaximized((prev) => !prev);
@@ -625,19 +671,6 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
     activeSplitSessionId,
   ]);
 
-  // Global keyboard shortcut: Ctrl+` (or Cmd+`) toggles terminal panel
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "`") {
-        e.preventDefault();
-        toggleTerminal();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [toggleTerminal]);
-
   const activeSession = useMemo(() => {
     return sessions.find((s) => s.sessionId === activeSessionId) || null;
   }, [sessions, activeSessionId]);
@@ -663,7 +696,7 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
     setActiveTerminal,
     setActiveSplitTerminal,
     toggleTerminal,
-    setTerminalOpen: setIsOpen,
+    setTerminalOpen,
     setPanelHeight,
     setSplitRatio,
     toggleMaximize,

@@ -9,6 +9,12 @@ pub struct ShellProfile {
     pub executable: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub args: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub env: Option<HashMap<String, String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cwd: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub is_custom: Option<bool>,
     pub icon: String,
     pub is_default: bool,
     pub platform: String,

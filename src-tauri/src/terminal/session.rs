@@ -1,7 +1,14 @@
 use super::error::TerminalError;
-use super::shells::{resolve_shell, resolve_working_directory, validate_executable};
-use super::types::{SessionStatus, TerminalCreateConfig, TerminalExitPayload, TerminalSessionInfo};
+use super::shells::{
+    resolve_shell, resolve_working_directory_with_guard, sanitize_env_vars, validate_shell_args,
+    validate_shell_executable,
+};
+use super::types::{
+    SessionStatus, ShellProfile, TerminalCreateConfig, TerminalExitPayload, TerminalSessionInfo,
+};
+use crate::security::WorkspaceGuard;
 use portable_pty::{native_pty_system, Child, CommandBuilder, MasterPty, PtySize};
+use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, AtomicU16, Ordering};
@@ -33,34 +40,97 @@ pub struct TerminalSession {
     pub workspace_id: Option<String>,
 }
 
+/// Validated launch configuration resolved prior to spawning a PTY child process.
+#[derive(Debug)]
+pub struct PreparedTerminalLaunch {
+    pub shell_exec: String,
+    pub shell_args: Vec<String>,
+    pub sanitized_env: Vec<(String, String)>,
+    pub cwd_path: std::path::PathBuf,
+}
+
+/// Resolves and validates shell executable, interactive arguments, sanitized environment
+/// variables, and working directory before PTY spawn.
+pub fn prepare_terminal_launch(
+    config: &TerminalCreateConfig,
+    workspace_root: Option<&Path>,
+    workspace_guard: Option<&WorkspaceGuard>,
+    custom_profile: Option<&ShellProfile>,
+) -> Result<PreparedTerminalLaunch, TerminalError> {
+    if config.executable.is_some() {
+        return Err(TerminalError::UnauthorizedExecutable(
+            "Direct executable overrides are not permitted. Select a discovered or registered shell profile.".to_string(),
+        ));
+    }
+
+    let (shell_exec, default_args, profile_env, profile_cwd) = if let Some(profile) = custom_profile
+    {
+        let valid_exec = validate_shell_executable(&profile.executable, workspace_guard)?;
+        let valid_args = validate_shell_args(profile.args.as_deref().unwrap_or(&[]))?;
+        (
+            WorkspaceGuard::display_path(&valid_exec),
+            valid_args,
+            profile.env.clone(),
+            profile.cwd.clone(),
+        )
+    } else {
+        let (exec, args) = resolve_shell(config.shell_id.as_deref())?;
+        (exec, args, None, None)
+    };
+
+    let shell_args = if let Some(ref requested_args) = config.args {
+        validate_shell_args(requested_args)?
+    } else {
+        default_args
+    };
+
+    let mut merged_env: HashMap<String, String> = HashMap::new();
+    if let Some(ref p_env) = profile_env {
+        for (k, v) in p_env {
+            merged_env.insert(k.clone(), v.clone());
+        }
+    }
+    if let Some(ref c_env) = config.env {
+        for (k, v) in c_env {
+            merged_env.insert(k.clone(), v.clone());
+        }
+    }
+    let sanitized_env = sanitize_env_vars(&merged_env)?;
+
+    let requested_cwd = config.cwd.as_deref().or(profile_cwd.as_deref());
+    let cwd_path =
+        resolve_working_directory_with_guard(requested_cwd, workspace_root, workspace_guard)?;
+
+    Ok(PreparedTerminalLaunch {
+        shell_exec,
+        shell_args,
+        sanitized_env,
+        cwd_path,
+    })
+}
+
 impl TerminalSession {
     /// Creates and spawns a new PTY terminal session.
     pub fn new<R: Runtime>(
         app: &AppHandle<R>,
         config: TerminalCreateConfig,
         workspace_root: Option<&Path>,
+        workspace_guard: Option<&WorkspaceGuard>,
+        custom_profile: Option<&ShellProfile>,
     ) -> Result<Arc<Self>, TerminalError> {
         let session_id = Uuid::new_v4().to_string();
 
-        // 1. Resolve executable and arguments
-        let (shell_exec, shell_args) = if let Some(exec) = &config.executable {
-            let valid_path = validate_executable(exec)?;
-            let args = config.args.unwrap_or_default();
-            (valid_path.to_string_lossy().to_string(), args)
-        } else {
-            let (exec, default_args) = resolve_shell(config.shell_id.as_deref())?;
-            let args = config.args.unwrap_or(default_args);
-            (exec, args)
-        };
-
-        // 2. Resolve working directory
-        let cwd_path = resolve_working_directory(config.cwd.as_deref(), workspace_root)?;
+        let PreparedTerminalLaunch {
+            shell_exec,
+            shell_args,
+            sanitized_env,
+            cwd_path,
+        } = prepare_terminal_launch(&config, workspace_root, workspace_guard, custom_profile)?;
         let cwd_str = cwd_path.to_string_lossy().to_string();
 
         let initial_cols = config.cols.unwrap_or(DEFAULT_TERMINAL_COLS);
         let initial_rows = config.rows.unwrap_or(DEFAULT_TERMINAL_ROWS);
 
-        // 3. Initialize PTY system
         let pty_system = native_pty_system();
         let pair = pty_system
             .openpty(PtySize {
@@ -73,22 +143,18 @@ impl TerminalSession {
                 TerminalError::PtySpawnFailed(format!("Failed to open PTY pair: {}", e))
             })?;
 
-        // 4. Configure command builder
         let mut cmd = CommandBuilder::new(&shell_exec);
         cmd.args(&shell_args);
         cmd.cwd(&cwd_path);
 
-        if let Some(env_vars) = config.env {
-            for (key, val) in env_vars {
-                cmd.env(key, val);
-            }
+        for (key, val) in sanitized_env {
+            cmd.env(key, val);
         }
 
-        // Standard terminal environment hints
+        // Standard terminal environment hints (set after sanitized overrides)
         cmd.env("TERM", "xterm-256color");
         cmd.env("COLORTERM", "truecolor");
 
-        // 5. Spawn child process into slave PTY
         let child = pair.slave.spawn_command(cmd).map_err(|e| {
             TerminalError::PtySpawnFailed(format!("Failed to spawn child process: {}", e))
         })?;
@@ -129,7 +195,6 @@ impl TerminalSession {
             workspace_id,
         });
 
-        // 6. Spawn continuous background reader thread
         let app_handle = app.clone();
         let session_weak = Arc::downgrade(&session);
         let event_data_name = format!("terminal:data:{}", session_id);
@@ -149,7 +214,6 @@ impl TerminalSession {
 
                     match reader.read(&mut buffer) {
                         Ok(0) => {
-                            // EOF received from PTY master
                             if !residual.is_empty() {
                                 let text = String::from_utf8_lossy(&residual).to_string();
                                 let _ = app_handle.emit(&event_data_name, text);
@@ -211,7 +275,6 @@ impl TerminalSession {
                     }
                 }
 
-                // Retrieve exit code if session still exists and not forcefully murdered
                 if let Some(session_arc) = session_weak.upgrade() {
                     let code = if let Ok(mut child_guard) = session_arc.child.lock() {
                         match child_guard.wait() {
@@ -307,14 +370,11 @@ impl TerminalSession {
         };
 
         if !already_exited {
-            // Attempt graceful interrupt signal (Ctrl+C / SIGINT) first
             if let Ok(mut writer_guard) = self.writer.lock() {
                 let _ = writer_guard.write_all(b"\x03");
                 let _ = writer_guard.flush();
             }
 
-            // Kill OS process tree FIRST using pid before acquiring child lock,
-            // preventing deadlocks when reader thread is waiting on child.wait()
             if let Some(pid) = self.pid {
                 #[cfg(windows)]
                 {
@@ -350,12 +410,19 @@ impl TerminalSession {
         Ok(())
     }
 
-    /// Returns a serializable snapshot of the terminal session information.
-    pub fn get_info(&self) -> TerminalSessionInfo {
-        let status = self.status.lock().unwrap().clone();
-        let exit_code = *self.exit_code.lock().unwrap();
+    /// Returns a serializable snapshot of the terminal session information,
+    /// returning a structured error if internal session mutexes are poisoned.
+    pub fn get_info(&self) -> Result<TerminalSessionInfo, TerminalError> {
+        let status = self
+            .status
+            .lock()
+            .map_err(|_| TerminalError::LockPoisoned("Terminal status mutex poisoned".to_string()))?
+            .clone();
+        let exit_code = *self.exit_code.lock().map_err(|_| {
+            TerminalError::LockPoisoned("Terminal exit_code mutex poisoned".to_string())
+        })?;
 
-        TerminalSessionInfo {
+        Ok(TerminalSessionInfo {
             session_id: self.session_id.clone(),
             pid: self.pid,
             shell: self.shell.clone(),
@@ -367,7 +434,7 @@ impl TerminalSession {
             created_at: self.created_at,
             exit_code,
             workspace_id: self.workspace_id.clone(),
-        }
+        })
     }
 }
 

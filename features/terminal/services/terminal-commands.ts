@@ -1,11 +1,21 @@
 import { CommandRegistry } from "@/features/commands/command-registry";
 import { ideEvents } from "@/lib/events";
 
+export interface RegisterTerminalCommandsOptions {
+  isWorkspaceActive?: () => boolean;
+}
+
 /**
  * Registers all integrated terminal commands into the central CommandRegistry.
  * Returns an unregister cleanup function.
  */
-export function registerTerminalCommands(): () => void {
+export function registerTerminalCommands(
+  options?: RegisterTerminalCommandsOptions
+): () => void {
+  const isWorkspaceEnabled = options?.isWorkspaceActive
+    ? () => Boolean(options.isWorkspaceActive?.())
+    : undefined;
+
   const unsubs = [
     CommandRegistry.register({
       id: "workbench.action.terminal.toggleTerminal",
@@ -13,6 +23,7 @@ export function registerTerminalCommands(): () => void {
       description: "Open or close the integrated terminal panel",
       category: "workbench",
       keywords: ["terminal", "bash", "powershell", "cmd", "pty", "console", "shell", "toggle"],
+      ...(isWorkspaceEnabled ? { enabled: isWorkspaceEnabled } : {}),
       execute: () => {
         ideEvents.emit("terminal:toggle");
       },
@@ -23,6 +34,7 @@ export function registerTerminalCommands(): () => void {
       description: "Spawn a new terminal session in the bottom panel",
       category: "workbench",
       keywords: ["terminal", "new", "create", "shell", "bash", "powershell"],
+      ...(isWorkspaceEnabled ? { enabled: isWorkspaceEnabled } : {}),
       execute: () => {
         ideEvents.emit("terminal:new");
       },
@@ -73,6 +85,7 @@ export function registerTerminalCommands(): () => void {
       description: "Split the current terminal session side by side",
       category: "workbench",
       keywords: ["terminal", "split", "horizontal", "vertical", "columns"],
+      ...(isWorkspaceEnabled ? { enabled: isWorkspaceEnabled } : {}),
       execute: () => {
         ideEvents.emit("terminal:split", "horizontal");
       },
@@ -93,6 +106,7 @@ export function registerTerminalCommands(): () => void {
       description: "Clear active terminal viewport screen",
       category: "workbench",
       keywords: ["terminal", "clear", "cls", "reset"],
+      ...(isWorkspaceEnabled ? { enabled: isWorkspaceEnabled } : {}),
       execute: () => {
         ideEvents.emit("terminal:clear");
       },

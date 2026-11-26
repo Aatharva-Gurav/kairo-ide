@@ -157,4 +157,34 @@ describe("AppTitleBar Menu Definitions - Welcome Screen vs Workspace", () => {
       expect(killWithSession?.disabled).toBe(false);
     });
   });
+
+  describe("Metadata Accuracy & Truthful Update Behavior (Stage 2B)", () => {
+    it("reports the exact installed Monaco Editor and App versions", async () => {
+      const fs = await import("node:fs");
+      const path = await import("node:path");
+      const { getAppVersion, getMonacoVersion } = await import("@/lib/app-metadata");
+
+      const monacoPkg = JSON.parse(
+        fs.readFileSync(path.join(process.cwd(), "node_modules", "monaco-editor", "package.json"), "utf8")
+      ) as { version: string };
+      const rootPkg = JSON.parse(
+        fs.readFileSync(path.join(process.cwd(), "package.json"), "utf8")
+      ) as { version: string };
+
+      expect(getMonacoVersion()).toBe(monacoPkg.version);
+      expect(getMonacoVersion()).not.toBe("0.56");
+      expect(getAppVersion()).toBe(rootPkg.version);
+    });
+
+    it("does not simulate a fake update check or hardcode Monaco 0.56 in AppTitleBar", async () => {
+      const fs = await import("node:fs");
+      const path = await import("node:path");
+      const src = fs.readFileSync(path.join(process.cwd(), "components", "app-titlebar.tsx"), "utf8");
+
+      expect(src).not.toContain("Monaco Editor 0.56");
+      expect(src).not.toContain("You Are Up to Date");
+      expect(src).toContain("Automatic Updates Unavailable");
+      expect(src).toContain("getMonacoVersion()");
+    });
+  });
 });

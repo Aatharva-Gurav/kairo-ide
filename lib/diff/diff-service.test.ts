@@ -150,4 +150,74 @@ describe("DiffService", () => {
     const result = DiffService.applyHunks(original, hunks);
     expect(result).toBe("line1\nline2_replaced\nline3");
   });
+
+  describe("Edge Cases, Line Endings & Large Files (Stage 2C)", () => {
+    it("handles insertions, deletions, replacements, and empty files accurately", () => {
+      // Insertion into completely empty file roundtrips without spurious trailing newline
+      const insertHunks = DiffService.computeHunks("", "first\nsecond");
+      expect(insertHunks).toHaveLength(1);
+      expect(DiffService.applyHunks("", insertHunks)).toBe("first\nsecond");
+
+      // Deletion to empty file
+      const deleteHunks = DiffService.computeHunks("first\nsecond", "");
+      expect(deleteHunks).toHaveLength(1);
+      expect(DiffService.applyHunks("first\nsecond", deleteHunks)).toBe("");
+
+      // Separated edits far apart produce separate compact hunks
+      const lines = Array.from({ length: 40 }, (_, i) => `line_${i + 1}`);
+      const modified = [...lines];
+      modified[1] = "line_2_changed";
+      modified[35] = "line_36_changed";
+
+      const splitHunks = DiffService.computeHunks(lines.join("\n"), modified.join("\n"));
+      expect(splitHunks.length).toBe(2);
+      expect(DiffService.applyHunks(lines.join("\n"), splitHunks)).toBe(modified.join("\n"));
+    });
+
+    it("preserves CRLF vs LF line endings in applyHunks and detects EOL conflicts", () => {
+      const crlfOld = "alpha\r\nbeta\r\ngamma";
+      const crlfNew = "alpha\r\nbeta_updated\r\ngamma";
+      const hunks = DiffService.computeHunks(crlfOld, crlfNew);
+
+      const applied = DiffService.applyHunks(crlfOld, hunks);
+      expect(applied).toBe(crlfNew);
+      expect(applied).toContain("\r\n");
+
+      // Stale base content due to line-ending change on disk triggers disk_mismatch
+      const eolConflict = DiffService.detectConflict({
+        path: "src/eol.ts",
+        baseContent: "a\nb",
+        currentBuffer: "a\nb",
+        currentDisk: "a\r\nb",
+        isDirty: false,
+      });
+      expect(eolConflict).not.toBeNull();
+      expect(eolConflict?.type).toBe("disk_mismatch");
+
+      // Dirty buffer without explicit baseContent is still protected
+      const dirtyNoBase = DiffService.detectConflict({
+        path: "src/dirty.ts",
+        baseContent: null,
+        currentBuffer: "edited",
+        currentDisk: "saved",
+        isDirty: true,
+      });
+      expect(dirtyNoBase).not.toBeNull();
+      expect(dirtyNoBase?.type).toBe("dirty_buffer");
+    });
+
+    it("handles large 10,000-line files quickly without OOM or matrix blowup", () => {
+      const largeOld = Array.from({ length: 10_000 }, (_, i) => `const v${i} = ${i};`);
+      const largeNew = [...largeOld];
+      largeNew[5_000] = "const v5000 = 999999;";
+
+      const startMs = Date.now();
+      const hunks = DiffService.computeHunks(largeOld.join("\n"), largeNew.join("\n"));
+      const elapsedMs = Date.now() - startMs;
+
+      expect(hunks).toHaveLength(1);
+      expect(elapsedMs).toBeLessThan(2000);
+      expect(DiffService.applyHunks(largeOld.join("\n"), hunks)).toBe(largeNew.join("\n"));
+    });
+  });
 });

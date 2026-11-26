@@ -20,7 +20,52 @@ function getStorage(): Storage | null {
   return getSafeLocalStorage();
 }
 
+export interface WorkspaceAuthInfo {
+  rootPath: string;
+  roots: string[];
+  workspaceId?: string;
+  generation: number;
+}
+
 export class WorkspaceService {
+  /**
+   * Registers and authorizes a workspace root in the native Rust WorkspaceGuard.
+   */
+  static async openNativeWorkspace(
+    rootPath: string,
+    workspaceId?: string
+  ): Promise<WorkspaceAuthInfo> {
+    return await invokeCommand<WorkspaceAuthInfo>("workspace_open", {
+      rootPath: normalizePath(rootPath),
+      workspaceId: workspaceId ?? null,
+    });
+  }
+
+  /**
+   * Clears workspace authorization in the native Rust WorkspaceGuard.
+   */
+  static async closeNativeWorkspace(): Promise<void> {
+    await invokeCommand<void>("workspace_close");
+  }
+
+  /**
+   * Adds an authorized root folder to the active native workspace.
+   */
+  static async addNativeRoot(rootPath: string): Promise<WorkspaceAuthInfo> {
+    return await invokeCommand<WorkspaceAuthInfo>("workspace_add_root", {
+      rootPath: normalizePath(rootPath),
+    });
+  }
+
+  /**
+   * Removes an authorized root folder from the active native workspace.
+   */
+  static async removeNativeRoot(rootPath: string): Promise<WorkspaceAuthInfo> {
+    return await invokeCommand<WorkspaceAuthInfo>("workspace_remove_root", {
+      rootPath: normalizePath(rootPath),
+    });
+  }
+
   /**
    * Triggers native OS folder picker dialog via Tauri backend.
    */
@@ -254,6 +299,22 @@ export class WorkspaceService {
 
       const isValid = await this.validatePath(parsed.rootPath);
       if (isValid) {
+        try {
+          await this.openNativeWorkspace(parsed.rootPath, parsed.id);
+        } catch (authErr) {
+          console.warn("[WorkspaceService] Native workspace authorization failed on restore:", authErr);
+          await this.closeNativeWorkspace().catch(() => {});
+          this.setLastActiveWorkspace(null);
+          return null;
+        }
+
+        const extraRoots = (parsed.roots || []).slice(1);
+        for (const extra of extraRoots) {
+          if (extra?.path) {
+            await this.addNativeRoot(extra.path).catch(() => {});
+          }
+        }
+
         const detected = await this.detectProjectCharacteristics(parsed.rootPath);
         const restored: Workspace = {
           ...parsed,

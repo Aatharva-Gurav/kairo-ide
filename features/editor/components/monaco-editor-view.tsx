@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import Editor, { loader } from "@monaco-editor/react";
 import * as monaco from "monaco-editor";
-import { useEditor } from "../store";
+import { useEditor, EditorPaneId } from "../store";
 import { useSettings } from "@/features/settings/store";
 import { ModelService } from "../services/model.service";
 import { IntelliSenseService } from "../services/intellisense.service";
@@ -103,6 +103,7 @@ if (typeof window !== "undefined") {
 
 interface MonacoEditorViewProps {
   document: EditorDocument;
+  paneId?: EditorPaneId;
   onCursorChange?: (docPath: string, pos: {
     lineNumber: number;
     column: number;
@@ -111,14 +112,16 @@ interface MonacoEditorViewProps {
   }) => void;
 }
 
-export function MonacoEditorView({ document, onCursorChange }: MonacoEditorViewProps) {
+export function MonacoEditorView({ document, paneId = "primary", onCursorChange }: MonacoEditorViewProps) {
   const {
     settings,
     updateContent,
     saveDocument,
     closeDocument,
     formatActiveDocument,
-    monacoEditorRef,
+    focusedPane,
+    registerPaneEditor,
+    focusPane,
     isSplit,
     setGoToLineVisible,
     setQuickOpenVisible,
@@ -138,16 +141,30 @@ export function MonacoEditorView({ document, onCursorChange }: MonacoEditorViewP
   const [isFindOpen, setIsFindOpen] = useState(false);
   const [isReplaceMode, setIsReplaceMode] = useState(false);
 
-  // Listen to menubar or global find and replace triggers
+  const focusedPaneRef = useRef(focusedPane);
+  useEffect(() => {
+    focusedPaneRef.current = focusedPane;
+  }, [focusedPane]);
+
+  const paneIdRef = useRef(paneId);
+  useEffect(() => {
+    paneIdRef.current = paneId;
+  }, [paneId]);
+
+  // Listen to menubar or global find and replace triggers, scoped to focused pane
   useEffect(() => {
     const unsubs = [
       ideEvents.on("editor:find", (payload) => {
+        if (payload?.paneId && payload.paneId !== paneIdRef.current) return;
+        if (!payload?.paneId && focusedPaneRef.current !== paneIdRef.current) return;
         if (!payload || !payload.path || payload.path === document.path) {
           setIsFindOpen(true);
           setIsReplaceMode(false);
         }
       }),
       ideEvents.on("editor:replace", (payload) => {
+        if (payload?.paneId && payload.paneId !== paneIdRef.current) return;
+        if (!payload?.paneId && focusedPaneRef.current !== paneIdRef.current) return;
         if (!payload || !payload.path || payload.path === document.path) {
           setIsFindOpen(true);
           setIsReplaceMode(true);
@@ -156,6 +173,13 @@ export function MonacoEditorView({ document, onCursorChange }: MonacoEditorViewP
     ];
     return () => unsubs.forEach((u) => u());
   }, [document.path]);
+
+  // Release pane editor registration safely on unmount
+  useEffect(() => {
+    return () => {
+      registerPaneEditor(paneIdRef.current, null);
+    };
+  }, [registerPaneEditor]);
 
   const onCursorChangeRef = useRef(onCursorChange);
   useEffect(() => {
@@ -380,7 +404,8 @@ export function MonacoEditorView({ document, onCursorChange }: MonacoEditorViewP
   const handleEditorDidMount = (editor: any) => {
     localEditorRef.current = editor;
     setEditorInstance(editor);
-    monacoEditorRef.current = editor;
+    registerPaneEditor(paneIdRef.current, editor);
+    focusPane(paneIdRef.current, documentRef.current.path);
 
     // Initialize IntelliSense and snippets
     IntelliSenseService.init(monaco);
@@ -402,7 +427,7 @@ export function MonacoEditorView({ document, onCursorChange }: MonacoEditorViewP
       }
       contentListenerRef.current = model.onDidChangeContent(() => {
         const val = model.getValue();
-        updateContent(document.path, val);
+        updateContent(documentRef.current.path, val);
       });
     }
 
@@ -417,10 +442,23 @@ export function MonacoEditorView({ document, onCursorChange }: MonacoEditorViewP
     });
 
     editor.onDidFocusEditorText(() => {
+      focusPane(paneIdRef.current, documentRef.current.path);
       emitCursorPosition(editor);
     });
 
+    editor.onDidFocusEditorWidget?.(() => {
+      focusPane(paneIdRef.current, documentRef.current.path);
+    });
+
+    editor.onDidDispose?.(() => {
+      if (localEditorRef.current === editor) {
+        localEditorRef.current = null;
+      }
+      registerPaneEditor(paneIdRef.current, null);
+    });
+
     editor.onMouseUp(() => {
+      focusPane(paneIdRef.current, documentRef.current.path);
       emitCursorPosition(editor);
     });
 
@@ -433,12 +471,12 @@ export function MonacoEditorView({ document, onCursorChange }: MonacoEditorViewP
 
     // Command: Ctrl/Cmd+S Save Document
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
-      saveDocument(document.path);
+      saveDocument(documentRef.current.path);
     });
 
     // Command: Ctrl/Cmd+W Close Active Document Tab
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyW, () => {
-      closeDocument(document.path);
+      closeDocument(documentRef.current.path);
     });
 
     // Command: Ctrl/Cmd+P Quick Open File Modal
@@ -448,11 +486,13 @@ export function MonacoEditorView({ document, onCursorChange }: MonacoEditorViewP
 
     // Command: Ctrl/Cmd+G Go To Line Modal
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyG, () => {
+      focusPane(paneIdRef.current, documentRef.current.path);
       setGoToLineVisible(true);
     });
 
     // Command: Shift+Alt+F Format Active Document
     editor.addCommand(monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.KeyF, () => {
+      focusPane(paneIdRef.current, documentRef.current.path);
       formatActiveDocument();
     });
 
