@@ -188,6 +188,14 @@ describe("SettingsService", () => {
     expect(SettingsService.getSetting<number>("editor.fontSize")).toBe(18);
   });
 
+  it("allows terminal.fontSize below 14 within its valid 9-32 range", () => {
+    SettingsService.updateSetting("terminal.fontSize", 12, "user");
+    expect(SettingsService.getSetting<number>("terminal.fontSize")).toBe(12);
+
+    SettingsService.updateSetting("terminal.fontSize", 10, "user");
+    expect(SettingsService.getSetting<number>("terminal.fontSize")).toBe(10);
+  });
+
   it("normalizes workspace paths across slashes and casing for settings persistence", () => {
     SettingsService.setWorkspaceRootPath("C:\\Projects\\MyApp");
     SettingsService.updateSetting("editor.tabSize", 4, "workspace");

@@ -44,7 +44,10 @@ export interface TerminalContextValue {
   activeSplitSessionId: string | null;
 
   createTerminal: (shellId?: string, cwd?: string) => Promise<string>;
-  killTerminal: (sessionId: string) => Promise<void>;
+  killTerminal: (sessionId: string, force?: boolean) => Promise<void>;
+  pendingKillSession: TerminalSessionState | null;
+  confirmKillTerminal: () => Promise<void>;
+  cancelKillTerminal: () => void;
   killAllTerminals: () => Promise<void>;
   killWorkspaceTerminals: (workspaceId?: string) => Promise<void>;
   setActiveTerminal: (sessionId: string) => void;
@@ -90,6 +93,7 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
   const [splitSessionIds, setSplitSessionIds] = useState<string[]>([]);
   const [splitDirection, setSplitDirection] = useState<"horizontal" | "vertical" | null>(null);
   const [splitRatio, setSplitRatio] = useState<number>(0.5);
+  const [pendingKillSession, setPendingKillSession] = useState<TerminalSessionState | null>(null);
 
   const [panelHeight, setPanelHeightState] = useState<number>(() => {
     if (typeof window === "undefined") return DEFAULT_PANEL_HEIGHT;
@@ -102,7 +106,7 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
         }
       }
     } catch {}
-    return DEFAULT_PANEL_HEIGHT;
+    return ideSettings.terminal?.panelHeight ?? DEFAULT_PANEL_HEIGHT;
   });
 
   const setPanelHeight = useCallback((height: number) => {
@@ -112,6 +116,19 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem(PANEL_HEIGHT_KEY, clamped.toString());
     } catch {}
   }, []);
+
+  // Sync panelHeight when changed from Settings
+  const prevSettingsPanelHeightRef = useRef(ideSettings.terminal?.panelHeight);
+  useEffect(() => {
+    const nextHeight = ideSettings.terminal?.panelHeight;
+    if (
+      typeof nextHeight === "number" &&
+      nextHeight !== prevSettingsPanelHeightRef.current
+    ) {
+      prevSettingsPanelHeightRef.current = nextHeight;
+      setPanelHeight(nextHeight);
+    }
+  }, [ideSettings.terminal?.panelHeight, setPanelHeight]);
 
   const activeWorkspaceRef = useRef(activeWorkspace);
   useEffect(() => {
@@ -144,9 +161,6 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
     };
     if (base.fontFamily && (base.fontFamily.includes("var(") || base.fontFamily.includes("var(--font-mono)"))) {
       base.fontFamily = DEFAULT_TERMINAL_SETTINGS.fontFamily;
-    }
-    if (typeof base.fontSize === "number" && base.fontSize < 14) {
-      base.fontSize = 14;
     }
     return base;
   }, [ideSettings.terminal]);
@@ -306,10 +320,21 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
     [allProfiles, defaultShell, terminalSettings.defaultCwd]
   );
 
-  // Terminate an active session
+  // Terminate an active session (respecting terminal.confirmKillProcess when force is false)
   const killTerminal = useCallback(
-    async (sessionId: string) => {
+    async (sessionId: string, force = false) => {
       if (!sessionId) return;
+      const targetSession = sessionsRef.current.find((s) => s.sessionId === sessionId);
+      if (
+        !force &&
+        terminalSettingsRef.current.confirmKillProcess &&
+        targetSession &&
+        !targetSession.isExited
+      ) {
+        setPendingKillSession(targetSession);
+        return;
+      }
+
       try {
         await TerminalIpcService.killSession(sessionId);
       } catch {
@@ -344,6 +369,18 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
     },
     [activeSessionId, splitSessionIds]
   );
+
+  const confirmKillTerminal = useCallback(async () => {
+    const target = pendingKillSession;
+    setPendingKillSession(null);
+    if (target) {
+      await killTerminal(target.sessionId, true);
+    }
+  }, [pendingKillSession, killTerminal]);
+
+  const cancelKillTerminal = useCallback(() => {
+    setPendingKillSession(null);
+  }, []);
 
   // Terminate all active sessions and clean up background processes
   const killAllTerminals = useCallback(async () => {
@@ -614,6 +651,21 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
     });
     const unlistenFocus = ideEvents.on("terminal:focus", () => {
       const curId = activeSplitSessionId || activeSessionId;
+      if (!isOpenRef.current) {
+        if (sessionsRef.current.length === 0) {
+          if (activeWorkspaceRef.current) {
+            createTerminal().catch(() => {});
+          }
+          return;
+        }
+        setTerminalOpen(true);
+        if (curId) {
+          setTimeout(() => {
+            TerminalInstanceRegistry.focus(curId);
+          }, 50);
+        }
+        return;
+      }
       if (curId) {
         TerminalInstanceRegistry.focus(curId);
       }
@@ -658,6 +710,7 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
     };
   }, [
     toggleTerminal,
+    setTerminalOpen,
     createTerminal,
     splitTerminal,
     clearTerminal,
@@ -691,6 +744,9 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
     activeSplitSessionId,
     createTerminal,
     killTerminal,
+    pendingKillSession,
+    confirmKillTerminal,
+    cancelKillTerminal,
     killAllTerminals,
     killWorkspaceTerminals,
     setActiveTerminal,

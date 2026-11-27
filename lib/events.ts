@@ -55,6 +55,8 @@ export type IDEEventMap = {
   "explorer:refreshed": { path?: string } | void;
   "explorer:collapse-all": void;
   "explorer:multi-selected": { paths: string[] };
+  "explorer:focus": void;
+  "explorer:focus-filter": void;
   "watcher:fs-changed": { type: "create" | "modify" | "delete"; path: string };
 
   "editor:document-opened": { path: string };

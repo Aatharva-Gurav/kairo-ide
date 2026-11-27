@@ -141,6 +141,11 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     filesSettingsRef.current = filesSettings;
   }, [filesSettings]);
 
+  const settingsRef = useRef(settings);
+  useEffect(() => {
+    settingsRef.current = settings;
+  }, [settings]);
+
   const splitDocumentIdRef = useRef(splitDocumentId);
   useEffect(() => {
     splitDocumentIdRef.current = splitDocumentId;
@@ -404,11 +409,18 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
         if (filesSettingsRef.current.trimTrailingWhitespace) {
           contentToSave = contentToSave
             .split("\n")
-            .map((line: string) => line.replace(/\s+$/, ""))
+            .map((line: string) => line.replace(/[ \t]+$/, ""))
             .join("\n");
         }
         if (filesSettingsRef.current.insertFinalNewline && !contentToSave.endsWith("\n")) {
           contentToSave += "\n";
+        }
+        if (filesSettingsRef.current.encoding === "ascii") {
+          contentToSave = contentToSave.replace(/[^\x00-\x7F]/g, "?");
+        }
+
+        if (activeModel && !activeModel.isDisposed() && activeModel.getValue() !== contentToSave) {
+          activeModel.setValue(contentToSave);
         }
 
         await EditorService.saveDocument(doc.path, contentToSave);
@@ -456,7 +468,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     // Auto-save on focus change
     if (prevId && prevId !== norm) {
       const mode = filesSettingsRef.current.autoSave;
-      if (mode === "onFocusChange" || mode === "onWindowChange") {
+      if (mode === "onFocusChange") {
         const prevDoc = documentsRef.current.find((d) => d.id === prevId);
         if (prevDoc && prevDoc.isDirty && saveDocumentRef.current) {
           saveDocumentRef.current(prevId);
@@ -602,7 +614,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
         const autoSaveMode = filesSettingsRef.current.autoSave;
         if (autoSaveMode !== "off" && saveDocumentRef.current) {
           await saveDocumentRef.current(norm);
-        } else {
+        } else if (settingsRef.current.confirmCloseUnsaved !== false) {
           setDirtyCloseCandidate({
             ...doc,
             content:
@@ -750,7 +762,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
         for (const doc of dirtyDocs) {
           await saveDocumentRef.current(doc.id);
         }
-      } else {
+      } else if (settingsRef.current.confirmCloseUnsaved !== false) {
         setDirtyCloseCandidate(dirtyDocs[0]);
         return false;
       }
@@ -777,7 +789,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
           for (const doc of dirtyDocs) {
             await saveDocumentRef.current(doc.id);
           }
-        } else {
+        } else if (settingsRef.current.confirmCloseUnsaved !== false) {
           setDirtyCloseCandidate(dirtyDocs[0]);
           return;
         }
@@ -813,7 +825,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
           for (const doc of dirtyOthers) {
             await saveDocumentRef.current(doc.id);
           }
-        } else {
+        } else if (settingsRef.current.confirmCloseUnsaved !== false) {
           setDirtyCloseCandidate(dirtyOthers[0]);
           return false;
         }
@@ -841,35 +853,44 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
   );
 
   const saveAllDocuments = useCallback(async (): Promise<boolean> => {
-    const { saved, failed } = await EditorService.saveAllDocuments(documentsRef.current);
+    const dirtyDocs = (documentsRef.current || []).filter(
+      (doc) => doc && doc.isDirty && !doc.isBinary && !doc.readonly
+    );
+    if (dirtyDocs.length === 0) return true;
 
-    if (saved.length > 0) {
-      setDocuments((prev) =>
-        prev.map((doc) =>
-          saved.includes(doc.path)
-            ? { ...doc, savedContent: doc.content, isDirty: false, error: null }
-            : doc
-        )
-      );
-
-      saved.forEach((p) => {
-        ideEvents.emit("editor:document-saved", { path: p });
-        ideEvents.emit("editor:document-changed", { path: p, isDirty: false });
-      });
-    }
-
-    if (failed.length > 0) {
-      setDocuments((prev) =>
-        prev.map((doc) => {
-          const fail = failed.find((f) => f.path === doc.path);
-          return fail ? { ...doc, error: fail.error } : doc;
-        })
-      );
-      return false;
-    }
-
-    return true;
+    const results = await Promise.all(
+      dirtyDocs.map(async (doc) => {
+        if (saveDocumentRef.current) {
+          return await saveDocumentRef.current(doc.id);
+        }
+        return false;
+      })
+    );
+    return results.every(Boolean);
   }, []);
+
+  // React immediately to live autoSave / autoSaveDelay setting changes
+  useEffect(() => {
+    autoSaveTimersRef.current.forEach((t) => clearTimeout(t));
+    autoSaveTimersRef.current.clear();
+
+    if (filesSettings.autoSave === "afterDelay") {
+      const delay = Math.max(200, filesSettings.autoSaveDelay || 1000);
+      const dirtyDocs = (documentsRef.current || []).filter(
+        (d) => d && d.isDirty && !d.isBinary && !d.readonly
+      );
+      for (const doc of dirtyDocs) {
+        const timer = setTimeout(() => {
+          autoSaveTimersRef.current.delete(doc.id);
+          const current = documentsRef.current.find((d) => d.id === doc.id);
+          if (current && current.isDirty && saveDocumentRef.current) {
+            saveDocumentRef.current(doc.id);
+          }
+        }, delay);
+        autoSaveTimersRef.current.set(doc.id, timer);
+      }
+    }
+  }, [filesSettings.autoSave, filesSettings.autoSaveDelay]);
 
   const formatActiveDocument = useCallback(async (): Promise<boolean> => {
     const targetEditor =
@@ -1117,44 +1138,6 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     window.addEventListener("blur", handleBlur);
     return () => window.removeEventListener("blur", handleBlur);
   }, []);
-
-  // Split view shortcuts:
-  // - Ctrl+\ (Cmd+\ on macOS): Toggle split right / close split
-  // - Ctrl+K then Ctrl+\: Split down
-  useEffect(() => {
-    let ctrlKActive = false;
-    let ctrlKTimeout: NodeJS.Timeout | null = null;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const isCtrlOrMeta = e.ctrlKey || e.metaKey;
-
-      if (isCtrlOrMeta && (e.key === "k" || e.key === "K")) {
-        ctrlKActive = true;
-        if (ctrlKTimeout) clearTimeout(ctrlKTimeout);
-        ctrlKTimeout = setTimeout(() => {
-          ctrlKActive = false;
-        }, 1200);
-        return;
-      }
-
-      if (isCtrlOrMeta && e.key === "\\") {
-        e.preventDefault();
-        if (ctrlKActive) {
-          ctrlKActive = false;
-          if (ctrlKTimeout) clearTimeout(ctrlKTimeout);
-          openSplitDown();
-        } else {
-          toggleSplitView();
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      if (ctrlKTimeout) clearTimeout(ctrlKTimeout);
-    };
-  }, [toggleSplitView, openSplitDown]);
 
   // External file watcher notifications
   useEffect(() => {

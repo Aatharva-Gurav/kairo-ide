@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useTerminal } from "../store";
+import { TerminalInstanceRegistry } from "../services/terminal-instance-registry";
 import { ChevronUp, ChevronDown, X, CaseSensitive, WholeWord, Regex } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -83,6 +84,21 @@ export function TerminalFindWidget({ onClose, className }: TerminalFindWidgetPro
     } else if (e.key === "Escape") {
       e.preventDefault();
       onClose();
+      if (targetSessionId) {
+        TerminalInstanceRegistry.focus(targetSessionId);
+      }
+    } else if (e.altKey && e.key.toLowerCase() === "c") {
+      e.preventDefault();
+      setCaseSensitive((prev) => !prev);
+      setTimeout(() => executeFindNext(), 10);
+    } else if (e.altKey && e.key.toLowerCase() === "w") {
+      e.preventDefault();
+      setWholeWord((prev) => !prev);
+      setTimeout(() => executeFindNext(), 10);
+    } else if (e.altKey && e.key.toLowerCase() === "r") {
+      e.preventDefault();
+      setUseRegex((prev) => !prev);
+      setTimeout(() => executeFindNext(), 10);
     }
   };
 

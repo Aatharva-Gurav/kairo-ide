@@ -110,6 +110,7 @@ export default function Page() {
               <SearchProvider>
                 <TauriDragDropListener />
                 <SidebarProvider
+                  enableKeyboardShortcut={false}
                   className="h-full w-full min-h-0 overflow-hidden flex flex-col"
                   style={
                     {

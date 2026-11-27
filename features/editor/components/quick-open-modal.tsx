@@ -28,7 +28,8 @@ export function QuickOpenModal({
   const { isQuickOpenVisible, setQuickOpenVisible, openDocument } = useEditor();
   const { activeWorkspace } = useWorkspace();
 
-  const isVisible = propIsOpen !== undefined ? propIsOpen : isQuickOpenVisible;
+  const isVisible =
+    propIsOpen !== undefined ? Boolean(propIsOpen || isQuickOpenVisible) : isQuickOpenVisible;
 
   const [query, setQuery] = useState("");
   const [files, setFiles] = useState<FileEntry[]>([]);
@@ -39,11 +40,8 @@ export function QuickOpenModal({
   const handleClose = useCallback(() => {
     setQuery("");
     setSelectedIndex(0);
-    if (propOnClose) {
-      propOnClose();
-    } else {
-      setQuickOpenVisible(false);
-    }
+    setQuickOpenVisible(false);
+    propOnClose?.();
   }, [propOnClose, setQuickOpenVisible]);
 
   // Fetch project files when modal opens

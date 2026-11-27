@@ -10,7 +10,7 @@ import React, {
   useRef,
 } from "react";
 import { CommandRegistry } from "./command-registry";
-import { KeybindingService } from "./keybinding.service";
+import { KeybindingContext, KeybindingService } from "./keybinding.service";
 import { useWorkspace } from "@/features/workspace/store";
 import { useFileExplorer } from "@/features/file-explorer/store";
 import { useEditor } from "@/features/editor/store";
@@ -77,6 +77,11 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     sidebarRef.current = { toggleSidebar };
   }, [toggleSidebar]);
+
+  const modalOpenRef = useRef(false);
+  useEffect(() => {
+    modalOpenRef.current = isCommandPaletteOpen || isQuickOpenOpen;
+  }, [isCommandPaletteOpen, isQuickOpenOpen]);
 
   // Modal open helpers
   const openCommandPalette = useCallback((initialQuery = "") => {
@@ -214,6 +219,31 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
     // ─── EXPLORER COMMANDS ─────────────────────────────────────────────────
     unsubs.push(
       CommandRegistry.register({
+        id: "explorer.focus",
+        title: "Explorer: Focus on Files Explorer",
+        description: "Open and focus the file explorer tree",
+        category: "explorer",
+        keywords: ["explorer", "files", "focus", "sidebar"],
+        execute: () => {
+          ideEvents.emit("sidebar:switch-tab", "explorer");
+          ideEvents.emit("explorer:focus");
+        },
+      }),
+
+      CommandRegistry.register({
+        id: "explorer.focusFilter",
+        title: "Explorer: Focus File Filter",
+        description: "Focus the file explorer search filter input",
+        category: "explorer",
+        keywords: ["explorer", "filter", "find", "search"],
+        enabled: () => Boolean(workspaceRef.current.activeWorkspace),
+        execute: () => {
+          ideEvents.emit("sidebar:switch-tab", "explorer");
+          ideEvents.emit("explorer:focus-filter");
+        },
+      }),
+
+      CommandRegistry.register({
         id: "explorer.newFile",
         title: "Explorer: New File",
         description: "Create a new file in the explorer",
@@ -221,7 +251,10 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
         keywords: ["create", "file", "new"],
         enabled: () => Boolean(workspaceRef.current.activeWorkspace),
         execute: () => {
-          explorerRef.current.startCreateFile();
+          ideEvents.emit("sidebar:switch-tab", "explorer");
+          setTimeout(() => {
+            explorerRef.current.startCreateFile();
+          }, 0);
         },
       }),
 
@@ -233,7 +266,10 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
         keywords: ["create", "folder", "directory", "new"],
         enabled: () => Boolean(workspaceRef.current.activeWorkspace),
         execute: () => {
-          explorerRef.current.startCreateFolder();
+          ideEvents.emit("sidebar:switch-tab", "explorer");
+          setTimeout(() => {
+            explorerRef.current.startCreateFolder();
+          }, 0);
         },
       }),
 
@@ -283,9 +319,10 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
         description: "Save active document to disk",
         category: "editor",
         keywords: ["save", "write", "disk"],
-        enabled: () => Boolean(editorRef.current.activeDocument),
+        enabled: () => Boolean(editorRef.current.focusedDocument || editorRef.current.activeDocument),
         execute: async () => {
-          await editorRef.current.saveDocument();
+          const targetPath = editorRef.current.focusedDocument?.path || editorRef.current.activeDocument?.path;
+          await editorRef.current.saveDocument(targetPath);
         },
       }),
 
@@ -307,10 +344,11 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
         description: "Close current open file tab",
         category: "editor",
         keywords: ["close", "tab", "file"],
-        enabled: () => Boolean(editorRef.current.activeDocumentId),
+        enabled: () => Boolean(editorRef.current.focusedDocument || editorRef.current.activeDocumentId),
         execute: async () => {
-          if (editorRef.current.activeDocumentId) {
-            await editorRef.current.closeDocument(editorRef.current.activeDocumentId);
+          const targetId = editorRef.current.focusedDocument?.id || editorRef.current.activeDocumentId;
+          if (targetId) {
+            await editorRef.current.closeDocument(targetId);
           }
         },
       }),
@@ -558,61 +596,108 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
     };
   }, [openCommandPalette, openQuickOpen]);
 
-  // Global Keydown Dispatcher
+  // Global Keydown Dispatcher (capture phase so Monaco/xterm don't swallow IDE shortcuts)
   useEffect(() => {
+    let pendingChord: string | null = null;
+    let pendingChordTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const clearPendingChord = () => {
+      pendingChord = null;
+      if (pendingChordTimer) {
+        clearTimeout(pendingChordTimer);
+        pendingChordTimer = null;
+      }
+    };
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Check if user is typing inside an input or textarea
-      const target = e.target as HTMLElement | null;
-      const isTextInput =
-        target &&
-        (target.tagName === "INPUT" ||
-          target.tagName === "TEXTAREA" ||
-          target.isContentEditable);
+      if (typeof document !== "undefined" && document.querySelector('[data-shortcut-recorder="true"]')) {
+        clearPendingChord();
+        return;
+      }
+
+      if (modalOpenRef.current) {
+        clearPendingChord();
+        return;
+      }
 
       const rawKey = KeybindingService.normalizeKeyboardEvent(e);
-      if (!rawKey) return;
+      if (!rawKey || !KeybindingService.hasNonModifierKey(rawKey)) {
+        return;
+      }
 
-      const commandId = KeybindingService.getCommandIdForKeybinding(rawKey);
-      if (!commandId) return;
-
-      // Accelerators that should work even inside inputs:
-      const isGlobalAccelerator = [
-        "workbench.openFile",
-        "workbench.openFolder",
-        "workbench.commandPalette",
-        "workbench.quickOpen",
-        "workbench.openSettings",
-        "workbench.toggleSidebar",
-        "search.findInWorkspace",
-        "editor.save",
-        "editor.saveAll",
-        "workbench.action.terminal.toggleTerminal",
-        "workbench.action.terminal.new",
-        "workbench.action.terminal.split",
-      ].includes(commandId);
-
+      const target = e.target as HTMLElement | null;
+      const isXterm = Boolean(target?.closest?.(".xterm"));
+      const isTerminalPanel = Boolean(target?.closest?.('[data-terminal-panel="true"]'));
       const isMonacoEditor = Boolean(target?.closest?.(".monaco-editor"));
-      const isMonacoAccelerator =
-        isMonacoEditor &&
-        [
-          "editor.goToLine",
-          "editor.close",
-          "editor.closeAll",
-          "editor.closeOthers",
-          "editor.formatDocument",
-          "editor.find",
-          "editor.replace",
-          "workbench.action.splitEditor",
-          "workbench.action.splitEditorDown",
-          "workbench.action.toggleEditorLayout",
-          "workbench.action.swapEditorPanes",
-          "workbench.action.closeSplitEditor",
-          "editor.zoomIn",
-          "editor.zoomOut",
-          "editor.zoomReset",
-        ].includes(commandId);
+      const isExplorerPanel = Boolean(target?.closest?.('[data-explorer-panel="true"]'));
+      const isInputTag = Boolean(
+        target &&
+          (target.tagName === "INPUT" ||
+            target.tagName === "TEXTAREA" ||
+            target.isContentEditable)
+      );
+      const isPlainTextInput = isInputTag && !isXterm && !isMonacoEditor;
 
-      if (isTextInput && !isGlobalAccelerator && !isMonacoAccelerator) {
+      const context: KeybindingContext = {
+        terminalFocus: isXterm || (isTerminalPanel && !isPlainTextInput),
+        editorTextFocus: isMonacoEditor,
+        explorerFocus: isExplorerPanel,
+      };
+
+      // Accelerators that should work even inside plain text inputs (e.g. search/rename/settings):
+      const isGlobalAccelerator = (cmdId: string) =>
+        [
+          "workbench.openFile",
+          "workbench.openFolder",
+          "workbench.commandPalette",
+          "workbench.quickOpen",
+          "workbench.openSettings",
+          "workbench.toggleSidebar",
+          "explorer.focus",
+          "search.findInWorkspace",
+          "editor.save",
+          "editor.saveAll",
+          "workbench.action.terminal.toggleTerminal",
+          "workbench.action.terminal.new",
+          "workbench.action.terminal.split",
+          "workbench.action.terminal.focus",
+        ].includes(cmdId);
+
+      // 1. Complete pending two-key chord (e.g. Ctrl+K Ctrl+\, Ctrl+K Ctrl+W, Ctrl+K Ctrl+S)
+      if (pendingChord && !isPlainTextInput) {
+        const chordKey = `${pendingChord} ${rawKey}`;
+        clearPendingChord();
+        const chordCommandId = KeybindingService.getCommandIdForKeybinding(chordKey, context);
+        if (chordCommandId && CommandRegistry.isEnabled(chordCommandId)) {
+          e.preventDefault();
+          e.stopPropagation();
+          CommandRegistry.execute(chordCommandId);
+          return;
+        }
+      } else if (pendingChord) {
+        clearPendingChord();
+      }
+
+      const commandId = KeybindingService.getCommandIdForKeybinding(rawKey, context);
+
+      if (!commandId) {
+        if (!isPlainTextInput && KeybindingService.isChordPrefix(rawKey, context)) {
+          pendingChord = rawKey;
+          pendingChordTimer = setTimeout(() => {
+            pendingChord = null;
+            pendingChordTimer = null;
+          }, 1500);
+          e.preventDefault();
+          e.stopPropagation();
+        }
+        return;
+      }
+
+      if (
+        isPlainTextInput &&
+        !isGlobalAccelerator(commandId) &&
+        !(commandId === "explorer.focusFilter" && context.explorerFocus)
+      ) {
         return;
       }
 
@@ -623,8 +708,11 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => {
+      clearPendingChord();
+      window.removeEventListener("keydown", handleKeyDown, true);
+    };
   }, []);
 
   // Synchronize recent workspaces with native Tauri menu
@@ -711,7 +799,8 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
             break;
           }
           case "edit.undo": {
-            const monaco = editorRef.current.monacoEditorRef.current;
+            const isMonacoFocused = Boolean(document.activeElement?.closest?.(".monaco-editor"));
+            const monaco = isMonacoFocused ? editorRef.current.monacoEditorRef.current : null;
             if (monaco) {
               monaco.trigger("nativeMenu", "undo", null);
             } else {
@@ -720,7 +809,8 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
             break;
           }
           case "edit.redo": {
-            const monaco = editorRef.current.monacoEditorRef.current;
+            const isMonacoFocused = Boolean(document.activeElement?.closest?.(".monaco-editor"));
+            const monaco = isMonacoFocused ? editorRef.current.monacoEditorRef.current : null;
             if (monaco) {
               monaco.trigger("nativeMenu", "redo", null);
             } else {
@@ -729,7 +819,8 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
             break;
           }
           case "edit.cut": {
-            const monaco = editorRef.current.monacoEditorRef.current;
+            const isMonacoFocused = Boolean(document.activeElement?.closest?.(".monaco-editor"));
+            const monaco = isMonacoFocused ? editorRef.current.monacoEditorRef.current : null;
             if (monaco) {
               monaco.trigger("nativeMenu", "editor.action.clipboardCutAction", null);
             } else {
@@ -738,7 +829,8 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
             break;
           }
           case "edit.copy": {
-            const monaco = editorRef.current.monacoEditorRef.current;
+            const isMonacoFocused = Boolean(document.activeElement?.closest?.(".monaco-editor"));
+            const monaco = isMonacoFocused ? editorRef.current.monacoEditorRef.current : null;
             if (monaco) {
               monaco.trigger("nativeMenu", "editor.action.clipboardCopyAction", null);
             } else {
@@ -747,7 +839,8 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
             break;
           }
           case "edit.paste": {
-            const monaco = editorRef.current.monacoEditorRef.current;
+            const isMonacoFocused = Boolean(document.activeElement?.closest?.(".monaco-editor"));
+            const monaco = isMonacoFocused ? editorRef.current.monacoEditorRef.current : null;
             if (monaco) {
               monaco.trigger("nativeMenu", "editor.action.clipboardPasteAction", null);
             } else {
@@ -757,7 +850,8 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
           }
           case "edit.selectAll":
           case "selection.selectAll": {
-            const monaco = editorRef.current.monacoEditorRef.current;
+            const isMonacoFocused = Boolean(document.activeElement?.closest?.(".monaco-editor"));
+            const monaco = isMonacoFocused ? editorRef.current.monacoEditorRef.current : null;
             if (monaco) {
               monaco.trigger("nativeMenu", "editor.action.selectAll", null);
             } else {

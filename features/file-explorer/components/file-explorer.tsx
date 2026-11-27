@@ -44,7 +44,10 @@ export function FileExplorer() {
   }
 
   return (
-    <div className="relative flex flex-col flex-1 min-h-0 w-full h-full overflow-hidden">
+    <div
+      data-explorer-panel="true"
+      className="relative flex flex-col flex-1 min-h-0 w-full h-full overflow-hidden"
+    >
       {/* Fixed Search Bar at top of sidebar */}
       <ExplorerSearchBar />
 

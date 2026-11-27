@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { useFileExplorer } from "../store";
 import { useWorkspace } from "../../workspace/store";
 import { ExplorerSortMode } from "../types";
+import { SettingsService } from "@/features/settings/services/settings.service";
 import {
   FilePlus,
   FolderPlus,
@@ -17,10 +18,11 @@ import {
 import { cn } from "@/lib/utils";
 
 const SORT_OPTIONS: Array<{ mode: ExplorerSortMode; label: string }> = [
-  { mode: "folders-first", label: "Folders First" },
+  { mode: "name", label: "Name (Alphabetical)" },
+  { mode: "type", label: "By Extension" },
+  { mode: "modified", label: "Last Modified" },
+  { mode: "size", label: "File Size" },
   { mode: "files-first", label: "Files First" },
-  { mode: "alphabetical", label: "Alphabetical" },
-  { mode: "type-based", label: "By Extension" },
 ];
 
 export function ExplorerToolbar() {
@@ -133,6 +135,9 @@ export function ExplorerToolbar() {
                 key={opt.mode}
                 onClick={() => {
                   setSortMode(opt.mode);
+                  if (opt.mode === "name" || opt.mode === "type" || opt.mode === "modified" || opt.mode === "size") {
+                    SettingsService.updateSetting("explorer.sortMode", opt.mode);
+                  }
                   setIsSortMenuOpen(false);
                 }}
                 className={cn(
@@ -154,7 +159,11 @@ export function ExplorerToolbar() {
 
       {/* Hidden Files Toggle */}
       <button
-        onClick={() => setShowHidden(!showHidden)}
+        onClick={() => {
+          const next = !showHidden;
+          setShowHidden(next);
+          SettingsService.updateSetting("explorer.showHidden", next);
+        }}
         className={cn(
           "p-1 rounded-full cursor-pointer transition-colors duration-140 active:scale-95",
           showHidden

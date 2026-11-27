@@ -2,11 +2,16 @@ export type ExplorerSortMode =
   | "folders-first"
   | "files-first"
   | "alphabetical"
-  | "type-based";
+  | "type-based"
+  | "name"
+  | "type"
+  | "modified"
+  | "size";
 
 export interface ExplorerSortConfig {
   mode: ExplorerSortMode;
   caseSensitive: boolean;
+  foldersFirst?: boolean;
 }
 
 export type GitStatus = "modified" | "added" | "deleted" | "untracked" | "ignored";

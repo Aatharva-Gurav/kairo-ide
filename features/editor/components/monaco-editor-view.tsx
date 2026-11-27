@@ -7,7 +7,6 @@ import { useEditor, EditorPaneId } from "../store";
 import { useSettings } from "@/features/settings/store";
 import { ModelService } from "../services/model.service";
 import { IntelliSenseService } from "../services/intellisense.service";
-import { NavigationService } from "../services/navigation.service";
 import { EditorDocument } from "../types";
 import { ideEvents } from "@/lib/events";
 import { installMonacoWorkerStub } from "@/lib/monaco-worker-stub";
@@ -116,15 +115,10 @@ export function MonacoEditorView({ document, paneId = "primary", onCursorChange 
   const {
     settings,
     updateContent,
-    saveDocument,
-    closeDocument,
-    formatActiveDocument,
     focusedPane,
     registerPaneEditor,
     focusPane,
     isSplit,
-    setGoToLineVisible,
-    setQuickOpenVisible,
   } = useEditor();
   const minimapEnabled = !isSplit && (settings.minimap ?? true);
   const { settings: ideSettings } = useSettings();
@@ -145,6 +139,11 @@ export function MonacoEditorView({ document, paneId = "primary", onCursorChange 
   useEffect(() => {
     focusedPaneRef.current = focusedPane;
   }, [focusedPane]);
+
+  const settingsRef = useRef(settings);
+  useEffect(() => {
+    settingsRef.current = settings;
+  }, [settings]);
 
   const paneIdRef = useRef(paneId);
   useEffect(() => {
@@ -279,14 +278,120 @@ export function MonacoEditorView({ document, paneId = "primary", onCursorChange 
     return () => unsubs.forEach((u) => u());
   }, []);
 
-  // Dynamically toggle minimap when split view state or settings change
+  const suggestionsEnabled = suggestions?.enabled ?? true;
+  const monacoOptions = React.useMemo(
+    () => ({
+      contextmenu: false,
+      fontSize: settings.fontSize,
+      fontFamily: settings.fontFamily,
+      fontWeight: settings.fontWeight || "normal",
+      tabSize: settings.tabSize,
+      insertSpaces: settings.insertSpaces,
+      detectIndentation: false,
+      wordWrap: settings.wordWrap,
+      lineNumbers: settings.lineNumbers,
+      minimap: { enabled: minimapEnabled },
+      cursorStyle: settings.cursorStyle || "line",
+      cursorBlinking: settings.cursorBlinking || "smooth",
+      cursorSmoothCaretAnimation: "on" as const,
+      renderLineHighlight: "all" as const,
+      renderLineHighlightOnlyWhenFocus: false,
+      folding: true,
+      foldingHighlight: true,
+      showFoldingControls: "always" as const,
+      renderWhitespace: settings.renderWhitespace,
+      automaticLayout: true,
+      smoothScrolling: settings.smoothScrolling ?? true,
+      stickyScroll: { enabled: settings.stickyScroll ?? true },
+      mouseWheelZoom: true,
+      bracketPairColorization: { enabled: settings.bracketPairGuides ?? true },
+      guides: {
+        bracketPairs: settings.bracketPairGuides ?? true,
+        indentation: true,
+        bracketPairsHorizontal: true,
+      },
+      formatOnPaste: Boolean(settings.formatOnPaste),
+      formatOnType: Boolean(settings.formatOnType),
+      scrollBeyondLastLine: false,
+      fixedOverflowWidgets: false,
+      padding: { top: 8, bottom: 8 },
+      hover: {
+        enabled: "off" as const,
+      },
+      inlayHints: {
+        enabled: "off" as const,
+      },
+      suggestFontSize: suggestions?.fontSize ?? 12,
+      suggestLineHeight: Math.round((suggestions?.fontSize ?? 12) * 2),
+      quickSuggestions:
+        suggestionsEnabled && (suggestions?.quickSuggestions ?? true)
+          ? { other: true, comments: true, strings: true }
+          : false,
+      quickSuggestionsDelay: 10,
+      suggestOnTriggerCharacters:
+        suggestionsEnabled && (suggestions?.suggestOnTriggerCharacters ?? true),
+      acceptSuggestionOnEnter: suggestionsEnabled
+        ? (suggestions?.acceptSuggestionOnEnter ?? "on")
+        : ("off" as const),
+      tabCompletion: (suggestionsEnabled
+        ? (suggestions?.tabCompletion ?? "on")
+        : "off") as "on" | "off" | "onlySnippets",
+      snippetSuggestions: (suggestionsEnabled
+        ? (suggestions?.snippetSuggestions ?? "inline")
+        : "none") as "top" | "inline" | "bottom" | "none",
+      wordBasedSuggestions: suggestionsEnabled ? ("allDocuments" as const) : ("off" as const),
+      inlineSuggest: {
+        enabled: suggestionsEnabled && (suggestions?.preview ?? true),
+      },
+      suggest: {
+        showIcons: suggestions?.showIcons ?? true,
+        showStatusBar: true,
+        preview: suggestionsEnabled && (suggestions?.preview ?? true),
+        previewMode: "subwordSmart" as const,
+        shareSuggestSelections: true,
+        filterGraceful: true,
+        localityBonus: true,
+        snippetsPreventQuickSuggestions: false,
+        showWords: suggestionsEnabled,
+        showSnippets: suggestionsEnabled && suggestions?.snippetSuggestions !== "none",
+        showKeywords: suggestionsEnabled,
+        showFunctions: suggestionsEnabled,
+        showClasses: suggestionsEnabled,
+        showVariables: suggestionsEnabled,
+        showConstants: suggestionsEnabled,
+        showFields: suggestionsEnabled,
+        showProperties: suggestionsEnabled,
+        showEvents: suggestionsEnabled,
+        showOperators: suggestionsEnabled,
+        showUnits: suggestionsEnabled,
+        showValues: suggestionsEnabled,
+        showEnumMembers: suggestionsEnabled,
+        showColors: suggestionsEnabled,
+        showFiles: suggestionsEnabled,
+        showReferences: suggestionsEnabled,
+        showFolders: suggestionsEnabled,
+        showTypeParameters: suggestionsEnabled,
+        showModules: suggestionsEnabled,
+        showStructs: suggestionsEnabled,
+        showInterfaces: suggestionsEnabled,
+      },
+    }),
+    [settings, suggestions, suggestionsEnabled, minimapEnabled]
+  );
+
+  // Live-update Monaco editor and active model options whenever settings change
   useEffect(() => {
     const ed = localEditorRef.current;
     if (!ed) return;
-    ed.updateOptions({
-      minimap: { enabled: minimapEnabled },
-    });
-  }, [minimapEnabled]);
+    ed.updateOptions(monacoOptions);
+    const model = ed.getModel();
+    if (model && !model.isDisposed?.()) {
+      model.updateOptions({
+        tabSize: settings.tabSize,
+        insertSpaces: settings.insertSpaces,
+      });
+    }
+  }, [monacoOptions, settings.tabSize, settings.insertSpaces, editorInstance]);
 
   // Hardware-accelerated layout observer for instant, zero-glitch window & pane resizing
   useEffect(() => {
@@ -314,36 +419,6 @@ export function MonacoEditorView({ document, paneId = "primary", onCursorChange 
     };
   }, [editorInstance]);
 
-  // Intercept Ctrl/Cmd + Plus/Minus/Zero keyboard shortcuts inside editor container
-  // to zoom the editor only, preventing whole-browser scaling
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (
-        (e.ctrlKey || e.metaKey) &&
-        (e.key === "=" || e.key === "+" || e.key === "-" || e.key === "_" || e.key === "0")
-      ) {
-        e.preventDefault();
-        e.stopPropagation();
-        const ed = localEditorRef.current;
-        if (!ed) return;
-
-        if (e.key === "=" || e.key === "+") {
-          ed.trigger("keyboard", "editor.action.fontZoomIn", null);
-        } else if (e.key === "-" || e.key === "_") {
-          ed.trigger("keyboard", "editor.action.fontZoomOut", null);
-        } else if (e.key === "0") {
-          ed.trigger("keyboard", "editor.action.fontZoomReset", null);
-        }
-      }
-    };
-
-    container.addEventListener("keydown", handleKeyDown, true);
-    return () => container.removeEventListener("keydown", handleKeyDown, true);
-  }, []);
-
   // Update attached model when document path or active document changes
   useEffect(() => {
     const editor = localEditorRef.current;
@@ -357,6 +432,10 @@ export function MonacoEditorView({ document, paneId = "primary", onCursorChange 
     );
 
     if (model) {
+      model.updateOptions({
+        tabSize: settingsRef.current.tabSize,
+        insertSpaces: settingsRef.current.insertSpaces,
+      });
       if (editor.getModel() !== model) {
         ModelService.saveViewState(editor, document.path);
         editor.setModel(model);
@@ -418,6 +497,10 @@ export function MonacoEditorView({ document, paneId = "primary", onCursorChange 
       document.language
     );
     if (model) {
+      model.updateOptions({
+        tabSize: settingsRef.current.tabSize,
+        insertSpaces: settingsRef.current.insertSpaces,
+      });
       editor.setModel(model);
       ModelService.restoreViewState(editor, document.path);
 
@@ -469,59 +552,6 @@ export function MonacoEditorView({ document, paneId = "primary", onCursorChange 
     // Emit initial position immediately upon mount
     emitCursorPosition(editor);
 
-    // Command: Ctrl/Cmd+S Save Document
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
-      saveDocument(documentRef.current.path);
-    });
-
-    // Command: Ctrl/Cmd+W Close Active Document Tab
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyW, () => {
-      closeDocument(documentRef.current.path);
-    });
-
-    // Command: Ctrl/Cmd+P Quick Open File Modal
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyP, () => {
-      setQuickOpenVisible(true);
-    });
-
-    // Command: Ctrl/Cmd+G Go To Line Modal
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyG, () => {
-      focusPane(paneIdRef.current, documentRef.current.path);
-      setGoToLineVisible(true);
-    });
-
-    // Command: Shift+Alt+F Format Active Document
-    editor.addCommand(monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.KeyF, () => {
-      focusPane(paneIdRef.current, documentRef.current.path);
-      formatActiveDocument();
-    });
-
-    // Intercept Ctrl/Cmd+F and Ctrl/Cmd+H inside Monaco editor to trigger custom Find & Replace
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyF, () => {
-      setIsFindOpen(true);
-      setIsReplaceMode(false);
-    });
-
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyH, () => {
-      setIsFindOpen(true);
-      setIsReplaceMode(true);
-    });
-
-    // Keyboard navigation actions (F12 / Alt+F12)
-    editor.addAction({
-      id: "kairo.goToDefinition",
-      label: "Go to Definition",
-      keybindings: [monaco.KeyCode.F12],
-      run: (ed: unknown) => NavigationService.goToDefinition(ed),
-    });
-
-    editor.addAction({
-      id: "kairo.peekDefinition",
-      label: "Peek Definition",
-      keybindings: [monaco.KeyMod.Alt | monaco.KeyCode.F12],
-      run: (ed: unknown) => NavigationService.peekDefinition(ed),
-    });
-
     // Disable and cancel editor context menu
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     editor.onContextMenu((e: any) => {
@@ -545,83 +575,7 @@ export function MonacoEditorView({ document, paneId = "primary", onCursorChange 
         height="100%"
         width="100%"
         theme={currentTheme}
-        options={{
-          contextmenu: false,
-          fontSize: settings.fontSize,
-          fontFamily: settings.fontFamily,
-          tabSize: settings.tabSize,
-          insertSpaces: settings.insertSpaces,
-          wordWrap: settings.wordWrap,
-          minimap: { enabled: minimapEnabled },
-          lineNumbers: settings.lineNumbers,
-          cursorStyle: settings.cursorStyle || "line",
-          cursorBlinking: settings.cursorBlinking || "smooth",
-          cursorSmoothCaretAnimation: "on",
-          renderLineHighlight: "all",
-          renderLineHighlightOnlyWhenFocus: false,
-          folding: true,
-          foldingHighlight: true,
-          showFoldingControls: "always",
-          renderWhitespace: settings.renderWhitespace,
-          automaticLayout: true,
-          smoothScrolling: settings.smoothScrolling ?? true,
-          stickyScroll: { enabled: settings.stickyScroll ?? true },
-          mouseWheelZoom: true,
-          bracketPairColorization: { enabled: true },
-          guides: { bracketPairs: settings.bracketPairGuides ?? true, indentation: true, bracketPairsHorizontal: true },
-          formatOnPaste: false,
-          formatOnType: false,
-          scrollBeyondLastLine: false,
-          fixedOverflowWidgets: false,
-          padding: { top: 8, bottom: 8 },
-          hover: {
-            enabled: "off",
-          },
-          inlayHints: {
-            enabled: "off",
-          },
-          suggestFontSize: suggestions?.fontSize ?? 12,
-          suggestLineHeight: Math.round((suggestions?.fontSize ?? 12) * 2),
-          quickSuggestions: { other: true, comments: true, strings: true },
-          quickSuggestionsDelay: 10,
-          suggestOnTriggerCharacters: true,
-          acceptSuggestionOnEnter: suggestions?.acceptSuggestionOnEnter ?? "on",
-          tabCompletion: (suggestions?.tabCompletion ?? "on") as "on" | "off" | "onlySnippets",
-          snippetSuggestions: (suggestions?.snippetSuggestions ?? "inline") as "top" | "inline" | "bottom" | "none",
-          wordBasedSuggestions: "allDocuments",
-          suggest: {
-            showIcons: suggestions?.showIcons ?? true,
-            showStatusBar: true,
-            preview: suggestions?.preview ?? false,
-            previewMode: "subwordSmart",
-            shareSuggestSelections: true,
-            filterGraceful: true,
-            localityBonus: true,
-            snippetsPreventQuickSuggestions: false,
-            showWords: true,
-            showSnippets: suggestions?.snippetSuggestions !== "none",
-            showKeywords: true,
-            showFunctions: true,
-            showClasses: true,
-            showVariables: true,
-            showConstants: true,
-            showFields: true,
-            showProperties: true,
-            showEvents: true,
-            showOperators: true,
-            showUnits: true,
-            showValues: true,
-            showEnumMembers: true,
-            showColors: true,
-            showFiles: true,
-            showReferences: true,
-            showFolders: true,
-            showTypeParameters: true,
-            showModules: true,
-            showStructs: true,
-            showInterfaces: true,
-          },
-        }}
+        options={monacoOptions}
         onMount={handleEditorDidMount}
       />
 

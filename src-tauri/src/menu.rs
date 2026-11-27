@@ -269,78 +269,82 @@ pub fn init_menus<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<AppMenus<R>> 
         .item(&about)
         .build()?;
 
-    // Also build submenus for setting global app menu (enables system keyboard shortcuts on macOS and window accelerators)
-    let file_sub = SubmenuBuilder::new(app, "File")
-        .item(&new_text_file)
-        .item(&new_window)
-        .separator()
-        .item(&open_file)
-        .item(&open_folder)
-        .item(&recent_submenu)
-        .separator()
-        .item(&save)
-        .item(&save_as)
-        .item(&save_all)
-        .separator()
-        .item(&close_editor)
-        .item(&close_workspace)
-        .item(&close_window)
-        .build()?;
-
-    let edit_sub = SubmenuBuilder::new(app, "Edit")
-        .item(&undo)
-        .item(&redo)
-        .separator()
-        .item(&cut)
-        .item(&copy)
-        .item(&paste)
-        .separator()
-        .item(&select_all)
-        .build()?;
-
-    let selection_sub = SubmenuBuilder::new(app, "Selection")
-        .item(&sel_select_all)
-        .item(&expand_sel)
-        .item(&shrink_sel)
-        .separator()
-        .item(&copy_line_up)
-        .item(&copy_line_down)
-        .item(&move_line_up)
-        .item(&move_line_down)
-        .build()?;
-
-    let view_sub = SubmenuBuilder::new(app, "View")
-        .item(&command_palette)
-        .separator()
-        .item(&appearance_menu)
-        .item(&editor_layout_menu)
-        .separator()
-        .item(&explorer)
-        .item(&search)
-        .separator()
-        .item(&source_control)
-        .item(&run_and_debug)
-        .item(&extensions)
-        .build()?;
-
-    let help_sub = SubmenuBuilder::new(app, "Help")
-        .item(&welcome)
-        .item(&documentation)
-        .item(&keyboard_shortcuts)
-        .item(&check_for_updates)
-        .separator()
-        .item(&about)
-        .build()?;
-
-    if let Ok(global_menu) = MenuBuilder::new(app)
-        .item(&file_sub)
-        .item(&edit_sub)
-        .item(&selection_sub)
-        .item(&view_sub)
-        .item(&help_sub)
-        .build()
+    // On macOS, set the global app menu bar; on Windows/Linux we use the custom React AppTitleBar
+    // and central KeybindingService so native OS menu accelerators don't hijack Terminal/Explorer shortcuts.
+    #[cfg(target_os = "macos")]
     {
-        let _ = app.set_menu(global_menu);
+        let file_sub = SubmenuBuilder::new(app, "File")
+            .item(&new_text_file)
+            .item(&new_window)
+            .separator()
+            .item(&open_file)
+            .item(&open_folder)
+            .item(&recent_submenu)
+            .separator()
+            .item(&save)
+            .item(&save_as)
+            .item(&save_all)
+            .separator()
+            .item(&close_editor)
+            .item(&close_workspace)
+            .item(&close_window)
+            .build()?;
+
+        let edit_sub = SubmenuBuilder::new(app, "Edit")
+            .item(&undo)
+            .item(&redo)
+            .separator()
+            .item(&cut)
+            .item(&copy)
+            .item(&paste)
+            .separator()
+            .item(&select_all)
+            .build()?;
+
+        let selection_sub = SubmenuBuilder::new(app, "Selection")
+            .item(&sel_select_all)
+            .item(&expand_sel)
+            .item(&shrink_sel)
+            .separator()
+            .item(&copy_line_up)
+            .item(&copy_line_down)
+            .item(&move_line_up)
+            .item(&move_line_down)
+            .build()?;
+
+        let view_sub = SubmenuBuilder::new(app, "View")
+            .item(&command_palette)
+            .separator()
+            .item(&appearance_menu)
+            .item(&editor_layout_menu)
+            .separator()
+            .item(&explorer)
+            .item(&search)
+            .separator()
+            .item(&source_control)
+            .item(&run_and_debug)
+            .item(&extensions)
+            .build()?;
+
+        let help_sub = SubmenuBuilder::new(app, "Help")
+            .item(&welcome)
+            .item(&documentation)
+            .item(&keyboard_shortcuts)
+            .item(&check_for_updates)
+            .separator()
+            .item(&about)
+            .build()?;
+
+        if let Ok(global_menu) = MenuBuilder::new(app)
+            .item(&file_sub)
+            .item(&edit_sub)
+            .item(&selection_sub)
+            .item(&view_sub)
+            .item(&help_sub)
+            .build()
+        {
+            let _ = app.set_menu(global_menu);
+        }
     }
 
     Ok(AppMenus {

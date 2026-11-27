@@ -94,6 +94,30 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
     optionsRef.current = options;
   }, [options]);
 
+  // Sync live Search settings changes from SettingsService
+  useEffect(() => {
+    return SettingsService.subscribe((effective, changedKey) => {
+      if (!changedKey || changedKey.startsWith("search.")) {
+        const s = effective.search;
+        if (!changedKey) {
+          setOptions({
+            isCaseSensitive: Boolean(s.isCaseSensitive),
+            isWholeWord: Boolean(s.isWholeWord),
+            isRegex: Boolean(s.isRegex),
+            includePattern: s.includePattern || "",
+            excludePattern: s.excludePattern || "",
+          });
+          return;
+        }
+        const prop = changedKey.slice("search.".length) as keyof SearchOptions;
+        setOptions((prev) => ({
+          ...prev,
+          [prop]: s[prop],
+        }));
+      }
+    });
+  }, []);
+
   const searchIdRef = useRef(0);
 
   const totalMatches = useMemo(() => {

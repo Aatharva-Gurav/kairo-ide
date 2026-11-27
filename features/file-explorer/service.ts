@@ -86,28 +86,30 @@ export class FileExplorerService {
    * Sorts nodes based on user configuration.
    */
   static sortNodes(nodes: FileSystemNode[], config: ExplorerSortConfig): FileSystemNode[] {
+    const foldersFirst =
+      config.foldersFirst !== undefined
+        ? config.foldersFirst
+        : config.mode !== "alphabetical" && config.mode !== "files-first";
+
     return [...nodes].sort((a, b) => {
       const nameA = config.caseSensitive ? a.name : a.name.toLowerCase();
       const nameB = config.caseSensitive ? b.name : b.name.toLowerCase();
 
+      if (config.mode === "files-first") {
+        if (a.type !== b.type) {
+          return a.type === "file" ? -1 : 1;
+        }
+        return nameA.localeCompare(nameB);
+      }
+
+      if (foldersFirst && config.mode !== "alphabetical" && a.type !== b.type) {
+        return a.type === "directory" ? -1 : 1;
+      }
+
       switch (config.mode) {
-        case "folders-first": {
-          if (a.type !== b.type) {
-            return a.type === "directory" ? -1 : 1;
-          }
-          return nameA.localeCompare(nameB);
-        }
-        case "files-first": {
-          if (a.type !== b.type) {
-            return a.type === "file" ? -1 : 1;
-          }
-          return nameA.localeCompare(nameB);
-        }
+        case "type":
         case "type-based": {
-          if (a.type !== b.type) {
-            return a.type === "directory" ? -1 : 1;
-          }
-          if (a.type === "file") {
+          if (a.type === "file" && b.type === "file") {
             const extA = (a.fileExtension || "").toLowerCase();
             const extB = (b.fileExtension || "").toLowerCase();
             if (extA !== extB) {
@@ -116,6 +118,24 @@ export class FileExplorerService {
           }
           return nameA.localeCompare(nameB);
         }
+        case "modified": {
+          const modA = a.modifiedAt ?? 0;
+          const modB = b.modifiedAt ?? 0;
+          if (modA !== modB) {
+            return modB - modA;
+          }
+          return nameA.localeCompare(nameB);
+        }
+        case "size": {
+          const sizeA = a.size ?? 0;
+          const sizeB = b.size ?? 0;
+          if (sizeA !== sizeB) {
+            return sizeB - sizeA;
+          }
+          return nameA.localeCompare(nameB);
+        }
+        case "name":
+        case "folders-first":
         case "alphabetical":
         default:
           return nameA.localeCompare(nameB);

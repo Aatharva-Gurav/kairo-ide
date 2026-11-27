@@ -156,6 +156,39 @@ describe("Integrated Terminal Subsystem - Stage 4", () => {
       expect(() => TerminalInstanceRegistry.dispose(sessionId)).not.toThrow();
       expect(TerminalInstanceRegistry.has(sessionId)).toBe(false);
     });
+
+    it("applies fontWeight, copyOnSelect, and rightClickBehavior from settings on create and update", () => {
+      const sessionId = "settings-sync-session";
+      const instance = TerminalInstanceRegistry.createOrGet(
+        sessionId,
+        {
+          ...DEFAULT_TERMINAL_SETTINGS,
+          fontWeight: "600",
+          copyOnSelect: true,
+          rightClickBehavior: "paste",
+        },
+        "dark-modern"
+      );
+
+      expect(instance.term.options.fontWeight).toBe("600");
+      expect(instance.copyOnSelect).toBe(true);
+      expect(instance.rightClickBehavior).toBe("paste");
+
+      TerminalInstanceRegistry.applySettings(sessionId, {
+        ...DEFAULT_TERMINAL_SETTINGS,
+        fontSize: 12,
+        fontWeight: "bold",
+        copyOnSelect: false,
+        rightClickBehavior: "selectWord",
+      });
+
+      expect(instance.term.options.fontSize).toBe(12);
+      expect(instance.term.options.fontWeight).toBe("bold");
+      expect(instance.copyOnSelect).toBe(false);
+      expect(instance.rightClickBehavior).toBe("selectWord");
+
+      TerminalInstanceRegistry.dispose(sessionId);
+    });
   });
 
   describe("Command & Keybinding Integration", () => {

@@ -98,6 +98,17 @@ export function TerminalSplitLayout({ onOpenFind, className }: TerminalSplitLayo
   const handleViewportContextMenu = (e: React.MouseEvent, sessionId: string) => {
     e.preventDefault();
     e.stopPropagation();
+
+    if (settings.rightClickBehavior === "paste") {
+      pasteToTerminal(sessionId);
+      return;
+    }
+
+    if (settings.rightClickBehavior === "selectWord") {
+      TerminalInstanceRegistry.selectWordAtPoint(sessionId, e.clientX, e.clientY);
+      return;
+    }
+
     setViewportContextMenu({
       pos: { x: e.clientX, y: e.clientY },
       sessionId,

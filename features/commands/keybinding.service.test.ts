@@ -183,4 +183,104 @@ describe("KeybindingService", () => {
       configurable: true,
     });
   });
+
+  it("normalizes shifted digit and backquote keys for terminal shortcuts", () => {
+    const originalNavigator = global.navigator;
+    Object.defineProperty(global, "navigator", {
+      value: { platform: "Win32", userAgent: "Windows NT 10.0; Win64; x64" },
+      configurable: true,
+    });
+
+    const newTerminalEvent = {
+      ctrlKey: true,
+      metaKey: false,
+      altKey: false,
+      shiftKey: true,
+      key: "~",
+      code: "Backquote",
+    } as unknown as KeyboardEvent;
+
+    const splitTerminalEvent = {
+      ctrlKey: true,
+      metaKey: false,
+      altKey: false,
+      shiftKey: true,
+      key: "%",
+      code: "Digit5",
+    } as unknown as KeyboardEvent;
+
+    const newNorm = KeybindingService.normalizeKeyboardEvent(newTerminalEvent);
+    const splitNorm = KeybindingService.normalizeKeyboardEvent(splitTerminalEvent);
+
+    expect(newNorm).toBe("ctrl+shift+`");
+    expect(splitNorm).toBe("ctrl+shift+5");
+    expect(KeybindingService.getCommandIdForKeybinding(newNorm)).toBe(
+      "workbench.action.terminal.new"
+    );
+    expect(KeybindingService.getCommandIdForKeybinding(splitNorm)).toBe(
+      "workbench.action.terminal.split"
+    );
+
+    // Fallback when e.code is omitted
+    const fallbackSplit = KeybindingService.normalizeKeyboardEvent({
+      ctrlKey: true,
+      metaKey: false,
+      altKey: false,
+      shiftKey: true,
+      key: "%",
+    } as unknown as KeyboardEvent);
+    expect(fallbackSplit).toBe("ctrl+shift+5");
+
+    Object.defineProperty(global, "navigator", {
+      value: originalNavigator,
+      configurable: true,
+    });
+  });
+
+  it("resolves context-aware shortcuts and two-key chord bindings", () => {
+    const originalNavigator = global.navigator;
+    Object.defineProperty(global, "navigator", {
+      value: { platform: "Win32", userAgent: "Windows NT 10.0; Win64; x64" },
+      configurable: true,
+    });
+
+    // Context-sensitive Ctrl+F
+    expect(KeybindingService.getCommandIdForKeybinding("ctrl+f", { terminalFocus: true })).toBe(
+      "workbench.action.terminal.find"
+    );
+    expect(KeybindingService.getCommandIdForKeybinding("ctrl+f", { explorerFocus: true })).toBe(
+      "explorer.focusFilter"
+    );
+    expect(KeybindingService.getCommandIdForKeybinding("ctrl+f", { editorTextFocus: true })).toBe(
+      "editor.find"
+    );
+
+    // Context-sensitive Ctrl+K (clears terminal when focused, acts as chord prefix outside terminal)
+    expect(KeybindingService.getCommandIdForKeybinding("ctrl+k", { terminalFocus: true })).toBe(
+      "workbench.action.terminal.clear"
+    );
+    expect(
+      KeybindingService.getCommandIdForKeybinding("ctrl+k", { editorTextFocus: true })
+    ).toBeNull();
+    expect(KeybindingService.isChordPrefix("ctrl+k", { editorTextFocus: true })).toBe(true);
+
+    // Two-key chords
+    expect(KeybindingService.getCommandIdForKeybinding("ctrl+k ctrl+\\")).toBe(
+      "workbench.action.splitEditorDown"
+    );
+    expect(KeybindingService.getCommandIdForKeybinding("ctrl+k ctrl+w")).toBe("editor.closeAll");
+    expect(KeybindingService.getCommandIdForKeybinding("ctrl+k ctrl+s")).toBe(
+      "workbench.openKeyboardShortcuts"
+    );
+    expect(KeybindingService.formatDisplay("ctrl+k ctrl+\\")).toBe("Ctrl+K Ctrl+\\");
+
+    // Explorer defaults
+    expect(KeybindingService.getCommandIdForKeybinding("ctrl+shift+e")).toBe("explorer.focus");
+    expect(KeybindingService.getCommandIdForKeybinding("ctrl+n")).toBe("explorer.newFile");
+
+    Object.defineProperty(global, "navigator", {
+      value: originalNavigator,
+      configurable: true,
+    });
+  });
 });

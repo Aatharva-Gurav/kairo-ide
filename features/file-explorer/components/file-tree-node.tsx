@@ -28,6 +28,7 @@ export function FileTreeNode({
     expandedPaths,
     clipboard,
     inlineAction,
+    compactMode,
     toggleExpand,
     selectNode,
     openFile,
@@ -43,10 +44,42 @@ export function FileTreeNode({
   const inputRef = useRef<HTMLInputElement>(null);
   const hoverTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const isDirectory = node.type === "directory";
-  const nodeNorm = normalizePath(node.path);
+  // When compactMode is enabled, collapse single-child expanded directory chains (e.g. src/components)
+  const { displayChain, targetNode } = React.useMemo(() => {
+    if (!compactMode || node.type !== "directory") {
+      return { displayChain: [node], targetNode: node };
+    }
+    const chain: FileSystemNode[] = [node];
+    let cur = node;
+    while (
+      cur.type === "directory" &&
+      (cur.isExpanded || expandedPaths.has(normalizePath(cur.path))) &&
+      cur.children &&
+      cur.children.length === 1 &&
+      cur.children[0].type === "directory"
+    ) {
+      const child = cur.children[0];
+      const curNorm = normalizePath(cur.path);
+      const childNorm = normalizePath(child.path);
+      const hasInlineOnCur =
+        inlineAction &&
+        ((inlineAction.targetNodeId && normalizePath(inlineAction.targetNodeId) === curNorm) ||
+          normalizePath(inlineAction.parentPath) === curNorm);
+      const hasInlineOnChild =
+        inlineAction?.targetNodeId && normalizePath(inlineAction.targetNodeId) === childNorm;
+      if (hasInlineOnCur || hasInlineOnChild) break;
+      chain.push(child);
+      cur = child;
+    }
+    return { displayChain: chain, targetNode: cur };
+  }, [compactMode, node, expandedPaths, inlineAction]);
+
+  const activeNode = targetNode;
+  const displayName = displayChain.map((n) => n.name).join("/");
+  const isDirectory = activeNode.type === "directory";
+  const nodeNorm = normalizePath(activeNode.path);
   const isExpanded =
-    node.isExpanded || (isDirectory && expandedPaths.has(nodeNorm));
+    activeNode.isExpanded || (isDirectory && expandedPaths.has(nodeNorm));
   const isSelected = selectedPaths.has(nodeNorm);
   const isFocused =
     focusedNode && normalizePath(focusedNode.path) === nodeNorm;
@@ -70,7 +103,7 @@ export function FileTreeNode({
   useEffect(() => {
     if (isRenaming && inputRef.current) {
       inputRef.current.focus();
-      const name = node.name;
+      const name = activeNode.name;
       const lastDot = name.lastIndexOf(".");
       if (lastDot > 0 && !isDirectory) {
         inputRef.current.setSelectionRange(0, lastDot);
@@ -78,7 +111,7 @@ export function FileTreeNode({
         inputRef.current.select();
       }
     }
-  }, [isRenaming, node.name, isDirectory]);
+  }, [isRenaming, activeNode.name, isDirectory]);
 
   useEffect(() => {
     return () => {
@@ -120,7 +153,7 @@ export function FileTreeNode({
         }
       }, 0);
     }
-    e.dataTransfer.setData("text/plain", node.path);
+    e.dataTransfer.setData("text/plain", activeNode.path);
     e.dataTransfer.effectAllowed = "move";
   };
 
@@ -153,7 +186,7 @@ export function FileTreeNode({
     // Auto-expand folder on hover during drag (600ms)
     if (isDirectory && !isExpanded && !hoverTimerRef.current) {
       hoverTimerRef.current = setTimeout(() => {
-        toggleExpand(node);
+        toggleExpand(activeNode);
         hoverTimerRef.current = null;
       }, 600);
     }
@@ -179,7 +212,7 @@ export function FileTreeNode({
     }
 
     // Determine target directory: if folder, drop directly inside; if file, drop into file's parent directory
-    const targetDir = isDirectory ? node.path : (node.parentPath || dirname(node.path));
+    const targetDir = isDirectory ? activeNode.path : (activeNode.parentPath || dirname(activeNode.path));
 
     // 1. External files dropped from OS/Computer
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0 && !e.dataTransfer.getData("text/plain")) {
@@ -242,8 +275,8 @@ export function FileTreeNode({
   return (
     <div className="flex flex-col select-none">
       <div
-        data-node-path={node.path}
-        data-folder-path={isDirectory ? node.path : (node.parentPath || dirname(node.path))}
+        data-node-path={activeNode.path}
+        data-folder-path={isDirectory ? activeNode.path : (activeNode.parentPath || dirname(activeNode.path))}
         data-is-directory={isDirectory ? "true" : "false"}
         draggable={!isRenaming}
         onDragStart={handleDragStart}
@@ -253,26 +286,27 @@ export function FileTreeNode({
         onClick={(e) => {
           e.stopPropagation();
           if (e.ctrlKey || e.metaKey || e.shiftKey) {
-            selectNode(node, true, e.shiftKey);
+            selectNode(activeNode, true, e.shiftKey);
           } else {
-            openFile(node);
+            openFile(activeNode);
           }
         }}
         onDoubleClick={(e) => {
           e.stopPropagation();
-          openFile(node);
+          openFile(activeNode);
         }}
         onContextMenu={(e) => {
           e.preventDefault();
           e.stopPropagation();
           if (!selectedPaths.has(nodeNorm)) {
-            selectNode(node, false, false);
+            selectNode(activeNode, false, false);
           }
-          onOpenContextMenu(e, node);
+          onOpenContextMenu(e, activeNode);
         }}
         style={{ paddingLeft: `${depth * 14 + 6}px` }}
         className={cn(
-          "group relative flex h-6.5 w-full items-center gap-1.5 pr-2 text-xs transition-colors duration-120 ease-out cursor-pointer rounded-xs select-none",
+          "group relative flex w-full items-center gap-1.5 pr-2 text-xs transition-colors duration-120 ease-out cursor-pointer rounded-xs select-none",
+          compactMode ? "h-5.5" : "h-6.5",
           isSelected
             ? cn(
                 selectedPaths.size > 1
@@ -293,12 +327,12 @@ export function FileTreeNode({
           <button
             onClick={(e) => {
               e.stopPropagation();
-              toggleExpand(node);
+              toggleExpand(activeNode);
             }}
             className="flex size-3.5 shrink-0 items-center justify-center text-muted-foreground/70 hover:text-foreground cursor-pointer rounded transition-all duration-140"
             tabIndex={-1}
           >
-            {node.isLoading ? (
+            {activeNode.isLoading ? (
               <span className="size-1.5 rounded-full bg-sidebar-primary animate-pulse" />
             ) : (
               <ChevronRight
@@ -315,7 +349,7 @@ export function FileTreeNode({
 
         {/* File or Folder Icon */}
         <FileIcon
-          name={node.name}
+          name={activeNode.name}
           isDirectory={isDirectory}
           isExpanded={isExpanded}
           className={cn(
@@ -329,15 +363,15 @@ export function FileTreeNode({
           <input
             ref={inputRef}
             type="text"
-            defaultValue={node.name}
+            defaultValue={activeNode.name}
             onKeyDown={handleInputKeyDown}
             onBlur={handleInputBlur}
             onClick={(e) => e.stopPropagation()}
             className="h-5.5 flex-1 rounded bg-background border border-sidebar-ring px-1.5 py-0.5 text-xs leading-normal text-foreground font-sans outline-none shadow-2xs focus:ring-1 focus:ring-sidebar-ring"
           />
         ) : (
-          <span className="truncate min-w-0 flex-1 leading-5 py-0.5 text-left tracking-tight" title={node.name}>
-            {node.name}
+          <span className="truncate min-w-0 flex-1 leading-5 py-0.5 text-left tracking-tight" title={displayName}>
+            {displayName}
           </span>
         )}
 
@@ -369,8 +403,8 @@ export function FileTreeNode({
             />
           )}
 
-          {node.children && node.children.length > 0 ? (
-            node.children.map((child) => (
+          {activeNode.children && activeNode.children.length > 0 ? (
+            activeNode.children.map((child) => (
               <FileTreeNode
                 key={child.path}
                 node={child}
@@ -378,12 +412,12 @@ export function FileTreeNode({
                 onOpenContextMenu={onOpenContextMenu}
               />
             ))
-          ) : !node.isLoading && !isCreatingChild ? (
+          ) : !activeNode.isLoading && !isCreatingChild ? (
             <div
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleNodeDrop}
-              data-folder-path={node.path}
+              data-folder-path={activeNode.path}
               style={{ paddingLeft: `${(depth + 1) * 14 + 20}px` }}
               className={cn(
                 "py-1 text-[11px] text-muted-foreground/60 italic animate-in fade-in-50 duration-100 rounded transition-colors",

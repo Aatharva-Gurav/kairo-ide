@@ -4,13 +4,15 @@ import { SearchAddon } from "@xterm/addon-search";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebglAddon } from "@xterm/addon-webgl";
-import { TerminalSettings } from "../types";
+import { TerminalSettings, TerminalRightClickBehavior } from "../types";
 import { TerminalThemeService } from "./terminal-theme.service";
 import { TerminalIpcService } from "./terminal-ipc.service";
 import { TerminalLinkProvider } from "./terminal-link-provider";
 import { DevServerDetector } from "./dev-server-detector";
 import { UnlistenFn } from "@tauri-apps/api/event";
 import { openExternalUrl } from "@/lib/tauri-ipc";
+import { KeybindingService } from "@/features/commands/keybinding.service";
+import { CommandRegistry } from "@/features/commands/command-registry";
 
 export interface TerminalInstance {
   sessionId: string;
@@ -21,6 +23,8 @@ export interface TerminalInstance {
   unicode11Addon: Unicode11Addon;
   webglAddon?: WebglAddon;
   container: HTMLElement | null;
+  copyOnSelect: boolean;
+  rightClickBehavior: TerminalRightClickBehavior;
   unlistenData?: UnlistenFn;
   unlistenExit?: UnlistenFn;
   disposed: boolean;
@@ -51,6 +55,7 @@ export class TerminalInstanceRegistry {
     const term = new Terminal({
       fontSize: settings.fontSize,
       fontFamily: settings.fontFamily,
+      fontWeight: settings.fontWeight,
       lineHeight: settings.lineHeight,
       cursorStyle: settings.cursorStyle,
       cursorBlink: settings.cursorBlink,
@@ -97,6 +102,57 @@ export class TerminalInstanceRegistry {
       }
     });
 
+    // Guard IDE/terminal shortcuts and clipboard copy/paste from being swallowed or sent as raw PTY bytes
+    term.attachCustomKeyEventHandler((e: KeyboardEvent) => {
+      if (e.type !== "keydown") return true;
+
+      const isMac = KeybindingService.isMacOS();
+      const primaryMod = isMac ? e.metaKey : e.ctrlKey;
+      const lowerKey = (e.key || "").toLowerCase();
+
+      // Copy selection with Ctrl+C / Cmd+C (when selection exists) or Ctrl+Shift+C
+      if (primaryMod && !e.altKey && lowerKey === "c") {
+        if (term.hasSelection()) {
+          const text = term.getSelection();
+          if (text && typeof navigator !== "undefined" && navigator.clipboard) {
+            navigator.clipboard.writeText(text).catch(() => {});
+          }
+          return false;
+        }
+        if (e.shiftKey) {
+          return false;
+        }
+        return true; // Send SIGINT (^C) when there is no selection
+      }
+
+      // Explicit paste with Ctrl+Shift+V (Ctrl+V is handled via native browser paste event)
+      if (primaryMod && e.shiftKey && !e.altKey && lowerKey === "v") {
+        if (typeof navigator !== "undefined" && navigator.clipboard) {
+          navigator.clipboard
+            .readText()
+            .then((text) => {
+              if (text && !instance.disposed) {
+                TerminalIpcService.writeSession(sessionId, text).catch(() => {});
+              }
+            })
+            .catch(() => {});
+        }
+        return false;
+      }
+
+      const rawKey = KeybindingService.normalizeKeyboardEvent(e);
+      if (rawKey && KeybindingService.hasNonModifierKey(rawKey)) {
+        const commandId = KeybindingService.getCommandIdForKeybinding(rawKey, {
+          terminalFocus: true,
+        });
+        if (commandId && CommandRegistry.isEnabled(commandId)) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+
     const instance: TerminalInstance = {
       sessionId,
       term,
@@ -105,8 +161,20 @@ export class TerminalInstanceRegistry {
       webLinksAddon,
       unicode11Addon,
       container: null,
+      copyOnSelect: Boolean(settings.copyOnSelect),
+      rightClickBehavior: settings.rightClickBehavior || "contextMenu",
       disposed: false,
     };
+
+    // Copy selected text automatically when terminal.copyOnSelect is enabled
+    term.onSelectionChange(() => {
+      if (instance.copyOnSelect && !instance.disposed && term.hasSelection()) {
+        const text = term.getSelection();
+        if (text && typeof navigator !== "undefined" && navigator.clipboard) {
+          navigator.clipboard.writeText(text).catch(() => {});
+        }
+      }
+    });
 
     // Try optional WebGL acceleration with graceful DOM fallback
     try {
@@ -222,6 +290,9 @@ export class TerminalInstanceRegistry {
     const instance = this.instances.get(sessionId);
     if (!instance || instance.disposed) return;
 
+    instance.copyOnSelect = Boolean(settings.copyOnSelect);
+    instance.rightClickBehavior = settings.rightClickBehavior || "contextMenu";
+
     let needsFit = false;
     if (instance.term.options.fontSize !== settings.fontSize) {
       instance.term.options.fontSize = settings.fontSize;
@@ -285,6 +356,46 @@ export class TerminalInstanceRegistry {
       } catch {
         // terminal not ready yet
       }
+    }
+  }
+
+  static selectWordAtPoint(sessionId: string, clientX: number, clientY: number): void {
+    const instance = this.instances.get(sessionId);
+    if (!instance || instance.disposed || !instance.container) return;
+
+    try {
+      const term = instance.term;
+      const screenEl = term.element?.querySelector(".xterm-screen") || instance.container;
+      const rect = screenEl.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0 || term.cols <= 0 || term.rows <= 0) return;
+
+      const relX = Math.max(0, Math.min(clientX - rect.left, rect.width - 1));
+      const relY = Math.max(0, Math.min(clientY - rect.top, rect.height - 1));
+      const col = Math.floor((relX / rect.width) * term.cols);
+      const viewportRow = Math.floor((relY / rect.height) * term.rows);
+      const buffer = term.buffer.active;
+      const absRow = buffer.viewportY + viewportRow;
+      const line = buffer.getLine(absRow);
+      if (!line) return;
+
+      const text = line.translateToString(true);
+      if (!text || col >= text.length) return;
+
+      const isWordChar = (ch: string) => /[A-Za-z0-9_./:~-]/.test(ch);
+      if (!isWordChar(text[col])) return;
+
+      let start = col;
+      while (start > 0 && isWordChar(text[start - 1])) start--;
+      let end = col;
+      while (end + 1 < text.length && isWordChar(text[end + 1])) end++;
+
+      term.select(start, absRow, end - start + 1);
+      if (instance.copyOnSelect && typeof navigator !== "undefined" && navigator.clipboard) {
+        const selected = term.getSelection();
+        if (selected) navigator.clipboard.writeText(selected).catch(() => {});
+      }
+    } catch {
+      // ignore selection error
     }
   }
 

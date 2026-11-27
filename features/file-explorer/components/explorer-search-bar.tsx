@@ -2,6 +2,7 @@
 
 import React, { useRef, useEffect } from "react";
 import { useFileExplorer } from "../store";
+import { ideEvents } from "@/lib/events";
 import { Search, X, CheckSquare } from "lucide-react";
 
 export function ExplorerSearchBar() {
@@ -14,26 +15,14 @@ export function ExplorerSearchBar() {
   } = useFileExplorer();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Global Ctrl+F / Cmd+F shortcut to focus search input
+  // Focus filter input when triggered via explorer.focusFilter command (Ctrl+F inside explorer)
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "f") {
-        const target = e.target as HTMLElement;
-        const isInputField =
-          target.tagName === "INPUT" ||
-          target.tagName === "TEXTAREA" ||
-          target.isContentEditable;
-
-        if (!isInputField || target === inputRef.current) {
-          e.preventDefault();
-          inputRef.current?.focus();
-          inputRef.current?.select();
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    return ideEvents.on("explorer:focus-filter", () => {
+      setTimeout(() => {
+        inputRef.current?.focus();
+        inputRef.current?.select();
+      }, 0);
+    });
   }, []);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -43,6 +32,8 @@ export function ExplorerSearchBar() {
         setFilterQuery("");
       } else {
         inputRef.current?.blur();
+        const treeEl = document.querySelector<HTMLElement>('[data-file-explorer="true"]');
+        treeEl?.focus();
       }
     }
   };

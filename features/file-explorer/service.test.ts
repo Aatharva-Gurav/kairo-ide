@@ -139,6 +139,26 @@ describe("FileExplorerService", () => {
         "index.ts",
       ]);
     });
+
+    it("supports modified, size, name, and foldersFirst=false settings sort modes", () => {
+      const sizedNodes: FileSystemNode[] = [
+        { id: "1", name: "small.txt", path: "C:/App/small.txt", type: "file", size: 10, modifiedAt: 100 },
+        { id: "2", name: "folder", path: "C:/App/folder", type: "directory", size: 0, modifiedAt: 500 },
+        { id: "3", name: "large.txt", path: "C:/App/large.txt", type: "file", size: 900, modifiedAt: 300 },
+      ];
+
+      expect(
+        FileExplorerService.sortNodes(sizedNodes, { mode: "size", caseSensitive: false, foldersFirst: true }).map((n) => n.name)
+      ).toEqual(["folder", "large.txt", "small.txt"]);
+
+      expect(
+        FileExplorerService.sortNodes(sizedNodes, { mode: "modified", caseSensitive: false, foldersFirst: true }).map((n) => n.name)
+      ).toEqual(["folder", "large.txt", "small.txt"]);
+
+      expect(
+        FileExplorerService.sortNodes(sizedNodes, { mode: "name", caseSensitive: false, foldersFirst: false }).map((n) => n.name)
+      ).toEqual(["folder", "large.txt", "small.txt"]);
+    });
   });
 
   describe("Filtering Hierarchy", () => {

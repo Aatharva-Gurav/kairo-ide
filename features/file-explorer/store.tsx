@@ -41,6 +41,7 @@ export interface FileExplorerContextValue {
   error: string | null;
   showHidden: boolean;
   setShowHidden: (show: boolean) => void;
+  compactMode: boolean;
 
   // Sorting & Filtering
   sortConfig: ExplorerSortConfig;
@@ -255,10 +256,17 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
   const [showHidden, setShowHiddenState] = useState<boolean>(() => {
     return SettingsService.getEffectiveSettings().explorer.showHidden;
   });
+  const [compactMode, setCompactMode] = useState<boolean>(() => {
+    return SettingsService.getEffectiveSettings().explorer.compactMode;
+  });
   const [filterQuery, setFilterQuery] = useState("");
-  const [sortConfig, setSortConfig] = useState<ExplorerSortConfig>({
-    mode: "folders-first",
-    caseSensitive: false,
+  const [sortConfig, setSortConfig] = useState<ExplorerSortConfig>(() => {
+    const exp = SettingsService.getEffectiveSettings().explorer;
+    return {
+      mode: exp.sortMode,
+      foldersFirst: exp.foldersFirst,
+      caseSensitive: false,
+    };
   });
 
   const expandedPathsRef = useRef(expandedPaths);
@@ -269,6 +277,9 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
   const nodesRef = useRef(nodes);
   const sortConfigRef = useRef(sortConfig);
   const showHiddenRef = useRef(showHidden);
+  const autoRefreshRef = useRef<boolean>(
+    SettingsService.getEffectiveSettings().explorer.autoRefresh
+  );
 
   const displayNodesRef = useRef<FileSystemNode[]>([]);
 
@@ -299,18 +310,6 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
         });
     }
   }, []);
-
-  // Subscribe to live settings changes (e.g. showHidden toggle from settings modal)
-  useEffect(() => {
-    return SettingsService.subscribe((effective, changedKey) => {
-      if (!changedKey || changedKey === "explorer.showHidden") {
-        if (effective.explorer.showHidden !== showHiddenRef.current) {
-          setShowHidden(effective.explorer.showHidden);
-        }
-      }
-    });
-  }, [setShowHidden]);
-
 
   /**
    * Refreshes the explorer tree, preserving expanded folder states.
@@ -361,6 +360,34 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
     []
   );
 
+  // Subscribe to live settings changes from SettingsService
+  useEffect(() => {
+    return SettingsService.subscribe((effective, changedKey) => {
+      if (!changedKey || changedKey === "explorer.showHidden") {
+        if (effective.explorer.showHidden !== showHiddenRef.current) {
+          setShowHidden(effective.explorer.showHidden);
+        }
+      }
+      if (!changedKey || changedKey === "explorer.sortMode" || changedKey === "explorer.foldersFirst") {
+        setSortConfig((prev) => ({
+          ...prev,
+          mode: effective.explorer.sortMode,
+          foldersFirst: effective.explorer.foldersFirst,
+        }));
+      }
+      if (!changedKey || changedKey === "explorer.compactMode") {
+        setCompactMode(effective.explorer.compactMode);
+      }
+      if (!changedKey || changedKey === "explorer.autoRefresh") {
+        const wasDisabled = !autoRefreshRef.current;
+        autoRefreshRef.current = effective.explorer.autoRefresh;
+        if (wasDisabled && effective.explorer.autoRefresh && activeWorkspaceRef.current) {
+          refresh();
+        }
+      }
+    });
+  }, [setShowHidden, refresh]);
+
   const activeWorkspacePath = activeWorkspace?.rootPath;
 
   // Restore workspace state or reset when active workspace changes
@@ -387,16 +414,23 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
       setBulkDeleteCandidate(null);
 
       const savedState = WorkspaceService.getWorkspaceState(activeWorkspacePath);
+      const effectiveExplorer = SettingsService.getEffectiveSettings().explorer;
       const restoredExpanded = savedState?.expandedPaths
         ? new Set(savedState.expandedPaths.map((p) => normalizePath(p)))
         : new Set<string>();
-      const restoredSortMode = (savedState?.sortMode as ExplorerSortMode) || "folders-first";
-      const restoredShowHidden = savedState?.showHidden ?? false;
+      const restoredSortMode = effectiveExplorer.sortMode || (savedState?.sortMode as ExplorerSortMode) || "name";
+      const restoredShowHidden = effectiveExplorer.showHidden;
 
       expandedPathsRef.current = restoredExpanded;
       showHiddenRef.current = restoredShowHidden;
+      autoRefreshRef.current = effectiveExplorer.autoRefresh;
       setExpandedPaths(restoredExpanded);
-      setSortConfig({ mode: restoredSortMode, caseSensitive: false });
+      setSortConfig({
+        mode: restoredSortMode,
+        foldersFirst: effectiveExplorer.foldersFirst,
+        caseSensitive: false,
+      });
+      setCompactMode(effectiveExplorer.compactMode);
       setShowHiddenState(restoredShowHidden);
 
       try {
@@ -468,6 +502,7 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
     const debounceTimers = new Map<string, NodeJS.Timeout>();
 
     const unwatch = fsWatcher.onEvent((event) => {
+      if (!autoRefreshRef.current) return;
       const normPath = normalizePath(event.path);
       const parent = dirname(normPath);
       const existing = debounceTimers.get(parent);
@@ -987,33 +1022,79 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
     [inlineAction, refresh, openFile]
   );
 
+  const executeDeleteNodes = useCallback(
+    async (targets: FileSystemNode[]): Promise<boolean> => {
+      if (!targets || targets.length === 0) return false;
+      setError(null);
+
+      try {
+        const parentsToRefresh = new Set<string>();
+        for (const node of targets) {
+          parentsToRefresh.add(dirname(node.path));
+        }
+
+        await FileExplorerService.bulkDelete(targets);
+
+        for (const parent of parentsToRefresh) {
+          await refresh(parent);
+        }
+
+        setSelectedPaths(new Set());
+        setSelectedNode(null);
+        setLastAnchorNode(null);
+
+        const deletedPaths = targets.map((node) => node.path);
+        ideEvents.emit("files:deleted", { paths: deletedPaths });
+
+        for (const node of targets) {
+          ideEvents.emit("file:deleted", {
+            path: node.path,
+            isDirectory: node.type === "directory",
+          });
+        }
+
+        setBulkDeleteCandidate(null);
+        return true;
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Failed to delete item(s).";
+        setError(msg);
+        return false;
+      }
+    },
+    [refresh]
+  );
+
   const promptDelete = useCallback(
     (candidate?: FileSystemNode | FileSystemNode[]) => {
+      let targets: FileSystemNode[] = [];
       if (Array.isArray(candidate)) {
-        setBulkDeleteCandidate(candidate);
+        targets = candidate;
       } else if (candidate) {
         const candidateNorm = normalizePath(candidate.path);
         if (
           selectedPathsRef.current.size > 1 &&
           selectedPathsRef.current.has(candidateNorm)
         ) {
-          const selected = findNodesByPaths(
-            nodesRef.current,
-            selectedPathsRef.current
-          );
-          setBulkDeleteCandidate(selected);
+          targets = findNodesByPaths(nodesRef.current, selectedPathsRef.current);
         } else {
-          setBulkDeleteCandidate([candidate]);
+          targets = [candidate];
         }
       } else if (selectedPathsRef.current.size > 0) {
-        const selected = findNodesByPaths(
-          nodesRef.current,
-          selectedPathsRef.current
-        );
-        setBulkDeleteCandidate(selected);
+        targets = findNodesByPaths(nodesRef.current, selectedPathsRef.current);
       }
+
+      if (targets.length === 0) return;
+
+      const effective = SettingsService.getEffectiveSettings();
+      const shouldConfirm = effective.explorer.confirmDelete && effective.files.confirmDelete;
+      if (!shouldConfirm) {
+        executeDeleteNodes(targets);
+        return;
+      }
+
+      setBulkDeleteCandidate(targets);
     },
-    []
+    [executeDeleteNodes]
   );
 
   const cancelDelete = useCallback(() => {
@@ -1022,42 +1103,8 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
 
   const confirmDelete = useCallback(async (): Promise<boolean> => {
     if (!bulkDeleteCandidate || bulkDeleteCandidate.length === 0) return false;
-    setError(null);
-
-    try {
-      const parentsToRefresh = new Set<string>();
-      for (const node of bulkDeleteCandidate) {
-        parentsToRefresh.add(dirname(node.path));
-      }
-
-      await FileExplorerService.bulkDelete(bulkDeleteCandidate);
-
-      for (const parent of parentsToRefresh) {
-        await refresh(parent);
-      }
-
-      setSelectedPaths(new Set());
-      setSelectedNode(null);
-      setLastAnchorNode(null);
-
-      const deletedPaths = bulkDeleteCandidate.map((node) => node.path);
-      ideEvents.emit("files:deleted", { paths: deletedPaths });
-
-      for (const node of bulkDeleteCandidate) {
-        ideEvents.emit("file:deleted", {
-          path: node.path,
-          isDirectory: node.type === "directory",
-        });
-      }
-
-      setBulkDeleteCandidate(null);
-      return true;
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to delete item(s).";
-      setError(msg);
-      return false;
-    }
-  }, [bulkDeleteCandidate, refresh]);
+    return await executeDeleteNodes(bulkDeleteCandidate);
+  }, [bulkDeleteCandidate, executeDeleteNodes]);
 
   const copySelected = useCallback(
     (targetNodes?: FileSystemNode[]) => {
@@ -1446,6 +1493,35 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
     (e: React.KeyboardEvent) => {
       if (inlineAction) return;
 
+      const primaryMod = e.ctrlKey || e.metaKey;
+
+      // Undo (Ctrl/Cmd + Z)
+      if (primaryMod && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        e.stopPropagation();
+        undo();
+        return;
+      }
+
+      // Redo (Ctrl/Cmd + Shift + Z or Ctrl/Cmd + Y)
+      if (
+        (primaryMod && e.shiftKey && !e.altKey && e.key.toLowerCase() === "z") ||
+        (primaryMod && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "y")
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        redo();
+        return;
+      }
+
+      // Paste into selected or root (Ctrl/Cmd + V) - allowed even if folder is empty
+      if (primaryMod && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "v") {
+        e.preventDefault();
+        e.stopPropagation();
+        pasteNode(selectedNodeRef.current);
+        return;
+      }
+
       const visible = getVisibleNodes(displayNodes, expandedPathsRef.current);
       if (visible.length === 0) return;
 
@@ -1457,55 +1533,35 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
           )
         : -1;
 
-      // Undo (Ctrl/Cmd + Z)
-      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "z") {
-        e.preventDefault();
-        undo();
-        return;
-      }
-
-      // Redo (Ctrl/Cmd + Shift + Z or Ctrl/Cmd + Y)
-      if (
-        ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "z") ||
-        ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y")
-      ) {
-        e.preventDefault();
-        redo();
-        return;
-      }
-
       // Duplicate (Ctrl/Cmd + D)
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "d") {
+      if (primaryMod && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "d") {
         e.preventDefault();
+        e.stopPropagation();
         duplicateSelected();
         return;
       }
 
       // Select all visible (Ctrl/Cmd + A)
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "a") {
+      if (primaryMod && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "a") {
         e.preventDefault();
+        e.stopPropagation();
         selectAll();
         return;
       }
 
       // Copy selected (Ctrl/Cmd + C)
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "c") {
+      if (primaryMod && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "c") {
         e.preventDefault();
+        e.stopPropagation();
         copySelected();
         return;
       }
 
       // Cut selected (Ctrl/Cmd + X)
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "x") {
+      if (primaryMod && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "x") {
         e.preventDefault();
+        e.stopPropagation();
         cutSelected();
-        return;
-      }
-
-      // Paste into selected or root (Ctrl/Cmd + V)
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "v") {
-        e.preventDefault();
-        pasteNode(selectedNodeRef.current);
         return;
       }
 
@@ -1597,6 +1653,7 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
       error,
       showHidden,
       setShowHidden,
+      compactMode,
       sortConfig,
       setSortMode,
       filterQuery,
@@ -1660,6 +1717,7 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
       error,
       showHidden,
       setShowHidden,
+      compactMode,
       sortConfig,
       setSortMode,
       filterQuery,

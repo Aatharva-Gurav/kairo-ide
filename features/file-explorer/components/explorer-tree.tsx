@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useFileExplorer, findNodesByPaths } from "../store";
 import { useWorkspace } from "../../workspace/store";
 import { FileTreeNode, InlineCreationInput } from "./file-tree-node";
 import { FileSystemNode } from "../types";
 import { normalizePath, dirname, isDescendant } from "@/lib/tauri-ipc";
+import { ideEvents } from "@/lib/events";
 import { FileExplorerService } from "../service";
 import { AlertCircle, X } from "lucide-react";
 
@@ -15,6 +16,15 @@ interface ExplorerTreeProps {
 
 export function ExplorerTree({ onOpenContextMenu }: ExplorerTreeProps) {
   const { activeWorkspace } = useWorkspace();
+  const treeRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    return ideEvents.on("explorer:focus", () => {
+      setTimeout(() => {
+        treeRef.current?.focus();
+      }, 0);
+    });
+  }, []);
   const {
     nodes,
     displayNodes,
@@ -110,6 +120,7 @@ export function ExplorerTree({ onOpenContextMenu }: ExplorerTreeProps) {
 
   return (
     <div
+      ref={treeRef}
       role="tree"
       aria-label="Files Explorer"
       aria-multiselectable="true"
