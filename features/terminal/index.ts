@@ -13,7 +13,6 @@ export * from "./services/dev-server-detector";
 export * from "./hooks/use-xterm";
 export * from "./store";
 export * from "./components/terminal-view";
-export * from "./components/terminal-test-harness";
 export * from "./components/terminal-panel";
 export * from "./components/terminal-panel-header";
 export * from "./components/terminal-panel-resizer";

@@ -1,333 +1,164 @@
-<div align="center">
+# Kairo IDE
 
-# ⚡ Kairo IDE
-
-**Next-Generation Desktop Code Editor Built with Next.js 16, React 19, Tauri v2 & Rust**
-
-[![Next.js](https://img.shields.io/badge/Next.js-16.4.0-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
-[![React](https://img.shields.io/badge/React-19.3.0-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Tauri](https://img.shields.io/badge/Tauri-v2.12-FFC131?style=for-the-badge&logo=tauri&logoColor=black)](https://v2.tauri.app/)
-[![Rust](https://img.shields.io/badge/Rust-2021%20Edition-DEA584?style=for-the-badge&logo=rust&logoColor=black)](https://www.rust-lang.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-[![Tests](https://img.shields.io/badge/Tests-225%20Vitest%20%7C%2023%20Cargo%20Passed-brightgreen?style=for-the-badge&logo=vitest)](https://vitest.dev/)
-[![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
-
-<p align="center">
-  A blazing-fast, secure, and extensible desktop code IDE combining the rapid iteration of modern React with the raw performance and low memory footprint of Rust.
-</p>
-
-[Key Features](#-key-features) •
-[Architecture](#-architecture-overview) •
-[Workspace Lifecycle](#-workspace-lifecycle-management) •
-[Terminal & PTY](#-integrated-terminal--pty-architecture) •
-[Security Hardening](#-security-hardening) •
-[Supported Languages](#-supported-languages) •
-[Themes](#-14-built-in-themes) •
-[Shortcuts](#-keyboard-shortcuts) •
-[Getting Started](#-getting-started) •
-[Testing](#-testing--quality-assurance)
-
-</div>
+**Kairo IDE** is a cross-platform desktop code editor engineered with **Next.js 16**, **React 19**, **TypeScript**, **Monaco Editor**, **xterm.js**, and a **Tauri v2 (Rust)** native backend. It pairs a modern, themeable workbench UI with a native filesystem security boundary (`WorkspaceGuard` + `SensitivePathPolicy`) and real OS PTY terminal sessions.
 
 ---
 
-## 🌟 Overview
+## Core Features
 
-**Kairo IDE** is an enterprise-grade desktop code development environment engineered from the ground up for speed, safety, and productivity. Combining a lightweight **Next.js 16** and **React 19** frontend shell with a **Tauri v2** native backend written in **Rust**, Kairo provides instantaneous file operations, multi-threaded workspace indexing, native pseudo-terminal (PTY) virtualization, and a rich **Monaco Editor** coding experience—while consuming a fraction of the RAM required by traditional Electron-based editors.
+### 1. Code Editor & Floating Creation (`features/editor/`)
+- Multi-tab Monaco Editor workbench with binary-file preview (`BinaryFileView`), breadcrumbs, and interactive status bar (`Ln/Col`, selection count, line endings, language label, zoom, formatting).
+- Horizontal and vertical 2-pane split views (`Ctrl+\`, `Ctrl+K Ctrl+\`) with draggable dividers and active-pane focus tracking.
+- Disk-to-buffer synchronization & conflict resolution (`BufferSyncService` + `DiffService`), preserving CRLF/LF line endings cleanly.
+- Draggable in-editor Find & Replace widget (`Ctrl+F` / `Ctrl+H`), Go to Line (`Ctrl+G`), Quick Open (`Ctrl+P`), JSON formatter provider, built-in snippets (`IntelliSenseService`), and Floating Creation quick-add menu when the sidebar is collapsed.
 
----
+### 2. Integrated Terminal (`features/terminal/`, `src-tauri/src/terminal/`)
+- Multi-tab and split-pane terminal powered by `xterm.js` (`FitAddon`, `SearchAddon`, `WebLinksAddon`, `Unicode11Addon`, optional `WebglAddon`) backed by real OS ConPTY / POSIX PTY sessions via `portable-pty`.
+- Automatic shell profile discovery (PowerShell 7, Windows PowerShell, CMD, Git Bash, WSL, zsh, bash, fish, sh, etc.) and custom profile sync validated against allowlisted shell binaries and blocked environment variables.
+- Clickable `file:line:col` links (`TerminalLinkProvider`) opening directly in the editor, local dev-server URL detection (`DevServerDetector`), persistent panel height, maximize mode (`Alt+F11`), and state preservation when toggling visibility (``Ctrl+` ``).
 
-## 🚀 Key Features
+### 3. Workspace Management & File Explorer (`features/workspace/`, `features/file-explorer/`)
+- Explicit workspace lifecycle (`OPEN` / `CLOSING` / `CLOSED`) with unsaved-document close hooks, project technology detection, multi-root backend support, and recent workspaces history.
+- Lazy-loaded directory tree with in-memory caching, compact single-child folder folding, inline create/rename, multi-select, batch rename, move modal, 30-step undo/redo history (`ExplorerHistoryService`), context menu actions, tree filter (`Ctrl+F` when focused), and OS window drag-and-drop.
 
-### 1. 🗂️ Workspace Lifecycle & Resource Teardown
-- **Deterministic 5-State Lifecycle Machine**: Governed strictly by `CLOSED`, `OPENING`, `OPEN`, `CLOSING`, and `SWITCHING` lifecycle states.
-- **Race Condition & Concurrency Guards**: Monotonic sequence tracking (`lifecycleSeqRef`) and transition locks (`isTransitioningRef`) ensure rapid switching between workspaces always executes sequentially without state collisions or orphaned processes.
-- **VS Code-Style 4-Second Closing Warning Overlay**: Displays a sleek backdrop-blurred closing overlay reporting live progress across 4 stages (Terminals, Editor models, Filesystem watchers, and Workspace resources) with synchronized animated progress bars.
-- **Unsaved Changes Safety Shield**: Proactive dirty document check before closing or switching workspaces with *Save All*, *Don't Save*, and *Cancel* options.
-- **Multi-Root Workspace Architecture**: Support for multi-root workspaces allowing developers to add and manage multiple project folders simultaneously in a single IDE window.
-- **Native OS Folder Picker**: Seamlessly open folders via native file system dialogs (`rfd` crate).
-- **Persistent Recent Workspaces**: Automatic deduplication, MRU ordering, configurable storage capacity, and clean state restoration.
+### 4. Workspace-Wide Search & Replace (`features/search/`, `src-tauri/src/commands/fs.rs`)
+- Debounced workspace search executed in Rust via `spawn_blocking` with Case Sensitive (`Alt+C`), Whole Word (`Alt+W`), Regex (`Alt+R`), and Include/Exclude glob pattern filters.
+- Atomic workspace-wide multi-file replacements with confirmation modal and line/column jump navigation.
 
-### 2. 💻 Integrated Pseudo-Terminal (PTY) Subsystem
-- **Native Rust PTY Engine**: Built on `portable-pty` for asynchronous, low-latency terminal emulation.
-- **"Open in Integrated Terminal" Folder Navigation**: Right-click any directory in the file explorer (or the workspace root) to spawn or activate a terminal initialized strictly in that folder across Windows, Linux, and macOS.
-- **Cross-Platform Process Tree Termination**:
-  - **Windows**: Executes forceful tree termination (`taskkill /pid <PID> /T /F`) to kill root shells and all spawned child processes (Node.js, Vite, Cargo, etc.).
-  - **Unix / macOS**: Dispatches `SIGTERM` followed by a grace period and `SIGKILL` to ensure zero orphaned background processes.
-- **Optional Workspace Terminal Persistence**: Configurable `terminal.persistAcrossWorkspaces` setting allowing background jobs to persist across workspace switches.
-- **Multi-Session & Split Terminals**: Support for multiple concurrent shell tabs, horizontal/vertical splits, custom shell profiles (PowerShell, Bash, Zsh, CMD), search, and themes.
+### 5. Commands, Keybindings & Live Settings (`features/commands/`, `features/command-palette/`, `features/settings/`)
+- Central `CommandRegistry` with fuzzy Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`).
+- Capture-phase global `KeybindingService` supporting cross-platform `Ctrl`/`Cmd` normalization, shifted physical key mappings, two-step chords (`Ctrl+K ...`), focus-aware `when` clauses (`terminalFocus`, `editorTextFocus`, `explorerFocus`), conflict detection, and custom shortcut recording.
+- User- and workspace-scoped Settings modal (`Ctrl+,` / `Cmd+,`) spanning **Appearance**, **Editor**, **Suggestions**, **Terminal**, **Files**, **Search**, and **Keybindings**.
 
-### 3. 🌲 Real Filesystem Explorer & Floating Creation Action
-- **Direct OS Binding**: Zero mock data—all reads and writes execute against the real filesystem via sandboxed Tauri IPC.
-- **Lazy-Loaded Tree Traversal**: Directories load on demand, maintaining silky smooth 60 FPS scrolling even on 100,000+ file codebases.
-- **Horizontal Floating Creation Menu**: A circular action button fixed to the IDE viewport that expands horizontally to the left into "New File" and "New Folder" circular options with top-floating tooltips and a destination tree picker.
-- **Full File & Directory Operations**:
-  - Create file and folder with strict validation (protecting against illegal characters and Windows reserved device names: `CON`, `PRN`, `AUX`, `NUL`, `COM1-9`, `LPT1-9`).
-  - Inline rename (`F2`) with path collision pre-checks.
-  - Delete with safety confirmation modal to prevent accidental loss.
-  - Clipboard operations: Recursive copy, cut, and paste with ancestor/descendant circular recursion safeguards.
-  - Duplicate file with smart collision numbering (`file copy.ts`, `file copy 2.ts`).
-  - Drag-and-drop moving of files and folders across tree branches.
-- **Seti & Lucide Icon Themes**: File-type-specific icon resolution for 60+ extensions and well-known configuration manifests.
-
-### 4. 📝 Advanced Code Editor (Monaco)
-- **Monaco Engine (`^0.58.0`)**: Bundled offline (`loader.config({ monaco })`) with zero CDN dependency.
-- **Multi-Tab Document Management**:
-  - Responsive horizontal tab strip with middle-click close, pin indicators, and Seti file icons.
-  - Context menu options: *Close*, *Close Others*, *Close All*, *Copy Path*, *Copy Relative Path*, and *Reveal in OS Explorer*.
-- **Multi-Split Editor Panels**: Split editor groups horizontally and vertically with independent model instances and synchronous viewState tracking.
-- **Complete Model Disposal on Workspace Close**: Deterministic disposal of all Monaco models (`ModelService.disposeAll()`) preventing memory leaks on workspace transitions.
-- **Document Dirty Tracking & Safety**:
-  - Real-time dirty state bullet (`•`) indicating unsaved changes.
-  - Single-file save (`Ctrl+S` / `Cmd+S`) and batch Save All (`Ctrl+Alt+S`).
-  - External modification detection alerting users to disk changes.
-- **Binary & Large File Safeguards**:
-  - Fast null-byte heuristic inspection and 20MB file threshold.
-  - Native image preview for `.png`, `.jpg`, `.jpeg`, `.svg`, `.webp`, `.gif`, and `.ico`.
-  - Binary alert banner with direct button to reveal the file in the OS explorer.
-- **Breadcrumb Navigation & Status Bar**:
-  - Interactive workspace-relative folder and file path breadcrumbs.
-  - Comprehensive status bar showing line & column, space indentation, UTF-8 encoding, language mode, and quick Format Document button.
-
-### 5. 🔍 High-Performance Workspace Search & Replace
-- **Multi-Threaded Rust Engine**: Powered by Rust's `regex` crate for rapid disk searching across large codebases.
-- **Flexible Search Query Options**:
-  - Case Sensitivity toggle (`Alt+C`).
-  - Whole Word matching toggle (`Alt+W`).
-  - Regular Expression support (`Alt+R`).
-  - Include & Exclude glob patterns (e.g. `src/**, *.tsx`, `!node_modules, !dist`).
-- **Interactive Results Tree**: Grouped by file with hit counters, line/column markers, and highlighted code snippets. Clicking jumps directly to the matching line.
-- **Safe Workspace Replace**:
-  - Batch replacement modal with total affected file and match count preview before disk commits.
-  - Bottom-to-top replacement algorithm ensuring line and offset integrity during multi-match writes.
-
-### 6. ⚡ Command Palette & Keybinding Registry
-- **Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`)**:
-  - Quick fuzzy search across all application, editor, file, and workspace commands.
-  - Categorized command groupings (File, Edit, View, Workspace, Theme, Help).
-- **Quick Open (`Ctrl+P` / `Cmd+P`)**: Instant fuzzy file finder scanning the entire workspace.
-- **Go to Line (`Ctrl+G` / `Cmd+G`)**: Direct line and column jumping (`line[:col]`) with boundary validation.
-- **Centralized Keybinding Registry**: Dispatch engine for customizable global and scoped keyboard shortcuts.
-
-### 7. 🎨 14 Built-In Professional Themes
-Instant theme switching with synchronized Monaco token colors and Tailwind design tokens:
-- **Dark+** (Default VS Code Dark)
-- **Light+** (Default VS Code Light)
-- **Monokai**
-- **Nord**
-- **Dracula**
-- **SynthWave '84**
-- **One Dark Pro**
-- **GitHub Dark**
-- **Tokyo Night**
-- **Solarized Dark**
-- **Cyberpunk**
-- **Catppuccin Mocha**
-- **Moonlight**
-- **Retro 80s**
+### 6. Themes, Icon Theme & Optional Supabase Auth (`features/theme/`, `features/icon-theme/`, `features/auth/`, `features/onboarding/`)
+- **14 built-in VS Code-inspired themes** (7 dark: `dark-modern`, `dark-plus`, `vs-dark`, `hc-dark`, `midnight-blue`, `graphite`, `forest-dark`; 7 light: `light-modern`, `light-plus`, `vs-light`, `hc-light`, `arctic-blue`, `warm-sand`, `mint-light`) plus OS `"system"` mode and pre-hydration anti-flash script (`public/theme-init.js`).
+- Cached multi-priority file/folder icon resolver (`@icons-pack/react-simple-icons` + SVG folders).
+- Optional Supabase cloud authentication (`public.profiles` + RLS + onboarding wizard) with seamless automatic fallback to **Offline Mode** when unconfigured.
 
 ---
 
-## 🏗 Architecture Overview
+## Architecture & Security Highlights
 
-```mermaid
-flowchart TD
-    subgraph UI_Layer["Frontend Presentation & Navigation (Next.js 16 + React 19)"]
-        Titlebar["Titlebar & Native Menus"]
-        Explorer["File Explorer & Context Menus"]
-        EditorView["Monaco Editor & Split Panes"]
-        TerminalUI["Integrated Terminal Dock"]
-        ClosingOverlay["Workspace Closing Warning Overlay (4s Staged)"]
-        FAB["Floating Creation Button (Horizontal Left Fan-Out)"]
-    end
+- **Workspace Boundary (`WorkspaceGuard`)**: Enforces authorized workspace roots, single-file grants from native Open/Save-As dialogs, monotonic workspace generations, and blocks path traversal (`..`), UNC/device paths, symlinks, NTFS junctions, and prefix collisions.
+- **Sensitive Path Protection (`SensitivePathPolicy`)**: Blocks `.env*`, `.git/*`, `.ssh`, `.gnupg`, `.aws`, `.kube`, `.docker`, `.azure`, `.gcloud`, `secrets/`, private keys (`*.pem`, `*.key`, `id_rsa*`, etc.), and credential files from IDE filesystem APIs.
+- **Custom `asset://` Range Protocol**: Serves media previews strictly within authorized workspace boundaries with empty declarative Tauri asset scope (`scope: []`).
+- **Hardened Production CSP (`src-tauri/tauri.conf.json`)**:
+  `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: asset: http://asset.localhost https://asset.localhost; media-src 'self' asset: http://asset.localhost https://asset.localhost; font-src 'self' data:; connect-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';`
 
-    subgraph Orchestration["State & Lifecycle Orchestrators"]
-        WSStore["Workspace Store (features/workspace/store.tsx)<br/>• 5-State Machine: CLOSED, OPENING, OPEN, CLOSING, SWITCHING<br/>• Monotonic Sequence Guard (lifecycleSeqRef)<br/>• Atomic Transition Lock (isTransitioningRef)"]
-        WSService["Workspace Service (features/workspace/service.ts)<br/>• cleanupWorkspaceResources()<br/>• Multi-Root Manager"]
-        EventBus["IDE Event Bus (lib/events.ts)"]
-    end
-
-    subgraph Native_Backend["Native Rust Backend (src-tauri/src/)"]
-        PTYManager["Terminal Manager (terminal/manager.rs)<br/>• Process Tree Killing (taskkill / SIGKILL)<br/>• Workspace-Scoped Sessions"]
-        FSEngine["Filesystem Engine (commands/fs.rs)<br/>• Multi-threaded Search<br/>• Atomic File IO"]
-    end
-
-    Titlebar --> WSStore
-    Explorer --> WSStore
-    Explorer --> TerminalUI
-    WSStore --> WSService
-    WSService --> ClosingOverlay
-    WSStore --> EventBus
-    TerminalUI --> PTYManager
-    Explorer --> FSEngine
-```
+For deeper technical details, see [docs/architecture/architecture-overview.md](docs/architecture/architecture-overview.md).
 
 ---
 
-## 🛡️ Security Hardening
-
-Kairo IDE incorporates comprehensive defense-in-depth security measures across both the frontend webview and the native Rust backend:
-
-| Threat Vector | Mitigation Strategy | Location |
-| :--- | :--- | :--- |
-| **Command Injection in `fs_reveal`** | Strict validation rejecting double quotes (`"`) before passing raw arguments to Windows `explorer.exe /select,`. | [`src-tauri/src/commands/fs.rs`](file:///c:/Users/Aatharva%20Gurav/Desktop/work/kairo-ide/src-tauri/src/commands/fs.rs) |
-| **Orphaned Process Exploitation** | Full process tree termination (`taskkill /T /F` on Windows; process group `SIGKILL` on Unix) preventing orphaned long-running processes on workspace close. | [`src-tauri/src/terminal/session.rs`](file:///c:/Users/Aatharva%20Gurav/Desktop/work/kairo-ide/src-tauri/src/terminal/session.rs) |
-| **Rust Multi-Byte UTF-8 Slicing Panic** | Non-ASCII searches advance char byte lengths (`c.len_utf8()`) rather than raw byte counts. Line slices validate `.is_char_boundary()`. | [`src-tauri/src/commands/fs.rs`](file:///c:/Users/Aatharva%20Gurav/Desktop/work/kairo-ide/src-tauri/src/commands/fs.rs) |
-| **Directory Traversal (`..`)** | Path normalization resolves and collapses `.` and `..` segments for both Windows drives and POSIX paths before boundary checks. | [`lib/tauri-ipc.ts`](file:///c:/Users/Aatharva%20Gurav/Desktop/work/kairo-ide/lib/tauri-ipc.ts) |
-| **Circular Symlink & Junction DoS** | Recursive workspace traversals enforce a strict 32-level depth limit to prevent stack overflows and memory exhaustion. | [`src-tauri/src/commands/fs.rs`](file:///c:/Users/Aatharva%20Gurav/Desktop/work/kairo-ide/src-tauri/src/commands/fs.rs) |
-| **Content Security Policy (CSP)** | Enforces strict CSP with `worker-src 'self' blob:;` for Monaco workers and `connect-src 'self' ipc: https: wss:;` for Supabase auth. | [`src-tauri/tauri.conf.json`](file:///c:/Users/Aatharva%20Gurav/Desktop/work/kairo-ide/src-tauri/tauri.conf.json) |
-| **Windows Reserved Filenames** | Blocks creation or renaming of device-reserved names (`CON`, `PRN`, `AUX`, `NUL`, `COM1-9`, `LPT1-9`). | [`features/editor/components/floating-creation/validation.ts`](file:///c:/Users/Aatharva%20Gurav/Desktop/work/kairo-ide/features/editor/components/floating-creation/validation.ts) |
-
----
-
-## 🌐 Supported Languages
-
-Kairo IDE includes full detection, syntax coloring, and Monaco editor mappings for **over 50 programming languages**:
-
-- **Web Technologies**: TypeScript, JavaScript, JSX, TSX, HTML, CSS, SCSS, LESS, JSON, JSONC, GraphQL, WebAssembly
-- **Systems Languages**: Rust, C, C++, C#, Go, Zig, Swift, Objective-C
-- **Backend & Scripting**: Python, Ruby, PHP, Java, Kotlin, Scala, Dart, Perl, R, Lua, Julia, Elixir, Erlang, Haskell, Clojure, Groovy
-- **Config & Infrastructure**: Bash, Zsh, PowerShell, Batch, YAML, TOML, XML, INI, Dockerfile, Makefile, SQL, Prisma
-- **Documentation**: Markdown, LaTeX, Plain Text
-
----
-
-## ⌨️ Keyboard Shortcuts
-
-| Shortcut (Windows/Linux) | Shortcut (macOS) | Action | Scope |
-| :--- | :--- | :--- | :--- |
-| <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>P</kbd> | <kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>P</kbd> | Open Command Palette | Global |
-| <kbd>Ctrl</kbd> + <kbd>P</kbd> | <kbd>Cmd</kbd> + <kbd>P</kbd> | Quick Open File | Global |
-| <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd> | <kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd> | Search in Workspace | Global |
-| <kbd>Ctrl</kbd> + <kbd>K</kbd> <kbd>F</kbd> | <kbd>Cmd</kbd> + <kbd>K</kbd> <kbd>F</kbd> | Close Current Workspace | Global |
-| <kbd>Ctrl</kbd> + <kbd>B</kbd> | <kbd>Cmd</kbd> + <kbd>B</kbd> | Toggle Sidebar | Global |
-| <kbd>Ctrl</kbd> + <kbd>\`</kbd> | <kbd>Cmd</kbd> + <kbd>\`</kbd> | Toggle Integrated Terminal Panel | Global |
-| <kbd>Ctrl</kbd> + <kbd>S</kbd> | <kbd>Cmd</kbd> + <kbd>S</kbd> | Save Active Document | Editor |
-| <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>S</kbd> | <kbd>Cmd</kbd> + <kbd>Alt</kbd> + <kbd>S</kbd> | Save All Open Documents | Editor |
-| <kbd>Ctrl</kbd> + <kbd>W</kbd> | <kbd>Cmd</kbd> + <kbd>W</kbd> | Close Active Tab | Editor |
-| <kbd>Shift</kbd> + <kbd>Alt</kbd> + <kbd>F</kbd> | <kbd>Shift</kbd> + <kbd>Option</kbd> + <kbd>F</kbd> | Format Document | Editor |
-| <kbd>Ctrl</kbd> + <kbd>G</kbd> | <kbd>Cmd</kbd> + <kbd>G</kbd> | Go to Line / Column | Editor |
-| <kbd>F12</kbd> | <kbd>F12</kbd> | Go to Definition | Editor |
-| <kbd>Alt</kbd> + <kbd>F12</kbd> | <kbd>Option</kbd> + <kbd>F12</kbd> | Peek Definition | Editor |
-| <kbd>Shift</kbd> + <kbd>F12</kbd> | <kbd>Shift</kbd> + <kbd>F12</kbd> | Find All References | Editor |
-| <kbd>Ctrl</kbd> + <kbd>F</kbd> | <kbd>Cmd</kbd> + <kbd>F</kbd> | In-File Find | Editor |
-| <kbd>Ctrl</kbd> + <kbd>H</kbd> | <kbd>Cmd</kbd> + <kbd>H</kbd> | In-File Replace | Editor |
-| <kbd>F2</kbd> | <kbd>Enter</kbd> | Rename File or Folder | File Explorer |
-| <kbd>Delete</kbd> | <kbd>Cmd</kbd> + <kbd>Backspace</kbd> | Delete File or Folder | File Explorer |
-
----
-
-## 📦 Project Structure
+## Repository Structure
 
 ```text
 kairo-ide/
-├── app/                               # Next.js 16 App Router
-│   ├── layout.tsx                     # Root HTML shell & Theme Providers
-│   ├── page.tsx                       # Master IDE Shell & Overlay Orchestrator
-│   └── auth/                          # Supabase Auth routing
-├── components/                        # Common UI and Shell Components
-│   ├── app-sidebar.tsx                # Activity bar and collapsible sidebar
-│   ├── app-titlebar.tsx               # Window titlebar, menus, and workspace status
-│   └── ui/                            # Atomic shadcn/ui components
-├── features/                          # Domain-Driven Feature Modules
-│   ├── auth/                          # Supabase auth services and modals
-│   ├── commands/                      # Command Palette, fuzzy search, keybindings
-│   ├── editor/                        # Monaco Editor, split views, formatters, intellisense
-│   │   └── components/floating-creation/ # Viewport-anchored horizontal creation FAB
-│   ├── file-explorer/                 # Real OS file tree, drag-and-drop, context menus
-│   ├── icon-theme/                    # Seti & Lucide icon resolution
-│   ├── search/                        # Multi-threaded workspace search & replace
-│   ├── settings/                      # Preferences, theme customization, shortcuts
-│   ├── terminal/                      # Embedded terminal emulator tabs & PTY bridge
-│   ├── theme/                         # 14 color themes & CSS variable token engine
-│   └── workspace/                     # 5-State lifecycle, closing overlay, multi-root
-├── lib/                               # Cross-cutting libraries
-│   ├── events.ts                      # Typed IDE event bus
-│   ├── tauri-ipc.ts                   # Sandboxed Tauri IPC invoker & path utilities
-│   └── watcher.ts                     # Real-time native filesystem watcher
-├── src-tauri/                         # Rust Native Backend
-│   ├── Cargo.toml                     # Cargo dependencies & release profiles
-│   ├── tauri.conf.json                # Tauri v2 capabilities, permissions, CSP
-│   └── src/
-│       ├── lib.rs                     # Tauri builder and command registration
-│       ├── main.rs                    # Desktop binary entrypoint
-│       ├── menu.rs                    # Native OS application menus
-│       ├── commands/                  # Native filesystem and workspace commands
-│       └── terminal/                  # PTY process manager, tree kill, and shell detector
-└── vitest.config.ts                   # Unit & integration test configuration
+├── app/               # Next.js App Router routes (/, /login, /signup, /onboarding), layout, CSS
+├── components/        # Frameless titlebar, floating sidebar, auth guard, drag-drop, shadcn/ui primitives
+├── features/          # Feature modules (auth, command-palette, commands, editor, file-explorer,
+│                      #   icon-theme, onboarding, search, settings, terminal, theme, workspace)
+├── lib/               # Tauri IPC bridge, event bus (ideEvents), DiffService, Supabase client, storage/worker utils
+├── public/            # Static icons & client scripts (icon.png, favicon.ico, theme-init.js, monaco-worker.js)
+├── src-tauri/         # Tauri v2 config, capabilities & Rust backend (commands, security, terminal, menu)
+├── supabase/          # PostgreSQL profiles schema, RLS policies & auth triggers
+└── docs/              # Centralized architecture, feature, development & release documentation
 ```
+
+See [docs/architecture/project-structure.md](docs/architecture/project-structure.md) for the complete module map.
 
 ---
 
-## 🛠️ Getting Started
+## Documentation Directory
+
+- [**Documentation Home**](docs/README.md)
+- **Architecture**: [Overview](docs/architecture/architecture-overview.md) · [Project Structure](docs/architecture/project-structure.md)
+- **Features**:
+  [Terminal](docs/features/terminal/README.md) ·
+  [Editor](docs/features/editor/README.md) ·
+  [File Explorer](docs/features/file-explorer/README.md) ·
+  [Workspace](docs/features/workspace/README.md) ·
+  [Search](docs/features/search/README.md) ·
+  [Commands & Keybindings](docs/features/commands/README.md) ·
+  [Settings](docs/features/settings/README.md) ·
+  [Themes](docs/features/theme/README.md) ·
+  [Icon Theme](docs/features/icon-theme/README.md) ·
+  [Auth](docs/features/auth/README.md) ·
+  [Onboarding](docs/features/onboarding/README.md)
+- **Development**: [Setup](docs/development/setup.md) · [Workflow](docs/development/development-workflow.md) · [Troubleshooting](docs/development/troubleshooting.md)
+- **Release**: [Build & Packaging](docs/release/build-and-packaging.md)
+
+---
+
+## Getting Started
 
 ### Prerequisites
+- **Node.js 20+** and **npm**
+- **Rust & Cargo** (`rustup`)
+- Platform **Tauri v2** prerequisites (WebView2 + C++ Build Tools on Windows, Xcode CLI tools on macOS, WebKitGTK dev libraries on Linux)
 
-Ensure you have the following installed on your machine:
-- **Node.js**: `v20.x` or higher ([Download](https://nodejs.org/))
-- **npm** or **pnpm**
-- **Rust Toolchain**: `1.77.2` or higher ([Install via rustup](https://rustup.rs/))
-- **Platform Dependencies**:
-  - **Windows**: [WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) and [C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/).
-  - **Linux**: `libwebkit2gtk-4.1-dev`, `build-essential`, `curl`, `wget`, `file`, `libssl-dev`, `libgtk-3-dev`, `libayatana-appindicator3-dev`, `librsvg2-dev`.
-  - **macOS**: Xcode Command Line Tools.
+### Install & Run
 
-### Installation
+```bash
+# 1. Install Node dependencies
+npm install
 
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/your-username/kairo-ide.git
-   cd kairo-ide
-   ```
+# 2. Launch native desktop application (Next.js + Tauri v2 + Rust PTY)
+npx tauri dev
 
-2. **Install frontend dependencies**:
-   ```bash
-   npm install
-   ```
+# Or run frontend-only browser mode (uses browser mock fallbacks)
+npm run dev
+```
 
-### Running in Development
-
-- **Web Browser Preview**:
-   ```bash
-   npm run dev
-   ```
-   *Opens the IDE shell in web fallback mode at `http://localhost:3000`.*
-
-- **Full Native Desktop Application**:
-   ```bash
-   npx tauri dev
-   ```
-   *Compiles the native Rust backend, launches Tauri v2, and attaches the hot-reloading Next.js dev server.*
+*(Optional Supabase Auth)*: Create `.env.local` with `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`, then apply [the database migration](supabase/migrations/20260923000000_create_profiles_and_auth_triggers.sql). Without Supabase configuration, Kairo IDE launches directly in local **Offline Mode**.
 
 ---
 
-## 🧪 Testing & Quality Assurance
+## Default Keyboard Shortcuts
 
-Kairo IDE maintains strict continuous quality standards across both frontend and backend layers:
+| Windows / Linux | macOS | Action | Context |
+| :--- | :--- | :--- | :--- |
+| `Ctrl+Shift+P` | `Cmd+Shift+P` | Command Palette | Global |
+| `Ctrl+P` | `Cmd+P` | Quick Open File | Global |
+| `Ctrl+,` | `Cmd+,` | Open Settings | Global |
+| `Ctrl+K Ctrl+S` | `Cmd+K Cmd+S` | Keyboard Shortcuts | Global |
+| `Ctrl+B` | `Cmd+B` | Toggle Sidebar | Global |
+| `Ctrl+Shift+E` | `Cmd+Shift+E` | Focus File Explorer | Global |
+| `Ctrl+Shift+F` | `Cmd+Shift+F` | Find in Workspace | Global |
+| `Ctrl+O` / `Ctrl+Shift+O` | `Cmd+O` / `Cmd+Shift+O` | Open File / Open Folder | Global |
+| `Ctrl+K F` | `Cmd+K F` | Close Workspace | Global |
+| `Ctrl+N` / `Ctrl+S` / `Ctrl+Shift+S` | `Cmd+N` / `Cmd+S` / `Cmd+Shift+S` | New File / Save / Save All | Global |
+| `Ctrl+W` / `Ctrl+K Ctrl+W` | `Cmd+W` / `Cmd+K Cmd+W` | Close Editor / Close All | Global |
+| `Ctrl+\` / `Ctrl+K Ctrl+\` | `Cmd+\` / `Cmd+K Cmd+\` | Split Editor Right / Down | Global |
+| `Ctrl+F` / `Ctrl+H` / `Ctrl+G` | `Cmd+F` / `Cmd+H` / `Cmd+G` | Find / Replace / Go to Line | Editor / Focused |
+| `Shift+Alt+F` | `Shift+Alt+F` | Format Document | Editor |
+| ``Ctrl+` `` / ``Ctrl+Shift+` `` | ``Cmd+` `` / ``Cmd+Shift+` `` | Toggle Terminal / New Terminal | Global |
+| `Ctrl+Shift+5` / `Ctrl+Shift+W` | `Cmd+Shift+5` / `Cmd+Shift+W` | Split Terminal / Close Terminal | Global |
+| `Alt+F11` | `Alt+F11` | Maximize/Restore Terminal Panel | Global |
+| `Ctrl+K` / `Ctrl+F` | `Cmd+K` / `Cmd+F` | Clear Terminal / Terminal Find | `terminalFocus` |
+| `Ctrl+F` | `Cmd+F` | Filter Explorer Tree | `explorerFocus` |
+
+---
+
+## Verification & Testing Commands
 
 ```bash
-# 1. Run TypeScript static type check (0 errors)
+# Frontend typecheck, lint, and unit tests (25 test files / 251 Vitest tests)
 npx tsc --noEmit
-
-# 2. Run ESLint code quality analysis (0 errors)
 npm run lint
+npm test
 
-# 3. Run full Vitest frontend suite (24 test files, 225 tests passed)
-npm run test
-
-# 4. Check Rust compiler
-cargo check --manifest-path src-tauri/Cargo.toml
-
-# 5. Run Rust backend unit test suite (23 tests passed)
+# Rust checks and unit tests (49 Cargo unit tests)
+cargo fmt --manifest-path src-tauri/Cargo.toml --check
+cargo check --manifest-path src-tauri/Cargo.toml --all-targets
 cargo test --manifest-path src-tauri/Cargo.toml
+cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets
 
-# 6. Run strict Rust Clippy linter (0 warnings)
-cargo clippy --manifest-path src-tauri/Cargo.toml
+# Production desktop installer build
+npx tauri build
 ```
 
 ---
 
-## 📄 License
+## License
 
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+No `LICENSE` file is currently included in this repository. Add your preferred license file at the project root before public distribution.
