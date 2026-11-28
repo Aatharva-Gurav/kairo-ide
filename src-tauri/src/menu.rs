@@ -520,11 +520,17 @@ pub fn window_is_maximized<R: Runtime>(window: tauri::Window<R>) -> Result<bool,
 }
 
 #[tauri::command]
-pub fn window_set_theme<R: Runtime>(window: tauri::Window<R>, theme: String) -> Result<(), String> {
+pub fn window_set_theme<R: Runtime>(window: tauri::Window<R>, theme: String) -> Result<String, String> {
     let t = match theme.as_str() {
         "light" => Some(tauri::Theme::Light),
         "dark" => Some(tauri::Theme::Dark),
         _ => None,
     };
-    window.set_theme(t).map_err(|e| e.to_string())
+    window.set_theme(t).map_err(|e| e.to_string())?;
+    let effective = match window.theme() {
+        Ok(tauri::Theme::Light) => "light",
+        Ok(tauri::Theme::Dark) => "dark",
+        _ => "dark",
+    };
+    Ok(effective.to_string())
 }

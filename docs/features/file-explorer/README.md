@@ -46,6 +46,7 @@ Relevant `features/settings/registry.ts` keys:
 2. Right-click any item for context operations, press `Ctrl+F` inside the explorer to filter the tree, or drag files directly from your OS into folders.
 
 ## Development Notes
+- **Tauri WebView Drag-and-Drop (`src-tauri/tauri.conf.json`)**: `dragDropEnabled` is set to `false` on the main window so native WebView2/WKWebView interception does not block HTML5 `draggable` / `onDragStart` / `onDragOver` / `onDrop` events for internal file/folder moves, explorer-to-editor drops, or external OS file drops (`FileExplorerService.importExternalFiles`).
 - Always invalidate affected parent directories in `directoryCache` after mutations.
 - All FS mutations pass through `WorkspaceGuard`; protected files (e.g., `.env*`, `.git/*`) remain blocked by backend security policy.
 

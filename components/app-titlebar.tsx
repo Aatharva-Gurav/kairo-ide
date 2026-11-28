@@ -195,13 +195,6 @@ export function AppTitleBar() {
     };
   }, [isTauri]);
 
-  // Sync window theme with Tauri if available
-  useEffect(() => {
-    if (!isTauri) return;
-    const isDark = document.documentElement.classList.contains("dark");
-    invokeCommand("window_set_theme", { theme: isDark ? "dark" : "light" }).catch(() => {});
-  }, [settings.appearance.theme, isTauri]);
-
   // Dismiss menus on outside click or escape
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {

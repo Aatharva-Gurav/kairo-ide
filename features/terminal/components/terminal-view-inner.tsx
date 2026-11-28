@@ -25,7 +25,11 @@ export function TerminalViewInner({
   className,
 }: TerminalViewInnerProps) {
   const { settings: ideSettings } = useSettings();
-  const currentTheme = ideSettings.appearance.theme;
+  const themePreference = ideSettings.appearance.theme;
+  const currentTheme =
+    themePreference === "system" && typeof document !== "undefined"
+      ? document.documentElement.getAttribute("data-theme") || themePreference
+      : themePreference;
 
   const { containerRef, focus } = useXterm({
     sessionId,

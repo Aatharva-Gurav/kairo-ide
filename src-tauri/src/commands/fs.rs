@@ -866,12 +866,40 @@ fn is_binary_extension(ext: &str) -> bool {
 
 fn detect_binary(bytes: &[u8]) -> bool {
     let check_len = std::cmp::min(bytes.len(), 8192);
+    if check_len == 0 {
+        return false;
+    }
+    let mut non_text_count = 0usize;
     for &b in &bytes[..check_len] {
         if b == 0 {
             return true;
         }
+        // Control characters other than tab (0x09), LF (0x0A), FF (0x0C), CR (0x0D), ESC (0x1B)
+        if b < 0x20 && !matches!(b, b'\t' | b'\n' | b'\r' | 0x0C | 0x1B) {
+            non_text_count += 1;
+        }
     }
-    false
+    // If > 30% of sampled bytes are non-printable control characters, treat as binary
+    non_text_count * 10 > check_len * 3
+}
+
+const MAX_BINARY_CHUNK_SIZE: usize = 1_048_576; // 1 MiB cap per IPC chunk read
+const MAX_BINARY_SEARCH_RESULTS: usize = 500;
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct BinaryChunkResult {
+    pub bytes: Vec<u8>,
+    pub offset: u64,
+    pub total_size: u64,
+    pub readonly: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct BinarySearchResult {
+    pub offsets: Vec<u64>,
+    pub truncated: bool,
 }
 
 pub fn fs_read_file_impl(
@@ -886,13 +914,6 @@ pub fn fs_read_file_impl(
     let size = metadata.len();
     let readonly = metadata.permissions().readonly();
 
-    // 20 MB safeguard
-    if size > 20 * 1024 * 1024 {
-        return Err(FsSecurityError::InvalidOperation(
-            "File is too large (>20 MB) to open in editor.".to_string(),
-        ));
-    }
-
     if let Some(ext) = target.extension().and_then(|e| e.to_str()) {
         if is_binary_extension(ext) {
             return Ok(FileContentResult {
@@ -902,6 +923,29 @@ pub fn fs_read_file_impl(
                 readonly,
             });
         }
+    }
+
+    // 20 MB safeguard for text files; sample first 8 KiB for large files to route binaries to hex viewer
+    if size > 20 * 1024 * 1024 {
+        use std::io::Read;
+        guard.revalidate_before_op(&target, gen, true)?;
+        let mut file = fs::File::open(&target)
+            .map_err(|e| FsSecurityError::Io(format!("Unable to open file: {}", e)))?;
+        let mut sample = vec![0u8; 8192];
+        let n = file
+            .read(&mut sample)
+            .map_err(|e| FsSecurityError::Io(format!("Unable to sample file: {}", e)))?;
+        if detect_binary(&sample[..n]) {
+            return Ok(FileContentResult {
+                content: String::new(),
+                is_binary: true,
+                size,
+                readonly,
+            });
+        }
+        return Err(FsSecurityError::InvalidOperation(
+            "File is too large (>20 MB) to open in text editor.".to_string(),
+        ));
     }
 
     guard.revalidate_before_op(&target, gen, true)?;
@@ -939,6 +983,180 @@ pub fn fs_read_file(
     path: String,
 ) -> Result<FileContentResult, String> {
     fs_read_file_impl(guard.inner(), path).map_err(Into::into)
+}
+
+pub fn fs_read_binary_chunk_impl(
+    guard: &WorkspaceGuard,
+    path: String,
+    offset: u64,
+    length: usize,
+) -> Result<BinaryChunkResult, FsSecurityError> {
+    use std::io::{Read, Seek, SeekFrom};
+
+    let (target, gen) = guard.validate_existing_file(&path, true)?;
+    guard.revalidate_before_op(&target, gen, true)?;
+
+    let metadata = fs::symlink_metadata(&target)
+        .map_err(|e| FsSecurityError::Io(format!("Unable to read file metadata: {}", e)))?;
+    let total_size = metadata.len();
+    let readonly = metadata.permissions().readonly();
+
+    if offset >= total_size || length == 0 {
+        return Ok(BinaryChunkResult {
+            bytes: Vec::new(),
+            offset: offset.min(total_size),
+            total_size,
+            readonly,
+        });
+    }
+
+    let capped_len = length.min(MAX_BINARY_CHUNK_SIZE);
+    let remaining = total_size.saturating_sub(offset);
+    let to_read = (capped_len as u64).min(remaining) as usize;
+
+    // Checked arithmetic to guard against overflow when computing end offset
+    offset
+        .checked_add(to_read as u64)
+        .ok_or_else(|| FsSecurityError::InvalidOperation("Requested byte range overflows u64.".to_string()))?;
+
+    guard.revalidate_before_op(&target, gen, true)?;
+    let mut file = fs::File::open(&target)
+        .map_err(|e| FsSecurityError::Io(format!("Unable to open binary file: {}", e)))?;
+    file.seek(SeekFrom::Start(offset))
+        .map_err(|e| FsSecurityError::Io(format!("Unable to seek binary file: {}", e)))?;
+
+    let mut buffer = vec![0u8; to_read];
+    let mut read_total = 0usize;
+    while read_total < to_read {
+        let n = file
+            .read(&mut buffer[read_total..])
+            .map_err(|e| FsSecurityError::Io(format!("Unable to read binary chunk: {}", e)))?;
+        if n == 0 {
+            break;
+        }
+        read_total += n;
+    }
+    buffer.truncate(read_total);
+
+    Ok(BinaryChunkResult {
+        bytes: buffer,
+        offset,
+        total_size,
+        readonly,
+    })
+}
+
+#[tauri::command]
+pub async fn fs_read_binary_chunk(
+    guard: State<'_, Arc<WorkspaceGuard>>,
+    path: String,
+    offset: u64,
+    length: usize,
+) -> Result<BinaryChunkResult, String> {
+    let guard_arc = Arc::clone(guard.inner());
+    tauri::async_runtime::spawn_blocking(move || {
+        fs_read_binary_chunk_impl(&guard_arc, path, offset, length)
+    })
+    .await
+    .map_err(|e| format!("Binary read task failed: {}", e))?
+    .map_err(Into::into)
+}
+
+pub fn fs_search_binary_impl(
+    guard: &WorkspaceGuard,
+    path: String,
+    query: Vec<u8>,
+    max_results: Option<usize>,
+) -> Result<BinarySearchResult, FsSecurityError> {
+    use std::io::Read;
+
+    if query.is_empty() {
+        return Ok(BinarySearchResult {
+            offsets: Vec::new(),
+            truncated: false,
+        });
+    }
+    if query.len() > 1024 {
+        return Err(FsSecurityError::InvalidOperation(
+            "Binary search query exceeds maximum length of 1024 bytes.".to_string(),
+        ));
+    }
+
+    let (target, gen) = guard.validate_existing_file(&path, true)?;
+    guard.revalidate_before_op(&target, gen, true)?;
+
+    let limit = max_results
+        .unwrap_or(MAX_BINARY_SEARCH_RESULTS)
+        .clamp(1, MAX_BINARY_SEARCH_RESULTS);
+
+    let mut file = fs::File::open(&target)
+        .map_err(|e| FsSecurityError::Io(format!("Unable to open binary file: {}", e)))?;
+
+    const WINDOW_SIZE: usize = 65_536;
+    let overlap = query.len().saturating_sub(1);
+    let mut buffer = vec![0u8; WINDOW_SIZE + overlap];
+    let mut carry = 0usize;
+    let mut file_offset = 0u64;
+    let mut offsets = Vec::new();
+    let mut truncated = false;
+
+    loop {
+        guard.ensure_generation(gen)?;
+        let n = file
+            .read(&mut buffer[carry..carry + WINDOW_SIZE])
+            .map_err(|e| FsSecurityError::Io(format!("Unable to search binary file: {}", e)))?;
+        if n == 0 {
+            break;
+        }
+        let valid_len = carry + n;
+        let slice = &buffer[..valid_len];
+
+        if valid_len >= query.len() {
+            let search_end = valid_len - query.len();
+            let mut idx = 0usize;
+            while idx <= search_end {
+                if &slice[idx..idx + query.len()] == query.as_slice() {
+                    let abs_offset = file_offset
+                        .saturating_add(idx as u64)
+                        .saturating_sub(carry as u64);
+                    offsets.push(abs_offset);
+                    if offsets.len() >= limit {
+                        truncated = true;
+                        return Ok(BinarySearchResult { offsets, truncated });
+                    }
+                    idx += 1;
+                } else {
+                    idx += 1;
+                }
+            }
+        }
+
+        file_offset = file_offset.saturating_add(n as u64);
+        if overlap > 0 && valid_len >= overlap {
+            buffer.copy_within(valid_len - overlap..valid_len, 0);
+            carry = overlap;
+        } else {
+            carry = 0;
+        }
+    }
+
+    Ok(BinarySearchResult { offsets, truncated })
+}
+
+#[tauri::command]
+pub async fn fs_search_binary(
+    guard: State<'_, Arc<WorkspaceGuard>>,
+    path: String,
+    query: Vec<u8>,
+    max_results: Option<usize>,
+) -> Result<BinarySearchResult, String> {
+    let guard_arc = Arc::clone(guard.inner());
+    tauri::async_runtime::spawn_blocking(move || {
+        fs_search_binary_impl(&guard_arc, path, query, max_results)
+    })
+    .await
+    .map_err(|e| format!("Binary search task failed: {}", e))?
+    .map_err(Into::into)
 }
 
 pub fn fs_write_file_impl(
@@ -2242,6 +2460,49 @@ mod tests {
             exclude_patterns: &empty_excludes,
         };
         assert!(walk_workspace_files_ctx(&mut walk_ctx, &missing_dir, &mut out, 0).is_err());
+
+        let _ = fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_binary_chunk_and_search_respect_bounds_and_offsets() {
+        let temp_dir = std::env::temp_dir().join(format!(
+            "kairo_bin_test_{}",
+            std::time::SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        fs::create_dir_all(&temp_dir).unwrap();
+        let bin_path = temp_dir.join("sample.bin");
+        let payload: Vec<u8> = vec![
+            0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
+            0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
+            0x89, 0x50, 0x4E, 0x47,
+        ];
+        fs::write(&bin_path, &payload).unwrap();
+
+        let guard = WorkspaceGuard::new();
+        guard
+            .open_workspace(&temp_dir.to_string_lossy(), None)
+            .unwrap();
+        let path_str = bin_path.to_string_lossy().to_string();
+
+        // Read middle slice
+        let chunk = fs_read_binary_chunk_impl(&guard, path_str.clone(), 8, 8).unwrap();
+        assert_eq!(chunk.offset, 8);
+        assert_eq!(chunk.total_size, 20);
+        assert_eq!(chunk.bytes, vec![0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52]);
+
+        // Past-EOF read returns empty bytes safely
+        let eof_chunk = fs_read_binary_chunk_impl(&guard, path_str.clone(), 100, 16).unwrap();
+        assert!(eof_chunk.bytes.is_empty());
+        assert_eq!(eof_chunk.total_size, 20);
+
+        // Search for PNG magic header
+        let search_res = fs_search_binary_impl(&guard, path_str, vec![0x89, 0x50, 0x4E, 0x47], None).unwrap();
+        assert_eq!(search_res.offsets, vec![0, 16]);
+        assert!(!search_res.truncated);
 
         let _ = fs::remove_dir_all(&temp_dir);
     }

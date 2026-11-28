@@ -35,7 +35,7 @@ import { cn } from "@/lib/utils";
 
 function PageContent() {
   const { activeWorkspace, openFolder } = useWorkspace();
-  const { documents, openFileDialog, focusedDocument, focusedCursorPos } = useEditor();
+  const { documents, openFileDialog, focusedDocument } = useEditor();
   const { isOpen, isMaximized } = useTerminal();
 
   const handleOpenFile = async () => {
@@ -85,7 +85,7 @@ function PageContent() {
 
       {/* Editor Status Bar Locked at the Bottom */}
       {focusedDocument && (
-        <EditorStatusBar document={focusedDocument} cursorPosition={focusedCursorPos} />
+        <EditorStatusBar document={focusedDocument} />
       )}
 
       {/* Floating File & Folder Creation Feature positioned stably at application viewport level */}

@@ -5,8 +5,8 @@ import {
   SettingScope,
 } from "../types";
 import { DEFAULT_SETTINGS, SETTINGS_REGISTRY, getSettingDefinition } from "../registry";
-import { normalizePath } from "@/lib/tauri-ipc";
-import { migrateLegacyTheme, isDarkTheme } from "@/features/theme";
+import { normalizePath, isTauriEnvironment, invokeCommand } from "@/lib/tauri-ipc";
+import { migrateLegacyTheme, resolveTheme } from "@/features/theme";
 import { getSafeLocalStorage } from "@/lib/storage";
 
 export const SETTINGS_STORAGE_KEYS = {
@@ -100,6 +100,7 @@ export class SettingsService {
   private static effectiveSettings: IDESettings = deepClone(DEFAULT_SETTINGS);
   private static listeners = new Set<SettingsChangeListener>();
   private static initialized = false;
+  private static systemPrefersDarkOverride: boolean | null = null;
 
   /**
    * Returns the user-scoped storage key for user preferences.
@@ -146,12 +147,20 @@ export class SettingsService {
     if (typeof window !== "undefined" && window.matchMedia) {
       try {
         const mq = window.matchMedia("(prefers-color-scheme: dark)");
-        mq.addEventListener("change", () => {
+        const handleSystemThemeChange = (event?: MediaQueryListEvent) => {
+          this.systemPrefersDarkOverride =
+            event && typeof event.matches === "boolean" ? event.matches : null;
           if (this.effectiveSettings.appearance.theme === "system") {
-            this.applyLiveSettings(this.effectiveSettings, "appearance.theme");
+            this.recalculateEffectiveSettings();
+            this.applyLiveSettings(this.effectiveSettings, "appearance.theme", true);
             this.notifyListeners("appearance.theme");
           }
-        });
+        };
+        if (typeof mq.addEventListener === "function") {
+          mq.addEventListener("change", handleSystemThemeChange);
+        } else if (typeof mq.addListener === "function") {
+          mq.addListener(handleSystemThemeChange);
+        }
       } catch {
         // matchMedia listeners not supported in test environment
       }
@@ -422,7 +431,11 @@ export class SettingsService {
   /**
    * Immediately applies live settings changes to DOM / system environment.
    */
-  private static applyLiveSettings(settings: IDESettings, changedKey?: string): void {
+  private static applyLiveSettings(
+    settings: IDESettings,
+    changedKey?: string,
+    skipTauriSync = false
+  ): void {
     if (!changedKey || changedKey === "appearance.theme") {
       const resolved = migrateLegacyTheme(settings.appearance.theme);
 
@@ -442,39 +455,64 @@ export class SettingsService {
     // 1. Theme live update
     if (!changedKey || changedKey === "appearance.theme") {
       const root = document.documentElement;
-      const theme = settings.appearance.theme;
-      const resolved = migrateLegacyTheme(theme);
-
+      const resolved = migrateLegacyTheme(settings.appearance.theme);
       const isSystem = resolved === "system";
-      let effectiveTheme: string = "dark-modern";
 
-      if (isSystem) {
-        const prefersDark = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)").matches : true;
-        effectiveTheme = prefersDark ? "dark-modern" : "light-modern";
-        if (prefersDark) {
-          root.classList.add("dark");
-          root.classList.remove("kairo-light");
-          root.classList.add("kairo-dark");
-        } else {
-          root.classList.remove("dark");
-          root.classList.remove("kairo-dark");
-          root.classList.add("kairo-light");
-        }
+      if (!skipTauriSync) {
+        this.systemPrefersDarkOverride = null;
+      }
+
+      const prefersDark =
+        isSystem && this.systemPrefersDarkOverride !== null
+          ? this.systemPrefersDarkOverride
+          : window.matchMedia
+            ? window.matchMedia("(prefers-color-scheme: dark)").matches
+            : true;
+
+      const concreteTheme = resolveTheme(resolved, prefersDark);
+      const dark = concreteTheme.category === "dark";
+
+      if (dark) {
+        root.classList.add("dark");
+        root.classList.remove("kairo-light");
+        root.classList.add("kairo-dark");
       } else {
-        effectiveTheme = resolved;
-        const dark = isDarkTheme(resolved);
-        if (dark) {
-          root.classList.add("dark");
-          root.classList.remove("kairo-light");
-          root.classList.add("kairo-dark");
-        } else {
-          root.classList.remove("dark");
-          root.classList.remove("kairo-dark");
-          root.classList.add("kairo-light");
+        root.classList.remove("dark");
+        root.classList.remove("kairo-dark");
+        root.classList.add("kairo-light");
+      }
+
+      root.setAttribute("data-theme", concreteTheme.id);
+
+      if (typeof document.querySelector === "function") {
+        const metaColorScheme = document.querySelector('meta[name="color-scheme"]');
+        if (metaColorScheme) {
+          metaColorScheme.setAttribute(
+            "content",
+            isSystem ? "light dark" : dark ? "dark" : "light"
+          );
         }
       }
 
-      root.setAttribute("data-theme", effectiveTheme);
+      if (!skipTauriSync && isTauriEnvironment()) {
+        const requestedTheme = isSystem ? "system" : dark ? "dark" : "light";
+        invokeCommand<string | undefined>("window_set_theme", { theme: requestedTheme })
+          .then((osTheme) => {
+            if (!isSystem || this.effectiveSettings.appearance.theme !== "system") {
+              return;
+            }
+            if (osTheme === "dark" || osTheme === "light") {
+              const osDark = osTheme === "dark";
+              this.systemPrefersDarkOverride = osDark;
+              if (osDark !== dark) {
+                this.recalculateEffectiveSettings();
+                this.applyLiveSettings(this.effectiveSettings, "appearance.theme", true);
+                this.notifyListeners("appearance.theme");
+              }
+            }
+          })
+          .catch(() => {});
+      }
     }
   }
 

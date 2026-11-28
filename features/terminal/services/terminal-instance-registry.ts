@@ -188,26 +188,68 @@ export class TerminalInstanceRegistry {
       // Graceful fallback to default canvas/DOM renderer
     }
 
-    // Subscribe directly to backend stdout stream (Zero React state buffering)
+    // Batch high-frequency PTY stdout chunks per animation frame (Zero React state buffering)
+    let pendingChunks: string[] = [];
+    let flushHandle: number | ReturnType<typeof setTimeout> | null = null;
+    let usingRaf = false;
+
+    const flushOutput = () => {
+      flushHandle = null;
+      if (pendingChunks.length === 0 || instance.disposed) {
+        pendingChunks = [];
+        return;
+      }
+      const batch = pendingChunks.length === 1 ? pendingChunks[0] : pendingChunks.join("");
+      pendingChunks = [];
+      try {
+        term.write(batch);
+        DevServerDetector.scanOutput(sessionId, batch);
+      } catch {
+        // Terminal may be disposing
+      }
+    };
+
+    const scheduleFlush = () => {
+      if (flushHandle !== null) return;
+      if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
+        usingRaf = true;
+        flushHandle = window.requestAnimationFrame(flushOutput);
+      } else {
+        usingRaf = false;
+        flushHandle = setTimeout(flushOutput, 16);
+      }
+    };
+
+    const cancelPendingFlush = () => {
+      if (flushHandle === null) return;
+      if (usingRaf && typeof window !== "undefined" && typeof window.cancelAnimationFrame === "function") {
+        window.cancelAnimationFrame(flushHandle as number);
+      } else {
+        clearTimeout(flushHandle as ReturnType<typeof setTimeout>);
+      }
+      flushHandle = null;
+    };
+
+    // Subscribe directly to backend stdout stream
     TerminalIpcService.subscribeOutput(sessionId, (chunk) => {
       if (!instance.disposed) {
-        try {
-          term.write(chunk);
-          DevServerDetector.scanOutput(sessionId, chunk);
-        } catch {
-          // Terminal may be disposing
-        }
+        pendingChunks.push(chunk);
+        scheduleFlush();
       }
     })
       .then((unlisten) => {
         if (instance.disposed) {
+          cancelPendingFlush();
           try {
             unlisten();
           } catch {
             // ignore
           }
         } else {
-          instance.unlistenData = unlisten;
+          instance.unlistenData = () => {
+            cancelPendingFlush();
+            unlisten();
+          };
         }
       })
       .catch((err) => {
@@ -219,6 +261,8 @@ export class TerminalInstanceRegistry {
     // Subscribe to backend exit event
     TerminalIpcService.subscribeExit(sessionId, (exitPayload) => {
       if (!instance.disposed) {
+        cancelPendingFlush();
+        flushOutput();
         try {
           term.writeln(`\r\n\x1b[90m[Process exited with code ${exitPayload.code ?? "unknown"}]\x1b[0m\r\n`);
         } catch {

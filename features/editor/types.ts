@@ -1,6 +1,9 @@
 /**
  * Domain types for Editor subsystem, Monaco integration, formatting, and navigation.
  */
+import type { EditorKind } from "./services/editor-resolver";
+
+export type { EditorKind };
 
 export interface CursorPosition {
   lineNumber: number;
@@ -22,6 +25,8 @@ export interface EditorDocument {
   isDirty: boolean; // True when content !== savedContent
   isBinary?: boolean;
   isTooLarge?: boolean;
+  fileSize?: number;
+  editorKind?: EditorKind;
   readonly?: boolean;
   cursorPosition?: CursorPosition;
   scrollPosition?: ScrollPosition;

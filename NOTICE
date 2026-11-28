@@ -1,0 +1,17 @@
+Kairo IDE
+Copyright (c) 2026 Aatharva Santosh Gurav
+
+This product includes software developed by Aatharva Santosh Gurav for the
+Kairo IDE project, licensed under the MIT License (see LICENSE).
+
+TRADEMARK AND BRANDING NOTICE
+The MIT License grants rights to the Software's source code and documentation,
+but does not grant any license or right to use the "Kairo IDE" name, logo,
+application icons (including public/icon.png and src-tauri/icons/*), or
+associated brand marks for endorsement or misleadingly branded derivative
+distributions without prior written permission from Aatharva Santosh Gurav.
+
+THIRD-PARTY COMPONENTS
+Kairo IDE incorporates open-source third-party packages (including Next.js,
+React, Monaco Editor, xterm.js, Tauri, and Rust crates), each governed by
+their respective licenses.

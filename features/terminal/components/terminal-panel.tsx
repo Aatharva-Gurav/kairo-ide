@@ -21,27 +21,8 @@ export function TerminalPanel({ className }: TerminalPanelProps) {
     panelHeight,
     setPanelHeight,
     sessions,
-    pendingKillSession,
-    confirmKillTerminal,
-    cancelKillTerminal,
   } = useTerminal();
   const [isFindOpen, setIsFindOpen] = useState(false);
-
-  // Keyboard shortcuts for kill confirmation modal
-  useEffect(() => {
-    if (!pendingKillSession) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        cancelKillTerminal();
-      } else if (e.key === "Enter") {
-        e.preventDefault();
-        confirmKillTerminal();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [pendingKillSession, cancelKillTerminal, confirmKillTerminal]);
 
   // Trigger resize event when sessions length changes to adjust terminal canvas
   useEffect(() => {
@@ -96,7 +77,7 @@ export function TerminalPanel({ className }: TerminalPanelProps) {
       />
 
       {/* Terminal Content Area (Workspace + Conditional Floating Sessions Sidebar) */}
-      <div className="relative flex flex-1 min-h-0 w-full overflow-hidden bg-background">
+      <div className="relative flex flex-1 min-h-0 w-full overflow-hidden bg-background pb-1.5">
         {/* Terminal Canvas Workspace (Single or Split Views) */}
         <div className="flex-1 min-w-0 h-full overflow-hidden relative">
           <TerminalSplitLayout onOpenFind={() => setIsFindOpen(true)} />
@@ -113,45 +94,6 @@ export function TerminalPanel({ className }: TerminalPanelProps) {
         {/* Floating Session Sidebar (Only visible when >1 terminal) */}
         {sessions.length > 1 && <TerminalSessionSidebar />}
       </div>
-
-      {/* Confirm Kill Running Terminal Modal */}
-      {pendingKillSession && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Confirm Terminate Terminal"
-          onClick={cancelKillTerminal}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-sm rounded-xl border border-border/80 bg-card p-5 shadow-2xl text-card-foreground"
-          >
-            <h3 className="text-sm font-semibold text-foreground">
-              Terminate active terminal?
-            </h3>
-            <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
-              &ldquo;{pendingKillSession.title}&rdquo; is still running. Closing it will terminate its active shell process.
-            </p>
-            <div className="mt-4 flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={cancelKillTerminal}
-                className="h-7 px-3 rounded-lg border border-border/80 bg-background text-xs font-medium text-foreground hover:bg-accent cursor-pointer transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => confirmKillTerminal()}
-                className="h-7 px-3 rounded-lg bg-destructive text-destructive-foreground text-xs font-medium hover:bg-destructive/90 cursor-pointer transition-colors"
-              >
-                Terminate
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </aside>
   );
 }

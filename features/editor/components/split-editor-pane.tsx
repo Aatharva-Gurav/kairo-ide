@@ -5,21 +5,8 @@ import { useEditor } from "../store";
 import { EditorDocument } from "../types";
 import { X, ChevronRight } from "lucide-react";
 import { FileIcon } from "@/features/file-explorer/components/file-icon";
-import { BinaryFileView } from "./binary-file-view";
-import dynamic from "next/dynamic";
+import { DocumentEditorSurface } from "./document-editor-surface";
 import { cn } from "@/lib/utils";
-
-const MonacoEditorView = dynamic(
-  () => import("./monaco-editor-view").then((mod) => mod.MonacoEditorView),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex flex-1 items-center justify-center h-full w-full bg-background text-xs text-muted-foreground font-mono">
-        Loading editor...
-      </div>
-    ),
-  }
-);
 
 interface SplitEditorPaneProps {
   document: EditorDocument;
@@ -178,22 +165,11 @@ export function SplitEditorPane({
 
       {/* Editor Content */}
       <div className="flex flex-1 flex-col h-full w-full overflow-hidden relative">
-        {document.isBinary || document.isTooLarge ? (
-          <BinaryFileView document={document} />
-        ) : document.error ? (
-          <div className="flex flex-1 flex-col items-center justify-center p-6 text-center">
-            <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 max-w-md text-destructive">
-              <h3 className="font-semibold text-xs">Error opening file</h3>
-              <p className="text-xs mt-1 text-muted-foreground">{document.error}</p>
-            </div>
-          </div>
-        ) : (
-          <MonacoEditorView
-            document={document}
-            paneId="split"
-            onCursorChange={onCursorChange}
-          />
-        )}
+        <DocumentEditorSurface
+          document={document}
+          paneId="split"
+          onCursorChange={onCursorChange}
+        />
       </div>
     </div>
   );

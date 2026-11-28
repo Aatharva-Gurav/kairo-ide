@@ -2,7 +2,7 @@
 
 import React from "react";
 import { EditorDocument } from "../types";
-import { useEditor } from "../store";
+import { useEditor, useEditorCursor } from "../store";
 import { LanguageService } from "../services/language.service";
 import { Code } from "lucide-react";
 
@@ -16,7 +16,10 @@ interface EditorStatusBarProps {
   };
 }
 
-export function EditorStatusBar({ document, cursorPosition }: EditorStatusBarProps) {
+export const EditorStatusBar = React.memo(function EditorStatusBar({
+  document,
+  cursorPosition,
+}: EditorStatusBarProps) {
   const {
     settings,
     formatActiveDocument,
@@ -26,15 +29,17 @@ export function EditorStatusBar({ document, cursorPosition }: EditorStatusBarPro
     zoomReset,
     setGoToLineVisible,
   } = useEditor();
+  const contextCursor = useEditorCursor();
+  const resolvedCursor = cursorPosition ?? contextCursor;
 
   if (!document) return null;
 
   const displayName = LanguageService.getDisplayName(document.language);
   const zoomPct = Math.round(100 + editorZoomLevel * 10);
-  const line = cursorPosition?.lineNumber ?? 1;
-  const col = cursorPosition?.column ?? 1;
-  const totalLines = cursorPosition?.totalLines;
-  const selectionCount = cursorPosition?.selectionCount;
+  const line = resolvedCursor?.lineNumber ?? 1;
+  const col = resolvedCursor?.column ?? 1;
+  const totalLines = resolvedCursor?.totalLines;
+  const selectionCount = resolvedCursor?.selectionCount;
   const lineEnding = document.content.includes("\r\n") ? "CRLF" : "LF";
 
   return (
@@ -125,4 +130,4 @@ export function EditorStatusBar({ document, cursorPosition }: EditorStatusBarPro
       </div>
     </div>
   );
-}
+});

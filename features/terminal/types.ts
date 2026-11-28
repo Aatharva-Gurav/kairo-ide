@@ -87,7 +87,6 @@ export interface TerminalSettings {
   panelHeight: number;
   copyOnSelect: boolean;
   rightClickBehavior: TerminalRightClickBehavior;
-  confirmKillProcess: boolean;
   persistAcrossWorkspaces: boolean;
   customProfiles: ShellProfile[];
 }
@@ -106,7 +105,6 @@ export const DEFAULT_TERMINAL_SETTINGS: TerminalSettings = {
   panelHeight: 260,
   copyOnSelect: false,
   rightClickBehavior: "contextMenu",
-  confirmKillProcess: true,
   persistAcrossWorkspaces: false,
   customProfiles: [],
 };

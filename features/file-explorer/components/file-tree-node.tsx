@@ -16,7 +16,11 @@ interface FileTreeNodeProps {
   onOpenContextMenu: (e: React.MouseEvent, node: FileSystemNode) => void;
 }
 
-export function FileTreeNode({
+// Tracks the paths currently being dragged internally so dragover can validate
+// targets even when dataTransfer.getData is restricted by the browser.
+let activeDraggedPaths: string[] = [];
+
+export const FileTreeNode = React.memo(function FileTreeNode({
   node,
   depth = 0,
   onOpenContextMenu,
@@ -125,10 +129,9 @@ export function FileTreeNode({
   const handleDragStart = (e: React.DragEvent) => {
     e.stopPropagation();
     if (selectedPaths.size > 1 && selectedPaths.has(nodeNorm)) {
-      e.dataTransfer.setData(
-        "application/json",
-        JSON.stringify(Array.from(selectedPaths))
-      );
+      const paths = Array.from(selectedPaths);
+      activeDraggedPaths = paths.map((p) => normalizePath(p));
+      e.dataTransfer.setData("application/json", JSON.stringify(paths));
       // Custom multi-item drag preview badge
       const dragBadge = document.createElement("div");
       dragBadge.style.position = "absolute";
@@ -152,35 +155,40 @@ export function FileTreeNode({
           document.body.removeChild(dragBadge);
         }
       }, 0);
+    } else {
+      activeDraggedPaths = [nodeNorm];
     }
     e.dataTransfer.setData("text/plain", activeNode.path);
     e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragEnd = () => {
+    activeDraggedPaths = [];
+    setIsDragOver(false);
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
   };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
-    // Prevent dropping onto self or into a descendant of any selected/dragged item
-    if (selectedPaths.has(nodeNorm)) {
-      e.dataTransfer.dropEffect = "none";
-      setIsDragOver(false);
-      return;
+    // Prevent dropping onto self or into a descendant of any dragged item
+    if (activeDraggedPaths.length > 0) {
+      const isDroppingIntoSelfOrChild = activeDraggedPaths.some((norm) => {
+        return norm === nodeNorm || isDescendant(norm, nodeNorm);
+      });
+
+      if (isDroppingIntoSelfOrChild) {
+        e.dataTransfer.dropEffect = "none";
+        setIsDragOver(false);
+        return;
+      }
     }
 
-    const draggedPaths = Array.from(selectedPaths);
-    const isDroppingIntoSelfOrChild = draggedPaths.some((p) => {
-      const norm = normalizePath(p);
-      return norm === nodeNorm || isDescendant(norm, nodeNorm);
-    });
-
-    if (isDroppingIntoSelfOrChild) {
-      e.dataTransfer.dropEffect = "none";
-      setIsDragOver(false);
-      return;
-    }
-
-    e.dataTransfer.dropEffect = "move";
+    e.dataTransfer.dropEffect = activeDraggedPaths.length > 0 ? "move" : "copy";
     setIsDragOver(true);
 
     // Auto-expand folder on hover during drag (600ms)
@@ -280,6 +288,7 @@ export function FileTreeNode({
         data-is-directory={isDirectory ? "true" : "false"}
         draggable={!isRenaming}
         onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleNodeDrop}
@@ -431,7 +440,7 @@ export function FileTreeNode({
       )}
     </div>
   );
-}
+});
 
 /**
  * Inline input row when creating a new file or folder

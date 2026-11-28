@@ -450,6 +450,46 @@ async function handleBrowserVfsCommand<T>(command: string, args?: Record<string,
       } as T;
     }
 
+    case "fs_read_binary_chunk": {
+      const p = normalizePath(String(args?.path || ""));
+      const offset = Number(args?.offset ?? 0);
+      const length = Math.min(Number(args?.length ?? 4096), 1_048_576);
+      const entry = vfs.get(p);
+      const raw = entry ? new TextEncoder().encode(entry.content) : new Uint8Array(0);
+      const safeOffset = Math.max(0, Math.min(offset, raw.length));
+      const slice = raw.slice(safeOffset, safeOffset + length);
+      return {
+        bytes: Array.from(slice),
+        offset: safeOffset,
+        totalSize: raw.length,
+        readonly: false,
+      } as T;
+    }
+
+    case "fs_search_binary": {
+      const p = normalizePath(String(args?.path || ""));
+      const query = Array.isArray(args?.query) ? (args.query as number[]) : [];
+      const entry = vfs.get(p);
+      const raw = entry ? new TextEncoder().encode(entry.content) : new Uint8Array(0);
+      const offsets: number[] = [];
+      if (query.length > 0 && raw.length >= query.length) {
+        for (let i = 0; i <= raw.length - query.length; i++) {
+          let match = true;
+          for (let j = 0; j < query.length; j++) {
+            if (raw[i + j] !== query[j]) {
+              match = false;
+              break;
+            }
+          }
+          if (match) {
+            offsets.push(i);
+            if (offsets.length >= 500) break;
+          }
+        }
+      }
+      return { offsets, truncated: offsets.length >= 500 } as T;
+    }
+
     case "fs_write_file": {
       const p = normalizePath(String(args?.path || ""));
       const content = String(args?.content ?? "");
@@ -789,6 +829,18 @@ export interface FileContentResult {
   readonly: boolean;
 }
 
+export interface BinaryChunkResult {
+  bytes: number[];
+  offset: number;
+  totalSize: number;
+  readonly: boolean;
+}
+
+export interface BinarySearchResult {
+  offsets: number[];
+  truncated: boolean;
+}
+
 export interface SearchQueryOptions {
   isCaseSensitive: boolean;
   isWholeWord: boolean;
@@ -825,6 +877,38 @@ export interface ReplaceSummary {
 export async function readFileContent(pathStr: string): Promise<FileContentResult> {
   const norm = normalizePath(pathStr);
   return await invokeCommand<FileContentResult>("fs_read_file", { path: norm });
+}
+
+/**
+ * Reads a bounded byte range from a binary file safely via Tauri backend.
+ */
+export async function readBinaryChunk(
+  pathStr: string,
+  offset: number,
+  length: number
+): Promise<BinaryChunkResult> {
+  const norm = normalizePath(pathStr);
+  return await invokeCommand<BinaryChunkResult>("fs_read_binary_chunk", {
+    path: norm,
+    offset,
+    length,
+  });
+}
+
+/**
+ * Searches a binary file for a byte sequence using streaming Rust backend search.
+ */
+export async function searchBinaryFile(
+  pathStr: string,
+  query: number[],
+  maxResults = 500
+): Promise<BinarySearchResult> {
+  const norm = normalizePath(pathStr);
+  return await invokeCommand<BinarySearchResult>("fs_search_binary", {
+    path: norm,
+    query,
+    maxResults,
+  });
 }
 
 /**

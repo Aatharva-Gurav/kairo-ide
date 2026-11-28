@@ -92,14 +92,8 @@ export interface EditorContextValue {
   registerPaneEditor: (paneId: EditorPaneId, editor: any | null) => void;
   focusPane: (paneId: EditorPaneId, docPath?: string | null) => void;
 
-  // Focused Document & Cursor tracking for workbench status bar
+  // Focused Document tracking for workbench status bar
   focusedDocument: EditorDocument | null;
-  focusedCursorPos: {
-    lineNumber: number;
-    column: number;
-    selectionCount?: number;
-    totalLines?: number;
-  } | undefined;
   bufferConflicts: Record<string, ConflictDetails>;
   clearBufferConflict: (path: string) => void;
   handleCursorChange: (
@@ -109,7 +103,15 @@ export interface EditorContextValue {
   setFocusedDocPath: (path: string | null) => void;
 }
 
+export interface EditorCursorPosition {
+  lineNumber: number;
+  column: number;
+  selectionCount?: number;
+  totalLines?: number;
+}
+
 const EditorContext = createContext<EditorContextValue | null>(null);
+const EditorCursorContext = createContext<EditorCursorPosition | undefined>(undefined);
 
 import { SettingsService } from "@/features/settings/services/settings.service";
 
@@ -225,11 +227,23 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
       docPath: string,
       pos: { lineNumber: number; column: number; selectionCount?: number; totalLines?: number }
     ) => {
-      setFocusedDocPath(docPath);
-      setCursorMap((prev) => ({
-        ...prev,
-        [docPath]: pos,
-      }));
+      setFocusedDocPath((prev) => (prev === docPath ? prev : docPath));
+      setCursorMap((prev) => {
+        const existing = prev[docPath];
+        if (
+          existing &&
+          existing.lineNumber === pos.lineNumber &&
+          existing.column === pos.column &&
+          existing.selectionCount === pos.selectionCount &&
+          existing.totalLines === pos.totalLines
+        ) {
+          return prev;
+        }
+        return {
+          ...prev,
+          [docPath]: pos,
+        };
+      });
     },
     []
   );
@@ -1272,7 +1286,6 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
       focusPane,
 
       focusedDocument,
-      focusedCursorPos,
       bufferConflicts,
       clearBufferConflict,
       handleCursorChange,
@@ -1328,7 +1341,6 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
       registerPaneEditor,
       focusPane,
       focusedDocument,
-      focusedCursorPos,
       bufferConflicts,
       clearBufferConflict,
       handleCursorChange,
@@ -1336,7 +1348,17 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     ]
   );
 
-  return <EditorContext.Provider value={value}>{children}</EditorContext.Provider>;
+  return (
+    <EditorContext.Provider value={value}>
+      <EditorCursorContext.Provider value={focusedCursorPos}>
+        {children}
+      </EditorCursorContext.Provider>
+    </EditorContext.Provider>
+  );
+}
+
+export function useEditorCursor() {
+  return useContext(EditorCursorContext);
 }
 
 export function useEditor() {

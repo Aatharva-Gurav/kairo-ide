@@ -31,4 +31,16 @@ describe("TerminalThemeService", () => {
     const lightTheme = TerminalThemeService.getTheme("light");
     expect(lightTheme.background).toBeDefined();
   });
+
+  it("resolves system theme preference dynamically", () => {
+    const systemDark = TerminalThemeService.getTheme("system", true);
+    const darkModern = TerminalThemeService.getTheme("dark-modern");
+    expect(systemDark.background).toBe(darkModern.background);
+    expect(systemDark.foreground).toBe(darkModern.foreground);
+
+    const systemLight = TerminalThemeService.getTheme("system", false);
+    const lightModern = TerminalThemeService.getTheme("light-modern");
+    expect(systemLight.background).toBe(lightModern.background);
+    expect(systemLight.foreground).toBe(lightModern.foreground);
+  });
 });

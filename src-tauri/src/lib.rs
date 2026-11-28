@@ -79,6 +79,8 @@ pub fn run() {
             fs_exists,
             fs_get_metadata,
             fs_read_file,
+            fs_read_binary_chunk,
+            fs_search_binary,
             fs_write_file,
             fs_search_workspace,
             fs_replace_in_files,

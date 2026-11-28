@@ -15,7 +15,7 @@ export interface FileIconProps {
   style?: React.CSSProperties;
 }
 
-export function FileIcon({
+export const FileIcon = React.memo(function FileIcon({
   name,
   isDirectory = false,
   isExpanded = false,
@@ -72,4 +72,4 @@ export function FileIcon({
       })}
     </>
   );
-}
+});

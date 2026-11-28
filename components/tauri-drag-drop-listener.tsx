@@ -100,20 +100,33 @@ export function TauriDragDropListener() {
     const handleWindowDrop = async (e: DragEvent) => {
       // If default was already prevented by an inner element, ignore
       if (e.defaultPrevented) return;
-      if (!e.dataTransfer || !e.dataTransfer.files || e.dataTransfer.files.length === 0) return;
+      if (!e.dataTransfer) return;
 
-      e.preventDefault();
-      const files = Array.from(e.dataTransfer.files);
-
-      for (const file of files) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const nativePath = (file as any).path;
-        if (nativePath) {
-          try {
-            await openDocument(nativePath);
-          } catch (err) {
-            console.error("[DragDrop] Failed to open dropped native file:", nativePath, err);
+      const files = e.dataTransfer.files ? Array.from(e.dataTransfer.files) : [];
+      if (files.length > 0) {
+        e.preventDefault();
+        for (const file of files) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const nativePath = (file as any).path;
+          if (nativePath) {
+            try {
+              await openDocument(nativePath);
+            } catch (err) {
+              console.error("[DragDrop] Failed to open dropped native file:", nativePath, err);
+            }
           }
+        }
+        return;
+      }
+
+      // Handle internal explorer file dragged onto the editor area
+      const textPath = e.dataTransfer.getData("text/plain");
+      if (textPath && (textPath.includes("/") || textPath.includes("\\"))) {
+        e.preventDefault();
+        try {
+          await openDocument(textPath);
+        } catch (err) {
+          console.error("[DragDrop] Failed to open dropped workspace file:", textPath, err);
         }
       }
     };

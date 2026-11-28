@@ -782,16 +782,6 @@ export const SETTINGS_REGISTRY: SettingDefinition<any>[] = [
     validate: (val) => ["contextMenu", "paste", "selectWord"].includes(val as string),
   },
   {
-    key: "terminal.confirmKillProcess",
-    category: "terminal",
-    label: "Confirm Before Killing Process",
-    description: "Prompt for confirmation before killing active terminal processes with child jobs.",
-    type: "boolean",
-    defaultValue: true,
-    scope: "both",
-    validate: (val) => typeof val === "boolean",
-  },
-  {
     key: "terminal.persistAcrossWorkspaces",
     category: "terminal",
     label: "Persist Terminals Across Workspaces",

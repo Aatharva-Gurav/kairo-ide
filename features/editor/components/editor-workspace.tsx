@@ -6,27 +6,19 @@ import dynamic from "next/dynamic";
 import { EditorTabs } from "./editor-tabs";
 import { EditorBreadcrumb } from "./editor-breadcrumb";
 import { EditorEmptyState } from "./editor-empty-state";
-import { BinaryFileView } from "./binary-file-view";
+import { DocumentEditorSurface } from "./document-editor-surface";
 import { CloseConfirmModal } from "./close-confirm-modal";
-import { GoToLineModal } from "./go-to-line-modal";
 import { installMonacoWorkerStub } from "@/lib/monaco-worker-stub";
+
+const GoToLineModal = dynamic(
+  () => import("./go-to-line-modal").then((m) => m.GoToLineModal),
+  { ssr: false }
+);
 
 // Early client-side registration of the shared worker stub before the editor
 // module finishes loading, to prevent any loader or worker ErrorEvent.
 // Idempotent — see lib/monaco-worker-stub.ts for the full implementation.
 installMonacoWorkerStub();
-
-const MonacoEditorView = dynamic(
-  () => import("./monaco-editor-view").then((mod) => mod.MonacoEditorView),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex flex-1 items-center justify-center h-full w-full bg-background text-xs text-muted-foreground font-mono">
-        Loading editor...
-      </div>
-    ),
-  }
-);
 
 import { SplitEditorPane } from "./split-editor-pane";
 import { cn } from "@/lib/utils";
@@ -115,22 +107,11 @@ export function EditorWorkspace() {
               )}
             >
               <EditorBreadcrumb document={activeDocument} />
-              {activeDocument.isBinary || activeDocument.isTooLarge ? (
-                <BinaryFileView document={activeDocument} />
-              ) : activeDocument.error ? (
-                <div className="flex flex-1 flex-col items-center justify-center p-6 text-center">
-                  <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 max-w-md text-destructive">
-                    <h3 className="font-semibold text-xs">Error opening file</h3>
-                    <p className="text-xs mt-1 text-muted-foreground">{activeDocument.error}</p>
-                  </div>
-                </div>
-              ) : (
-                <MonacoEditorView
-                  document={activeDocument}
-                  paneId="primary"
-                  onCursorChange={handleCursorChange}
-                />
-              )}
+              <DocumentEditorSurface
+                document={activeDocument}
+                paneId="primary"
+                onCursorChange={handleCursorChange}
+              />
             </div>
 
             {/* Draggable Divider */}
@@ -182,23 +163,11 @@ export function EditorWorkspace() {
         ) : (
           <div className="flex flex-1 flex-col h-full w-full overflow-hidden relative">
             <EditorBreadcrumb document={activeDocument} />
-
-            {activeDocument.isBinary || activeDocument.isTooLarge ? (
-              <BinaryFileView document={activeDocument} />
-            ) : activeDocument.error ? (
-              <div className="flex flex-1 flex-col items-center justify-center p-6 text-center">
-                <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 max-w-md text-destructive">
-                  <h3 className="font-semibold text-xs">Error opening file</h3>
-                  <p className="text-xs mt-1 text-muted-foreground">{activeDocument.error}</p>
-                </div>
-              </div>
-            ) : (
-              <MonacoEditorView
-                document={activeDocument}
-                paneId="primary"
-                onCursorChange={handleCursorChange}
-              />
-            )}
+            <DocumentEditorSurface
+              document={activeDocument}
+              paneId="primary"
+              onCursorChange={handleCursorChange}
+            />
           </div>
         )
       ) : (

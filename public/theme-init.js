@@ -36,8 +36,9 @@
     if (migrationMap[theme]) {
       theme = migrationMap[theme];
     }
+    var isSystem = theme === "system";
     var isDark = true;
-    if (theme === "system") {
+    if (isSystem) {
       isDark = window.matchMedia
         ? window.matchMedia("(prefers-color-scheme: dark)").matches
         : true;
@@ -64,5 +65,14 @@
       document.documentElement.classList.add("kairo-light");
     }
     document.documentElement.setAttribute("data-theme", theme);
+    if (typeof document.querySelector === "function") {
+      var metaColorScheme = document.querySelector('meta[name="color-scheme"]');
+      if (metaColorScheme) {
+        metaColorScheme.setAttribute(
+          "content",
+          isSystem ? "light dark" : isDark ? "dark" : "light"
+        );
+      }
+    }
   } catch {}
 })();

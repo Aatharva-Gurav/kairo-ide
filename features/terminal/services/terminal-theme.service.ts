@@ -1,13 +1,17 @@
 import type { ITheme } from "@xterm/xterm";
-import { THEME_DEFINITIONS, ThemeId, migrateLegacyTheme } from "@/features/theme";
+import { resolveTheme } from "@/features/theme";
 
 export class TerminalThemeService {
   /**
    * Generates a fully compliant xterm.js ITheme object matching a Kairo IDE theme.
    */
-  static getTheme(themePreference: string): ITheme {
-    const themeId = migrateLegacyTheme(themePreference) as ThemeId;
-    const def = THEME_DEFINITIONS[themeId] || THEME_DEFINITIONS["dark-modern"];
+  static getTheme(themePreference: string, prefersDark?: boolean): ITheme {
+    const resolvedPrefersDark =
+      prefersDark ??
+      (typeof window !== "undefined" && window.matchMedia
+        ? window.matchMedia("(prefers-color-scheme: dark)").matches
+        : true);
+    const def = resolveTheme(themePreference, resolvedPrefersDark);
     const isDark = def.category === "dark";
 
     if (isDark) {

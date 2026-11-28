@@ -7,6 +7,7 @@ import {
 } from "@/lib/tauri-ipc";
 import { EditorDocument } from "../types";
 import { LanguageService } from "./language.service";
+import { resolveEditorType } from "./editor-resolver";
 
 export class EditorService {
   /**
@@ -27,6 +28,8 @@ export class EditorService {
         savedContent: initialContent,
         isDirty: false,
         isBinary: false,
+        fileSize: initialContent.length,
+        editorKind: resolveEditorType(normPath, { isBinary: false }),
         readonly: false,
       };
     }
@@ -44,6 +47,8 @@ export class EditorService {
           savedContent: fileData.content || "",
           isDirty: false,
           isBinary: true,
+          fileSize: fileData.size,
+          editorKind: resolveEditorType(normPath, { isBinary: true }),
           readonly: fileData.readonly,
         };
       }
@@ -57,6 +62,8 @@ export class EditorService {
         savedContent: fileData.content,
         isDirty: false,
         isBinary: false,
+        fileSize: fileData.size,
+        editorKind: resolveEditorType(normPath, { isBinary: false }),
         readonly: fileData.readonly,
       };
     } catch (error: unknown) {
@@ -72,6 +79,7 @@ export class EditorService {
         savedContent: "",
         isDirty: false,
         isTooLarge: isLarge,
+        editorKind: resolveEditorType(normPath, { isTooLarge: isLarge }),
         error: msg,
       };
     }

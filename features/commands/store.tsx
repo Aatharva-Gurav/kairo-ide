@@ -16,10 +16,21 @@ import { useFileExplorer } from "@/features/file-explorer/store";
 import { useEditor } from "@/features/editor/store";
 import { useSettings } from "@/features/settings/store";
 import { useSidebar } from "@/components/ui/sidebar";
-import { CommandPaletteModal } from "@/features/command-palette/components/command-palette-modal";
-import { QuickOpenModal } from "@/features/editor/components/quick-open-modal";
-import { SettingsModal } from "@/features/settings/components/settings-modal";
+import dynamic from "next/dynamic";
 import { ideEvents } from "@/lib/events";
+
+const CommandPaletteModal = dynamic(
+  () => import("@/features/command-palette/components/command-palette-modal").then((m) => m.CommandPaletteModal),
+  { ssr: false }
+);
+const QuickOpenModal = dynamic(
+  () => import("@/features/editor/components/quick-open-modal").then((m) => m.QuickOpenModal),
+  { ssr: false }
+);
+const SettingsModal = dynamic(
+  () => import("@/features/settings/components/settings-modal").then((m) => m.SettingsModal),
+  { ssr: false }
+);
 import { isTauriEnvironment, invokeCommand, writeFileContent } from "@/lib/tauri-ipc";
 import { WorkspaceService } from "@/features/workspace/service";
 import { isDarkTheme } from "@/features/theme";

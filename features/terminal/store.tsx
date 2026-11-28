@@ -44,10 +44,7 @@ export interface TerminalContextValue {
   activeSplitSessionId: string | null;
 
   createTerminal: (shellId?: string, cwd?: string) => Promise<string>;
-  killTerminal: (sessionId: string, force?: boolean) => Promise<void>;
-  pendingKillSession: TerminalSessionState | null;
-  confirmKillTerminal: () => Promise<void>;
-  cancelKillTerminal: () => void;
+  killTerminal: (sessionId: string) => Promise<void>;
   killAllTerminals: () => Promise<void>;
   killWorkspaceTerminals: (workspaceId?: string) => Promise<void>;
   setActiveTerminal: (sessionId: string) => void;
@@ -93,7 +90,6 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
   const [splitSessionIds, setSplitSessionIds] = useState<string[]>([]);
   const [splitDirection, setSplitDirection] = useState<"horizontal" | "vertical" | null>(null);
   const [splitRatio, setSplitRatio] = useState<number>(0.5);
-  const [pendingKillSession, setPendingKillSession] = useState<TerminalSessionState | null>(null);
 
   const [panelHeight, setPanelHeightState] = useState<number>(() => {
     if (typeof window === "undefined") return DEFAULT_PANEL_HEIGHT;
@@ -320,20 +316,10 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
     [allProfiles, defaultShell, terminalSettings.defaultCwd]
   );
 
-  // Terminate an active session (respecting terminal.confirmKillProcess when force is false)
+  // Terminate an active session immediately
   const killTerminal = useCallback(
-    async (sessionId: string, force = false) => {
+    async (sessionId: string) => {
       if (!sessionId) return;
-      const targetSession = sessionsRef.current.find((s) => s.sessionId === sessionId);
-      if (
-        !force &&
-        terminalSettingsRef.current.confirmKillProcess &&
-        targetSession &&
-        !targetSession.isExited
-      ) {
-        setPendingKillSession(targetSession);
-        return;
-      }
 
       try {
         await TerminalIpcService.killSession(sessionId);
@@ -369,18 +355,6 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
     },
     [activeSessionId, splitSessionIds]
   );
-
-  const confirmKillTerminal = useCallback(async () => {
-    const target = pendingKillSession;
-    setPendingKillSession(null);
-    if (target) {
-      await killTerminal(target.sessionId, true);
-    }
-  }, [pendingKillSession, killTerminal]);
-
-  const cancelKillTerminal = useCallback(() => {
-    setPendingKillSession(null);
-  }, []);
 
   // Terminate all active sessions and clean up background processes
   const killAllTerminals = useCallback(async () => {
@@ -728,45 +702,80 @@ export function TerminalProvider({ children }: { children: React.ReactNode }) {
     return sessions.find((s) => s.sessionId === activeSessionId) || null;
   }, [sessions, activeSessionId]);
 
-  const value: TerminalContextValue = {
-    sessions,
-    activeSessionId,
-    activeSession,
-    availableShells,
-    defaultShell,
-    isOpen,
-    isMaximized,
-    panelHeight,
-    settings: terminalSettings,
-    splitSessionIds,
-    splitDirection,
-    splitRatio,
-    activeSplitSessionId,
-    createTerminal,
-    killTerminal,
-    pendingKillSession,
-    confirmKillTerminal,
-    cancelKillTerminal,
-    killAllTerminals,
-    killWorkspaceTerminals,
-    setActiveTerminal,
-    setActiveSplitTerminal,
-    toggleTerminal,
-    setTerminalOpen,
-    setPanelHeight,
-    setSplitRatio,
-    toggleMaximize,
-    renameTerminal,
-    clearTerminal,
-    clearBuffer,
-    splitTerminal,
-    closeSplit,
-    copySelection,
-    pasteToTerminal,
-    selectAll,
-    findNext,
-    findPrevious,
-  };
+  const value = useMemo<TerminalContextValue>(
+    () => ({
+      sessions,
+      activeSessionId,
+      activeSession,
+      availableShells,
+      defaultShell,
+      isOpen,
+      isMaximized,
+      panelHeight,
+      settings: terminalSettings,
+      splitSessionIds,
+      splitDirection,
+      splitRatio,
+      activeSplitSessionId,
+      createTerminal,
+      killTerminal,
+      killAllTerminals,
+      killWorkspaceTerminals,
+      setActiveTerminal,
+      setActiveSplitTerminal,
+      toggleTerminal,
+      setTerminalOpen,
+      setPanelHeight,
+      setSplitRatio,
+      toggleMaximize,
+      renameTerminal,
+      clearTerminal,
+      clearBuffer,
+      splitTerminal,
+      closeSplit,
+      copySelection,
+      pasteToTerminal,
+      selectAll,
+      findNext,
+      findPrevious,
+    }),
+    [
+      sessions,
+      activeSessionId,
+      activeSession,
+      availableShells,
+      defaultShell,
+      isOpen,
+      isMaximized,
+      panelHeight,
+      terminalSettings,
+      splitSessionIds,
+      splitDirection,
+      splitRatio,
+      activeSplitSessionId,
+      createTerminal,
+      killTerminal,
+      killAllTerminals,
+      killWorkspaceTerminals,
+      setActiveTerminal,
+      setActiveSplitTerminal,
+      toggleTerminal,
+      setTerminalOpen,
+      setPanelHeight,
+      setSplitRatio,
+      toggleMaximize,
+      renameTerminal,
+      clearTerminal,
+      clearBuffer,
+      splitTerminal,
+      closeSplit,
+      copySelection,
+      pasteToTerminal,
+      selectAll,
+      findNext,
+      findPrevious,
+    ]
+  );
 
   return (
     <TerminalContext.Provider value={value}>{children}</TerminalContext.Provider>

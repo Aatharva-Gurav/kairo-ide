@@ -42,7 +42,8 @@ Rust TerminalManager (src-tauri/src/terminal/manager.rs)
 - **Keybinding Priority**: `TerminalInstanceRegistry` attaches `attachCustomKeyEventHandler` on xterm so workbench shortcuts registered in `KeybindingService` (e.g., `Ctrl+P`, `Ctrl+Shift+P`, `Ctrl+B`, `Ctrl+` `, `Ctrl+F`, `Ctrl+K`, `Ctrl+Shift+5`) are intercepted cleanly with `terminalFocus: true` rather than swallowed as raw PTY control characters.
 
 ## Feature Functionality
-- **Terminal Creation & Lifecycle**: Auto-spawns a default shell on panel open when no active session exists; supports creating additional sessions with specific profiles (`TerminalShellDropdown`), tracking running/exited status (`Exit Code`), and killing single, workspace, or all sessions (`killTerminal` prompts confirmation when `terminal.confirmOnClose` / active process checks apply).
+- **Terminal Creation & Lifecycle**: Auto-spawns a default shell on panel open when no active session exists; supports creating additional sessions with specific profiles (`TerminalShellDropdown`), tracking running/exited status (`Exit Code`), and immediately terminating single, workspace, or all sessions (`killTerminal`, `killWorkspaceTerminals`, `killAllTerminals`) without modal interruption.
+- **High-Throughput Output Batching**: `TerminalInstanceRegistry` batches incoming PTY stdout chunks per animation frame (`requestAnimationFrame`) before writing to xterm.js, keeping scrolling and rendering smooth during heavy build or install output.
 - **Tabs & Split Panes**: Switch tabs (`TerminalTabs` / `TerminalSessionSidebar`), inline rename sessions, split horizontally or vertically (`splitTerminal`, draggable ratio), and resize or maximize (`Alt+F11`) the bottom panel (`min 120px`, persisted height).
 - **Shell Detection & Custom Profiles**:
   - Windows: detects PowerShell 7 (`pwsh.exe`), Windows PowerShell (`powershell.exe`), Command Prompt (`cmd.exe`), Git Bash, WSL distributions
@@ -62,7 +63,7 @@ Rust TerminalManager (src-tauri/src/terminal/manager.rs)
 
 ## Configuration & Security
 ### Settings (`features/settings/registry.ts`)
-`terminal.fontSize`, `terminal.fontFamily`, `terminal.fontWeight`, `terminal.lineHeight`, `terminal.cursorStyle`, `terminal.cursorBlink`, `terminal.scrollback`, `terminal.defaultShell`, `terminal.copyOnSelect`, `terminal.rightClickBehavior`, `terminal.confirmOnClose`, `terminal.customProfiles`.
+`terminal.fontSize`, `terminal.fontFamily`, `terminal.fontWeight`, `terminal.lineHeight`, `terminal.cursorStyle`, `terminal.cursorBlink`, `terminal.scrollback`, `terminal.defaultProfile`, `terminal.defaultCwd`, `terminal.copyOnSelect`, `terminal.rightClickBehavior`, `terminal.persistAcrossWorkspaces`, `terminal.customProfiles`.
 
 ### Registered Commands & Default Keybindings
 - `workbench.action.terminal.toggleTerminal` (``Ctrl+` `` / ``Cmd+` ``)

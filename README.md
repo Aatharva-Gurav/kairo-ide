@@ -1,25 +1,60 @@
+<div align="center">
+
+<img src="public/icon.png" alt="Kairo IDE Logo" width="110" height="110" />
+
 # Kairo IDE
 
-**Kairo IDE** is a cross-platform desktop code editor engineered with **Next.js 16**, **React 19**, **TypeScript**, **Monaco Editor**, **xterm.js**, and a **Tauri v2 (Rust)** native backend. It pairs a modern, themeable workbench UI with a native filesystem security boundary (`WorkspaceGuard` + `SensitivePathPolicy`) and real OS PTY terminal sessions.
+**A fast, security-hardened, cross-platform desktop code editor built with Next.js 16, React 19, TypeScript, Monaco Editor, xterm.js, and Tauri v2 (Rust).**
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
+![Next.js](https://img.shields.io/badge/Next.js-16-000000?style=flat-square&logo=next.js)
+![React](https://img.shields.io/badge/React-19-149ECA?style=flat-square&logo=react)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript)
+![Tauri](https://img.shields.io/badge/Tauri-v2-24C8DB?style=flat-square&logo=tauri)
+![Rust](https://img.shields.io/badge/Rust-2021-DEA584?style=flat-square&logo=rust)
+![Monaco Editor](https://img.shields.io/badge/Monaco%20Editor-0.58-007ACC?style=flat-square)
+![xterm.js](https://img.shields.io/badge/xterm.js-6.0-1E1E1E?style=flat-square)
+
+</div>
+
+---
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Core Features](#core-features)
+- [Architecture, Security & Performance](#architecture-security--performance)
+- [Repository Structure](#repository-structure)
+- [Documentation](#documentation)
+- [Getting Started](#getting-started)
+- [Default Keyboard Shortcuts](#default-keyboard-shortcuts)
+- [Verification & Testing](#verification--testing)
+- [License](#license)
+
+---
+
+## Overview
+
+**Kairo IDE** pairs a modern, themeable workbench UI with a native Rust backend powered by **Tauri v2**. Every filesystem operation passes through a strict native security boundary (`WorkspaceGuard` + `SensitivePathPolicy`), while the integrated terminal runs real OS ConPTY / POSIX PTY sessions via `portable-pty` with automatic browser mock fallbacks when running in web-only mode (`npm run dev`).
 
 ---
 
 ## Core Features
 
 ### 1. Code Editor & Floating Creation (`features/editor/`)
-- Multi-tab Monaco Editor workbench with binary-file preview (`BinaryFileView`), breadcrumbs, and interactive status bar (`Ln/Col`, selection count, line endings, language label, zoom, formatting).
+- Multi-tab **Monaco Editor** workbench with binary/media preview (`BinaryFileView`), breadcrumbs, and interactive status bar (`Ln/Col`, selection count, line endings, language label, zoom, formatting).
 - Horizontal and vertical 2-pane split views (`Ctrl+\`, `Ctrl+K Ctrl+\`) with draggable dividers and active-pane focus tracking.
 - Disk-to-buffer synchronization & conflict resolution (`BufferSyncService` + `DiffService`), preserving CRLF/LF line endings cleanly.
 - Draggable in-editor Find & Replace widget (`Ctrl+F` / `Ctrl+H`), Go to Line (`Ctrl+G`), Quick Open (`Ctrl+P`), JSON formatter provider, built-in snippets (`IntelliSenseService`), and Floating Creation quick-add menu when the sidebar is collapsed.
 
 ### 2. Integrated Terminal (`features/terminal/`, `src-tauri/src/terminal/`)
-- Multi-tab and split-pane terminal powered by `xterm.js` (`FitAddon`, `SearchAddon`, `WebLinksAddon`, `Unicode11Addon`, optional `WebglAddon`) backed by real OS ConPTY / POSIX PTY sessions via `portable-pty`.
+- Multi-tab and split-pane terminal powered by **xterm.js** (`FitAddon`, `SearchAddon`, `WebLinksAddon`, `Unicode11Addon`, optional `WebglAddon`) backed by real OS ConPTY / POSIX PTY sessions via `portable-pty`.
 - Automatic shell profile discovery (PowerShell 7, Windows PowerShell, CMD, Git Bash, WSL, zsh, bash, fish, sh, etc.) and custom profile sync validated against allowlisted shell binaries and blocked environment variables.
-- Clickable `file:line:col` links (`TerminalLinkProvider`) opening directly in the editor, local dev-server URL detection (`DevServerDetector`), persistent panel height, maximize mode (`Alt+F11`), and state preservation when toggling visibility (``Ctrl+` ``).
+- Clickable `file:line:col` links (`TerminalLinkProvider`) opening directly in the editor, local dev-server URL detection (`DevServerDetector`), persistent panel height, maximize mode (`Alt+F11`), instant session close without confirmation interruptions, and state preservation when toggling visibility (``Ctrl+` ``).
 
 ### 3. Workspace Management & File Explorer (`features/workspace/`, `features/file-explorer/`)
 - Explicit workspace lifecycle (`OPEN` / `CLOSING` / `CLOSED`) with unsaved-document close hooks, project technology detection, multi-root backend support, and recent workspaces history.
-- Lazy-loaded directory tree with in-memory caching, compact single-child folder folding, inline create/rename, multi-select, batch rename, move modal, 30-step undo/redo history (`ExplorerHistoryService`), context menu actions, tree filter (`Ctrl+F` when focused), and OS window drag-and-drop.
+- Lazy-loaded directory tree with in-memory caching, compact single-child folder folding, inline create/rename, multi-select, batch rename, move modal, 30-step undo/redo history (`ExplorerHistoryService`), context menu actions, tree filter (`Ctrl+F` when focused), and full HTML5 drag-and-drop (internal file/folder moves, explorer-to-editor drops, and external OS file/folder drops).
 
 ### 4. Workspace-Wide Search & Replace (`features/search/`, `src-tauri/src/commands/fs.rs`)
 - Debounced workspace search executed in Rust via `spawn_blocking` with Case Sensitive (`Alt+C`), Whole Word (`Alt+W`), Regex (`Alt+R`), and Include/Exclude glob pattern filters.
@@ -37,11 +72,16 @@
 
 ---
 
-## Architecture & Security Highlights
+## Architecture, Security & Performance
 
 - **Workspace Boundary (`WorkspaceGuard`)**: Enforces authorized workspace roots, single-file grants from native Open/Save-As dialogs, monotonic workspace generations, and blocks path traversal (`..`), UNC/device paths, symlinks, NTFS junctions, and prefix collisions.
 - **Sensitive Path Protection (`SensitivePathPolicy`)**: Blocks `.env*`, `.git/*`, `.ssh`, `.gnupg`, `.aws`, `.kube`, `.docker`, `.azure`, `.gcloud`, `secrets/`, private keys (`*.pem`, `*.key`, `id_rsa*`, etc.), and credential files from IDE filesystem APIs.
 - **Custom `asset://` Range Protocol**: Serves media previews strictly within authorized workspace boundaries with empty declarative Tauri asset scope (`scope: []`).
+- **Performance Optimizations**:
+  - **Isolated Cursor Context**: `EditorCursorContext` isolates high-frequency cursor updates from `EditorContext`, preventing full-workbench re-renders on every keystroke or cursor move.
+  - **Memoized Tree & Icons**: `FileTreeNode`, `FileIcon`, and `EditorStatusBar` use `React.memo`, and provider values (`TerminalProvider`, `EditorProvider`) are memoized.
+  - **Code-Split Modals**: Heavy workbench dialogs (`CommandPaletteModal`, `QuickOpenModal`, `SettingsModal`, `GoToLineModal`) and `MonacoEditorView` are lazy-loaded via `next/dynamic`.
+  - **Frame-Batched Terminal Output**: `TerminalInstanceRegistry` batches high-throughput PTY stdout chunks per `requestAnimationFrame` before writing to xterm.js.
 - **Hardened Production CSP (`src-tauri/tauri.conf.json`)**:
   `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: asset: http://asset.localhost https://asset.localhost; media-src 'self' asset: http://asset.localhost https://asset.localhost; font-src 'self' data:; connect-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';`
 
@@ -68,7 +108,7 @@ See [docs/architecture/project-structure.md](docs/architecture/project-structure
 
 ---
 
-## Documentation Directory
+## Documentation
 
 - [**Documentation Home**](docs/README.md)
 - **Architecture**: [Overview](docs/architecture/architecture-overview.md) · [Project Structure](docs/architecture/project-structure.md)
@@ -139,15 +179,15 @@ npm run dev
 
 ---
 
-## Verification & Testing Commands
+## Verification & Testing
 
 ```bash
-# Frontend typecheck, lint, and unit tests (25 test files / 251 Vitest tests)
+# Frontend typecheck, lint, and unit tests
 npx tsc --noEmit
 npm run lint
 npm test
 
-# Rust checks and unit tests (49 Cargo unit tests)
+# Rust checks and unit tests
 cargo fmt --manifest-path src-tauri/Cargo.toml --check
 cargo check --manifest-path src-tauri/Cargo.toml --all-targets
 cargo test --manifest-path src-tauri/Cargo.toml
@@ -161,4 +201,10 @@ npx tauri build
 
 ## License
 
-No `LICENSE` file is currently included in this repository. Add your preferred license file at the project root before public distribution.
+**Kairo IDE** is copyright &copy; 2026 **Aatharva Santosh Gurav** and is distributed under the **MIT License** — see the [LICENSE](LICENSE) file for the full legal text and [NOTICE](NOTICE) for attribution and trademark terms.
+
+| Permitted | Conditions | Limitations |
+| :--- | :--- | :--- |
+| Commercial use, modification, distribution, private use | Include the original copyright notice and [LICENSE](LICENSE) in all copies or substantial portions of the Software | Provided **"AS IS"**, without warranty of any kind and with no liability for the authors or copyright holders |
+
+> **Trademark & Brand Notice:** The MIT License applies strictly to the source code and documentation. The **Kairo IDE** name, logo (`public/icon.png`), and brand assets remain the intellectual property of **Aatharva Santosh Gurav** and may not be used to imply endorsement of derivative works without prior written consent.

@@ -261,4 +261,73 @@ describe("SettingsService", () => {
     expect(runThemeInit(false)).toEqual({ theme: "light-modern", isDark: false });
     expect(runThemeInit(true)).toEqual({ theme: "dark-modern", isDark: true });
   });
+
+  it("applies system theme to DOM and meta color-scheme based on matchMedia", () => {
+    let prefersDark = false;
+    const classes = new Set<string>();
+    const attrs: Record<string, string> = {};
+    const metaAttrs: Record<string, string> = { content: "light dark" };
+
+    const origWindow = globalThis.window;
+    const origDocument = globalThis.document;
+
+    try {
+      Object.defineProperty(globalThis, "document", {
+        configurable: true,
+        value: {
+          documentElement: {
+            classList: {
+              add: (c: string) => classes.add(c),
+              remove: (c: string) => classes.delete(c),
+            },
+            setAttribute: (k: string, v: string) => {
+              attrs[k] = v;
+            },
+          },
+          querySelector: (selector: string) =>
+            selector === 'meta[name="color-scheme"]'
+              ? {
+                  setAttribute: (k: string, v: string) => {
+                    metaAttrs[k] = v;
+                  },
+                }
+              : null,
+        },
+      });
+
+      Object.defineProperty(globalThis, "window", {
+        configurable: true,
+        value: {
+          matchMedia: () => ({
+            matches: prefersDark,
+            addEventListener: () => {},
+          }),
+        },
+      });
+
+      // OS in light mode -> system resolves to light-modern while keeping meta "light dark"
+      prefersDark = false;
+      SettingsService.updateSetting("appearance.theme", "system", "user");
+      expect(attrs["data-theme"]).toBe("light-modern");
+      expect(classes.has("dark")).toBe(false);
+      expect(classes.has("kairo-light")).toBe(true);
+      expect(metaAttrs["content"]).toBe("light dark");
+
+      // OS in dark mode -> system resolves to dark-modern while keeping meta "light dark"
+      prefersDark = true;
+      SettingsService.updateSetting("appearance.theme", "system", "user");
+      expect(attrs["data-theme"]).toBe("dark-modern");
+      expect(classes.has("dark")).toBe(true);
+      expect(classes.has("kairo-dark")).toBe(true);
+      expect(metaAttrs["content"]).toBe("light dark");
+
+      // Explicit light theme pins meta color-scheme to "light"
+      SettingsService.updateSetting("appearance.theme", "light-modern", "user");
+      expect(attrs["data-theme"]).toBe("light-modern");
+      expect(metaAttrs["content"]).toBe("light");
+    } finally {
+      Object.defineProperty(globalThis, "window", { configurable: true, value: origWindow });
+      Object.defineProperty(globalThis, "document", { configurable: true, value: origDocument });
+    }
+  });
 });
